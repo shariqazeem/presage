@@ -67,6 +67,8 @@ contract PresageMarket is Ownable2Step, ReentrancyGuard {
     uint8 private immutable _feedDecimals;
 
     address public treasury;
+    /// Stops new subscriptions and paid calls. Claims, refunds and settlement always keep working.
+    bool public paymentsPaused;
 
     /// Accepted stablecoins and their decimals. 0 means not accepted.
     mapping(address token => uint8) public stableDecimals;
@@ -94,6 +96,7 @@ contract PresageMarket is Ownable2Step, ReentrancyGuard {
     event StableSet(address indexed token, uint8 decimals);
     event TreasurySet(address indexed treasury);
     event OperatorSet(address indexed account, bool allowed);
+    event PaymentsPaused(bool paused);
 
     error AgentNotActive(uint256 agentId);
     error NotForSale(uint256 agentId);
@@ -112,6 +115,12 @@ contract PresageMarket is Ownable2Step, ReentrancyGuard {
     error NotOperator();
     error ZeroAddress();
     error NativeTransferFailed();
+    error Paused();
+
+    modifier whenPaymentsOpen() {
+        if (paymentsPaused) revert Paused();
+        _;
+    }
 
     modifier onlyOperator() {
         if (!isOperator[msg.sender]) revert NotOperator();
@@ -155,6 +164,11 @@ contract PresageMarket is Ownable2Step, ReentrancyGuard {
     function setOperator(address account, bool allowed) external onlyOwner {
         isOperator[account] = allowed;
         emit OperatorSet(account, allowed);
+    }
+
+    function setPaymentsPaused(bool paused) external onlyOwner {
+        paymentsPaused = paused;
+        emit PaymentsPaused(paused);
     }
 
     // ---------------------------------------------------------------- views
@@ -217,6 +231,7 @@ contract PresageMarket is Ownable2Step, ReentrancyGuard {
         external
         payable
         nonReentrant
+        whenPaymentsOpen
         returns (uint40 until)
     {
         if (periods == 0 || periods > MAX_PERIODS) revert BadPeriods();
@@ -246,6 +261,7 @@ contract PresageMarket is Ownable2Step, ReentrancyGuard {
         external
         payable
         nonReentrant
+        whenPaymentsOpen
     {
         if (requestId == bytes32(0) || agentId > type(uint64).max) revert BadRequest(requestId);
         if (_requests[requestId].state != RequestState.None) revert AlreadyPaid(requestId);

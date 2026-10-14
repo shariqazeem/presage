@@ -539,6 +539,28 @@ contract PresageTest is Test {
         market.subscribe{value: 1 ether}(agentId, address(0), 1, 1 ether);
     }
 
+    function test_pauseStopsNewPaymentsButNotClaims() public {
+        bytes32 req = keccak256("before-pause");
+        uint256 callId = _paidCall(req);
+        vm.prank(committer);
+        calls.reveal(callId, SALT, PAYLOAD, PresageCalls.Outcome.Win, 90);
+
+        vm.prank(mallory);
+        vm.expectRevert();
+        market.setPaymentsPaused(true);
+        vm.prank(owner);
+        market.setPaymentsPaused(true);
+
+        vm.prank(alice);
+        vm.expectRevert(PresageMarket.Paused.selector);
+        market.payForCall(agentId, keccak256("after-pause"), address(usdc), 50_000);
+
+        market.settle(req); // settlement still works
+        vm.prank(creator);
+        market.claim(address(usdc)); // and so do claims
+        assertEq(usdc.balanceOf(creator), 40_000);
+    }
+
     function testFuzz_quoteRoundsUpForStables(uint64 usd6) public {
         MockStable eighteen = new MockStable();
         vm.prank(owner);

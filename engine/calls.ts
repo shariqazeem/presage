@@ -1,0 +1,139 @@
+import { eq } from 'drizzle-orm'
+import { stringToHex, type Hex } from 'viem'
+import { presageCallsAbi } from '../lib/abi/PresageCalls'
+import { presageMarketAbi } from '../lib/abi/PresageMarket'
+import { commitmentOf, newSalt, serializePayload, type CallPayload } from '../lib/calls/payload'
+import type { Outcome } from '../lib/calls/rules'
+import { deployment, publicClient } from '../lib/chain'
+import { getDb, schema } from '../lib/db'
+import { errMsg, log } from './log'
+import { write } from './tx'
+
+const l = log('calls')
+
+export const OUTCOME_CODE: Record<Outcome, number> = { win: 1, loss: 2, flat: 3, nofill: 4 }
+
+export function contracts() {
+  if (!deployment) throw new Error('Presage is not deployed on this network yet')
+  return deployment
+}
+
+type CallRow = typeof schema.calls.$inferSelect
+
+/**
+ * Seal a call on chain. The payload and salt are written to the database before the transaction is
+ * sent: if they were lost, the call could never be revealed and would be forfeited.
+ */
+export async function publishCall(input: { payload: CallPayload; revealBy: number; requestId?: Hex }): Promise<CallRow> {
+  const db = getDb()
+  const { payload } = input
+  const json = serializePayload(payload)
+  const salt = newSalt()
+  const commitment = commitmentOf(salt, json)
+  const setup = payload.rules === 'presage/setup-v1' ? payload : null
+  const dir = payload.rules === 'presage/direction-v1' ? payload : null
+
+  const [row] = await db
+    .insert(schema.calls)
+    .values({
+      agentId: payload.agent,
+      kind: setup ? 'setup' : 'direction',
+      status: 'pending',
+      payload: json,
+      salt,
+      commitment,
+      revealBy: input.revealBy,
+      issuedAt: payload.issuedAt,
+      asset: payload.asset.symbol,
+      side: setup ? setup.side : dir!.direction,
+      priceAtIssue: payload.priceAtIssue,
+      entry: setup ? setup.entry.price : null,
+      stop: setup ? setup.stop : null,
+      target: setup ? setup.target : null,
+      horizonSec: dir ? dir.horizonSec : setup!.maxHoldSec,
+      confidence: dir ? dir.confidence : (setup!.conviction ?? null),
+      requestId: input.requestId ?? null,
+    })
+    .returning()
+
+  const c = contracts()
+  try {
+    const sent = input.requestId
+      ? await write({
+          address: c.market,
+          abi: presageMarketAbi,
+          functionName: 'sealPaidCall',
+          args: [input.requestId, commitment, input.revealBy],
+          label: `seal paid call #${row.id} (${payload.asset.symbol})`,
+        })
+      : await write({
+          address: c.calls,
+          abi: presageCallsAbi,
+          functionName: 'seal',
+          args: [BigInt(payload.agent), commitment, input.revealBy],
+          label: `seal call #${row.id} (${payload.asset.symbol})`,
+        })
+    const ev = sent.logs.find(e => e.eventName === 'CallSealed')
+    if (!ev) throw new Error('No CallSealed event in the seal transaction')
+    const block = await publicClient.getBlock({ blockNumber: sent.receipt.blockNumber })
+    const [updated] = await db
+      .update(schema.calls)
+      .set({
+        chainCallId: Number(ev.args.callId as bigint),
+        sealTx: sent.hash,
+        sealedAt: Number(block.timestamp),
+        status: 'sealed',
+        error: null,
+      })
+      .where(eq(schema.calls.id, row.id))
+      .returning()
+    return updated
+  } catch (e) {
+    // The indexer reconciles by commitment, so a seal that landed despite this error is not lost.
+    await db.update(schema.calls).set({ status: 'failed', error: errMsg(e) }).where(eq(schema.calls.id, row.id))
+    throw e
+  }
+}
+
+/** Reveal a sealed call with its outcome, then release or refund its escrow if it was paid for. */
+export async function revealCall(row: CallRow, outcome: Outcome, result: number, resolution: object): Promise<void> {
+  const db = getDb()
+  const c = contracts()
+  if (row.chainCallId == null) throw new Error(`Call #${row.id} has no chain id`)
+  const sent = await write({
+    address: c.calls,
+    abi: presageCallsAbi,
+    functionName: 'reveal',
+    args: [BigInt(row.chainCallId), row.salt as Hex, stringToHex(row.payload), OUTCOME_CODE[outcome], result],
+    label: `reveal call #${row.id} → ${outcome} ${result}`,
+  })
+  const block = await publicClient.getBlock({ blockNumber: sent.receipt.blockNumber })
+  await db
+    .update(schema.calls)
+    .set({
+      status: 'revealed',
+      outcome,
+      result,
+      resolution: JSON.stringify(resolution),
+      revealTx: sent.hash,
+      revealedAt: Number(block.timestamp),
+    })
+    .where(eq(schema.calls.id, row.id))
+
+  if (row.requestId) await settlePaid(row.id, row.requestId as Hex)
+}
+
+export async function settlePaid(callRowId: number, requestId: Hex): Promise<void> {
+  try {
+    const sent = await write({
+      address: contracts().market,
+      abi: presageMarketAbi,
+      functionName: 'settle',
+      args: [requestId],
+      label: `settle paid call #${callRowId}`,
+    })
+    await getDb().update(schema.calls).set({ settleTx: sent.hash }).where(eq(schema.calls.id, callRowId))
+  } catch (e) {
+    l.warn(`settle for call #${callRowId} will be retried`, { error: errMsg(e) })
+  }
+}
