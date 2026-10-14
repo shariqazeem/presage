@@ -13,6 +13,9 @@ import { write } from './tx'
 
 const l = log('resolver')
 
+/** A setup can only change when a 15-minute candle closes, so each is checked once per candle. */
+const lastSetupCheck = new Map<number, number>()
+
 /** Work out every open call that can be resolved, and reveal it. Most urgent deadline first. */
 export async function resolveDue(): Promise<void> {
   const db = getDb()
@@ -44,6 +47,9 @@ export async function resolveDue(): Promise<void> {
       }
 
       if (p.rules === 'presage/setup-v1') {
+        const candle = Math.floor(now / 900)
+        if (lastSetupCheck.get(row.id) === candle) continue
+        lastSetupCheck.set(row.id, candle)
         const candles = await candles15mSince(p.asset, row.sealedAt)
         const res = resolveSetup(p, candles, row.sealedAt, now)
         if (res) {

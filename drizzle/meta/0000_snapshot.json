@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "e78aa1f5-a3e3-4522-aa19-cd96e71db6d1",
+  "id": "167d153c-5f6e-48ab-8759-ba774272f079",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "agent_drafts": {
@@ -11,6 +11,13 @@
           "name": "id",
           "type": "text",
           "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
@@ -85,7 +92,15 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "agent_drafts_slug_unique": {
+          "name": "agent_drafts_slug_unique",
+          "columns": [
+            "slug"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
@@ -581,6 +596,13 @@
           "name": "request_id",
           "type": "text",
           "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "secret_hash": {
+          "name": "secret_hash",
+          "type": "text",
+          "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },

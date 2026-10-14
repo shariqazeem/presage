@@ -1,5 +1,6 @@
 CREATE TABLE `agent_drafts` (
 	`id` text PRIMARY KEY NOT NULL,
+	`slug` text NOT NULL,
 	`creator` text NOT NULL,
 	`name` text NOT NULL,
 	`description` text NOT NULL,
@@ -12,6 +13,7 @@ CREATE TABLE `agent_drafts` (
 	`created_at` integer NOT NULL
 );
 --> statement-breakpoint
+CREATE UNIQUE INDEX `agent_drafts_slug_unique` ON `agent_drafts` (`slug`);--> statement-breakpoint
 CREATE TABLE `agents` (
 	`id` integer PRIMARY KEY NOT NULL,
 	`slug` text NOT NULL,
@@ -88,6 +90,7 @@ CREATE TABLE `kv` (
 --> statement-breakpoint
 CREATE TABLE `oracle_requests` (
 	`request_id` text PRIMARY KEY NOT NULL,
+	`secret_hash` text NOT NULL,
 	`wallet` text,
 	`asset` text NOT NULL,
 	`horizon` text NOT NULL,

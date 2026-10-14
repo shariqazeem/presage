@@ -23,6 +23,8 @@ export const agents = sqliteTable('agents', {
 /** A strategy a creator has compiled and confirmed, before (and while) it is registered on chain. */
 export const agentDrafts = sqliteTable('agent_drafts', {
   id: text('id').primaryKey(),
+  /** Fixed when the draft is made, because the ERC-8004 card URL has to exist before the identity does. */
+  slug: text('slug').notNull().unique(),
   creator: text('creator').notNull(),
   name: text('name').notNull(),
   description: text('description').notNull(),
@@ -84,6 +86,9 @@ export const oracleRequests = sqliteTable(
   'oracle_requests',
   {
     requestId: text('request_id').primaryKey(),
+    /** sha256 of the secret handed to whoever asked. The request id goes public on chain once paid,
+     * so the secret, not the id, is what unlocks the answer before it is revealed. */
+    secretHash: text('secret_hash').notNull(),
     wallet: text('wallet'),
     asset: text('asset').notNull(),
     horizon: text('horizon').notNull(),

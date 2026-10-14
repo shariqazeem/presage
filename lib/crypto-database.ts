@@ -1,9 +1,9 @@
 /**
- * Comprehensive Cryptocurrency Database for Oracle Agent
- *
- * Showcases x402 + Parallax capability to provide predictions for ANY cryptocurrency
- * Perfect for hackathon demo: "Our Oracle isn't limited - it covers the entire crypto market!"
+ * The coin list behind the Oracle's coin picker (carried over from ParallaxPay). ALL_COINS is the raw
+ * list; CRYPTO_DATABASE is the part the Oracle covers, every coin with a live Binance USDT market,
+ * so each call names a price source anyone can check.
  */
+import { ORACLE_SYMBOLS } from './oracle'
 
 export interface CryptoAsset {
   symbol: string
@@ -33,7 +33,7 @@ export const CRYPTO_CATEGORIES = {
   EMERGING: 'Emerging Projects'
 } as const
 
-export const CRYPTO_DATABASE: CryptoAsset[] = [
+export const ALL_COINS: CryptoAsset[] = [
   // ===== MAJOR CRYPTOCURRENCIES =====
   { symbol: 'BTC', name: 'Bitcoin', coinGeckoId: 'bitcoin', category: 'MAJOR', marketCapRank: 1 },
   { symbol: 'ETH', name: 'Ethereum', coinGeckoId: 'ethereum', category: 'MAJOR', marketCapRank: 2 },
@@ -199,6 +199,13 @@ export const CRYPTO_DATABASE: CryptoAsset[] = [
 ]
 
 // Helper functions
+const seen = new Set<string>()
+export const CRYPTO_DATABASE: CryptoAsset[] = ALL_COINS.filter(c => {
+  if (!ORACLE_SYMBOLS.has(c.symbol) || seen.has(c.symbol)) return false
+  seen.add(c.symbol)
+  return true
+})
+
 export function getCoinById(coinGeckoId: string): CryptoAsset | undefined {
   return CRYPTO_DATABASE.find(coin => coin.coinGeckoId === coinGeckoId)
 }
@@ -237,37 +244,9 @@ export function getAllCategories(): Array<{ key: string; label: string; count: n
 }
 
 // Featured coins for quick access
-export const FEATURED_COINS = ['BTC', 'ETH', 'SOL', 'USDC', 'USDT', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX']
+export const FEATURED_COINS = ['BTC', 'ETH', 'METIS', 'SOL', 'BNB', 'XRP', 'DOGE', 'LINK', 'AVAX', 'SUI'].filter(s => ORACLE_SYMBOLS.has(s))
 
 // Get total supported coins count
 export const TOTAL_SUPPORTED_COINS = CRYPTO_DATABASE.length
 
 // Hackathon demo talking point
-export const HACKATHON_PITCH = `
-🎯 ORACLE AGENT: Your x402-Powered Crypto Intelligence Platform
-
-✨ What makes this special:
-• ${TOTAL_SUPPORTED_COINS}+ cryptocurrencies supported (not just BTC/ETH/SOL!)
-• Each prediction powered by Gradient Parallax AI multi-provider consensus
-• Pay-per-prediction with x402 micropayments on Solana
-• Autonomous operation: Runs 24/7, builds on-chain reputation
-• Agent-to-agent ready: Other AI agents can query our Oracle
-
-💰 x402 Micropayments Demo:
-• Traditional API: $50-100/month for limited calls
-• Our Oracle: Pay only $0.0001-0.001 per prediction
-• Perfect for AI agents: No subscriptions, pay-as-you-go
-• Transparent: Every transaction on Solana blockchain
-
-🤖 Gradient Parallax Showcase:
-• Multi-provider consensus (3-5 AI providers per prediction)
-• Real-time accuracy tracking and verification
-• Smart reasoning: AI explains its predictions
-• Production-ready: Real traders can use this today
-
-🏆 Why judges will love it:
-• Real-world use case that couldn't exist without x402
-• Shows the power of AI agent micropayments
-• Production quality, not a prototype
-• Developer-friendly: Anyone can deploy their own Oracle
-`

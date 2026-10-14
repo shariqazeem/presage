@@ -5,7 +5,7 @@ import type { SetupPayload } from '../lib/calls/payload'
 import { getDb, schema } from '../lib/db'
 import { chatJson, llmConfigured, models } from '../lib/llm'
 import { loadFrames } from '../lib/market/frames'
-import { topPools, trendingPools, type Pool } from '../lib/market/geckoterminal'
+import { GT_POOL_BUDGET, topPools, trendingPools, type Pool } from '../lib/market/geckoterminal'
 import type { AssetRef, Frames } from '../lib/market/types'
 import { publishCall } from './calls'
 import { errMsg, log } from './log'
@@ -20,7 +20,7 @@ type GtAsset = Extract<AssetRef, { source: 'geckoterminal' }> & { liquidityUsd: 
 
 // ST Quant's own universe filters (okxtradingagent/src/universe.js), applied to GeckoTerminal pools.
 const FILTERS = { minLiquidityUsd: 120_000, minVolume24hUsd: 200_000, minTurnover: 0.08 }
-const MAX_UNIVERSE = Number(process.env.STQUANT_MAX_UNIVERSE ?? 24)
+const MAX_UNIVERSE = Number(process.env.STQUANT_MAX_UNIVERSE ?? GT_POOL_BUDGET)
 const NETWORKS = (process.env.STQUANT_NETWORKS ?? 'bsc,x-layer').split(',').map(s => s.trim())
 const MAX_OPEN = Number(process.env.STQUANT_MAX_OPEN ?? 8)
 const AI_READS_PER_SCAN = 2
@@ -29,6 +29,8 @@ const PARKING =
   /^(w?eth|w?btc|cb?btc|tbtc|w?bnb|w?sol|okb|matic|pol|avax|weeth|eeth|steth|wsteth|reth|cbeth|sfrx|frx|xaut|paxg|usd|usdt|usdc|dai|fdusd|tusd|usde|susd|susds|pyusd|aarb|ausdc|a[a-z]*usd)/i
 // Tokenised stocks (wNVDAx, wQQQx, ...) track an equity, which by the same logic is not ST Quant's game.
 const TOKENISED_STOCK = /^w?[A-Z]{1,5}x$/
+// Bridged or tokenised majors (xETH, xBTC, xSOL, ...) for the same reason.
+const TOKENISED_MAJOR = /^x(eth|btc|sol|bnb|xrp|doge)$/i
 
 const CHART_DIR = resolve(process.env.PRESAGE_CHART_DIR ?? 'var/charts')
 const RUBRIC = readFileSync(new URL('./stquant/RUBRIC.md', import.meta.url), 'utf8')
@@ -49,7 +51,7 @@ async function refreshUniverse(): Promise<void> {
   }
   const best = new Map<string, Pool>()
   for (const p of pools) {
-    if (PARKING.test(p.baseSymbol) || TOKENISED_STOCK.test(p.baseSymbol)) continue
+    if (PARKING.test(p.baseSymbol) || TOKENISED_STOCK.test(p.baseSymbol) || TOKENISED_MAJOR.test(p.baseSymbol)) continue
     if (p.liquidityUsd < FILTERS.minLiquidityUsd || p.volume24hUsd < FILTERS.minVolume24hUsd) continue
     if (p.volume24hUsd / p.liquidityUsd < FILTERS.minTurnover) continue
     const key = `${p.network}:${p.baseToken.toLowerCase()}`

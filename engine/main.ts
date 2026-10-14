@@ -33,6 +33,29 @@ function every(name: string, ms: number, fn: () => Promise<void>) {
   setInterval(tick, ms)
 }
 
+/** Run `fn` `delaySec` after every `minutes`-minute boundary (UTC), never overlapping itself. */
+function onCandleClose(name: string, minutes: number, delaySec: number, fn: () => Promise<void>) {
+  let running = false
+  const schedule = () => {
+    const period = minutes * 60_000
+    const wait = period - (Date.now() % period) + delaySec * 1000
+    setTimeout(async () => {
+      if (!running) {
+        running = true
+        try {
+          await fn()
+        } catch (e) {
+          l.error(`${name}: ${errMsg(e)}`)
+        } finally {
+          running = false
+        }
+      }
+      schedule()
+    }, wait)
+  }
+  schedule()
+}
+
 function houseAgentId(slug: string): number | null {
   const row = getDb().select({ id: schema.agents.id }).from(schema.agents).where(eq(schema.agents.slug, slug)).get()
   return row?.id ?? null
@@ -55,7 +78,8 @@ async function main() {
   every('refunds', 5 * 60_000, refundUndelivered)
   if (oracleId != null) every('oracle', 2_000, () => answerPaid(oracleId))
   else l.warn('no Oracle agent registered yet: run scripts/register-house-agents.ts')
-  if (stquantId != null && process.env.STQUANT_ENABLED !== '0') every('stquant', 5 * 60_000, () => scanOnce(stquantId))
+  // ST Quant reads 15-minute candles, so it scans once per candle, a minute after each one closes.
+  if (stquantId != null && process.env.STQUANT_ENABLED !== '0') onCandleClose('stquant', 15, 60, () => scanOnce(stquantId))
   every('creators', 5 * 60_000, runCreatorAgents)
   if (!isMainnet) every('testnet-feed', 6 * 3_600_000, keepTestnetFeedFresh)
   every('gas', 30 * 60_000, async () => {

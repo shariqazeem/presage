@@ -1,7 +1,7 @@
 // Writes lib/oracle-assets.ts: the coins from ParallaxPay's database that Binance trades against USDT.
 // Run with: npx tsx scripts/oracle-assets.ts
 import { writeFileSync } from 'node:fs'
-import { CRYPTO_DATABASE } from '../lib/crypto-database'
+import { ALL_COINS as CRYPTO_DATABASE } from '../lib/crypto-database'
 import { binanceUsdtMarkets } from '../lib/market/binance'
 
 // Same project, new ticker. (FTM to S and MKR to SKY are left out: those were conversions, not renames.)

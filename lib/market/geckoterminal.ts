@@ -1,27 +1,44 @@
 import type { Candle } from './types'
 
-// GeckoTerminal's public API: DEX pools on BSC and X Layer. No key, but the free tier throttles hard,
-// so every request goes through one queue that spaces calls out and backs off on 429.
-const BASE = 'https://api.geckoterminal.com/api/v2'
-const MIN_GAP_MS = Number(process.env.GT_MIN_GAP_MS ?? 2600)
+// GeckoTerminal's DEX data: pools on BSC and X Layer. Without a key the public API allows only a few
+// requests a minute from one IP, so every request goes through one queue that spaces calls out and
+// backs off on 429. With a free CoinGecko demo key the same data comes from CoinGecko's on-chain API,
+// which allows 30 a minute.
+const KEY = process.env.COINGECKO_API_KEY
+const BASE = KEY ? 'https://api.coingecko.com/api/v3/onchain' : 'https://api.geckoterminal.com/api/v2'
+/** Pools ST Quant can afford to watch at this source's rate limit. */
+export const GT_POOL_BUDGET = KEY ? 24 : 12
 
+// The gap between requests adapts: it widens on every 429 and narrows slowly after a run of successes,
+// so it settles just under whatever limit applies to this IP.
+const FLOOR_MS = KEY ? 2_100 : 2_500
+let gapMs = Number(process.env.GT_MIN_GAP_MS ?? (KEY ? 2_100 : 12_000))
+let okStreak = 0
 let chain: Promise<unknown> = Promise.resolve()
 let last = 0
 
 async function gt<T>(path: string): Promise<T> {
   const run = async (): Promise<T> => {
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const wait = last + MIN_GAP_MS - Date.now()
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const wait = last + gapMs - Date.now()
       if (wait > 0) await new Promise(r => setTimeout(r, wait))
       last = Date.now()
       const res = await fetch(`${BASE}${path}`, {
-        headers: { accept: 'application/json;version=20230302' },
+        headers: KEY ? { accept: 'application/json', 'x-cg-demo-api-key': KEY } : { accept: 'application/json;version=20230302' },
         signal: AbortSignal.timeout(15_000),
         cache: 'no-store',
       })
-      if (res.ok) return (await res.json()) as T
+      if (process.env.GT_DEBUG) console.log(`${new Date().toISOString()} GT ${res.status} gap=${gapMs} ${path.slice(0, 80)}`)
+      if (res.ok) {
+        if (++okStreak >= 10) {
+          gapMs = Math.max(FLOOR_MS, Math.round(gapMs * 0.9))
+          okStreak = 0
+        }
+        return (await res.json()) as T
+      }
       if (res.status === 429 || res.status >= 500) {
-        await new Promise(r => setTimeout(r, 5_000 * 2 ** attempt))
+        okStreak = 0
+        if (res.status === 429) gapMs = Math.min(30_000, Math.round(gapMs * 1.5))
         continue
       }
       throw new Error(`GeckoTerminal ${res.status} for ${path}`)
