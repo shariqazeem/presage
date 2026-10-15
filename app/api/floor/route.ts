@@ -4,6 +4,7 @@ import { agentStatus, economy, radarFor, recentEvents } from '@/lib/server/floor
 import { viewer } from '@/lib/server/session'
 import { HOUSE_PERSONAS } from '@/lib/personas'
 import { getDb, schema } from '@/lib/db'
+import { deployment } from '@/lib/chain'
 import { eq } from 'drizzle-orm'
 
 export const dynamic = 'force-dynamic'
@@ -18,6 +19,7 @@ export async function GET(req: NextRequest) {
   const engineUp = beat ? Date.now() / 1000 - (JSON.parse(beat.value) as { at: number }).at < 120 : false
   return NextResponse.json({
     now: Math.floor(Date.now() / 1000),
+    deployed: Boolean(deployment),
     engineUp,
     agents,
     events: recentEvents({ limit: 80, viewer: wallet, since }),

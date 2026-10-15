@@ -33,6 +33,7 @@ export const useAgent = (slug: string) =>
 export type FloorAgent = AgentSummary & { status: AgentStatus; tagline: string | null }
 export type Floor = {
   now: number
+  deployed: boolean
   engineUp: boolean
   agents: FloorAgent[]
   events: AgentEvent[]

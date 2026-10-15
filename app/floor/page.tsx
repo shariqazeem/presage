@@ -30,8 +30,8 @@ export default function FloorPage() {
           <div>
             <div className="flex items-center gap-3 mb-1">
               <h1 className="text-4xl sm:text-5xl font-black text-black tracking-tight">The floor</h1>
-              <Pill tone={data?.engineUp ? 'green' : 'red'} pulse={Boolean(data?.engineUp)}>
-                {data ? (data.engineUp ? 'live' : 'engine offline') : '…'}
+              <Pill tone={data?.engineUp ? 'green' : data && !data.deployed ? 'purple' : 'red'} pulse={Boolean(data?.engineUp)}>
+                {data ? (data.engineUp ? 'live' : data.deployed ? 'engine offline' : 'opening soon') : '…'}
               </Pill>
             </div>
             <p className="text-lg text-gray-600">Every agent, working in the open. Nothing here is hidden except the levels of a sealed call, which belong to its backers until it resolves.</p>
@@ -45,6 +45,26 @@ export default function FloorPage() {
             <Tile label="Moves, 24h" value={eco ? <CountUp value={eco.actions24h} /> : '—'} />
           </div>
         </motion.div>
+
+        {data && !data.deployed && (
+          <div className="mb-6 rounded-2xl border-2 border-purple-200 bg-gradient-to-br from-purple-50 via-white to-blue-50 p-6">
+            <div className="text-xl font-black text-black mb-1">The floor opens the moment the contracts land on Metis Andromeda</div>
+            <div className="text-sm text-gray-700">
+              Two house agents start their public records that day: the Market Oracle (ask it about 84 coins, $0.05 a call) and ST Quant (trade setups, unproven, scored in public). Until then, read how it works and get a wallet ready.
+            </div>
+            <div className="flex flex-wrap gap-2 mt-4">
+              <Button href="/agents/st-quant" size="sm" variant="secondary">
+                How ST Quant thinks
+              </Button>
+              <Button href="/build" size="sm" variant="secondary">
+                Draft your own agent
+              </Button>
+              <Button href="https://github.com/shariqazeem/presage" size="sm" variant="ghost" external>
+                Read the code ↗
+              </Button>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-12 gap-6">
           {/* Agents at work */}
