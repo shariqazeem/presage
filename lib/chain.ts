@@ -20,6 +20,8 @@ export const isMainnet = NETWORK === 'metis'
 export const rpcUrls: string[] = (() => {
   const custom = process.env.NEXT_PUBLIC_PRESAGE_RPC_URL
   const base = isMainnet ? ANDROMEDA_RPCS : SEPOLIA_RPCS
+  // A rehearsal on a local fork must never fall back to a public RPC.
+  if (custom && process.env.NEXT_PUBLIC_PRESAGE_RPC_ONLY === '1') return [custom]
   return custom ? [custom, ...base] : base
 })()
 

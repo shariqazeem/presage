@@ -24,6 +24,10 @@ const MAX_UNIVERSE = Number(process.env.STQUANT_MAX_UNIVERSE ?? GT_POOL_BUDGET)
 const NETWORKS = (process.env.STQUANT_NETWORKS ?? 'bsc,x-layer').split(',').map(s => s.trim())
 const MAX_OPEN = Number(process.env.STQUANT_MAX_OPEN ?? 8)
 const AI_READS_PER_SCAN = 2
+// A chart read costs a few cents of model time; cap them per UTC day so spend stays bounded.
+const AI_READS_PER_DAY = Number(process.env.STQUANT_MAX_AI_READS_PER_DAY ?? 60)
+let aiDay = ''
+let aiToday = 0
 // Wrapped, pegged, staked or tokenised majors: they track something else. Same list as ST Quant.
 const PARKING =
   /^(w?eth|w?btc|cb?btc|tbtc|w?bnb|w?sol|okb|matic|pol|avax|weeth|eeth|steth|wsteth|reth|cbeth|sfrx|frx|xaut|paxg|usd|usdt|usdc|dai|fdusd|tusd|usde|susd|susds|pyusd|aarb|ausdc|a[a-z]*usd)/i
@@ -263,8 +267,14 @@ export async function scanOnce(agentId: number): Promise<void> {
         continue
       }
       // Sniper fires need the chart read's approval; without a model only armed plans go out.
-      if (!llmConfigured() || !models.vision() || aiReads >= AI_READS_PER_SCAN) continue
+      const today = new Date().toISOString().slice(0, 10)
+      if (today !== aiDay) {
+        aiDay = today
+        aiToday = 0
+      }
+      if (!llmConfigured() || !models.vision() || aiReads >= AI_READS_PER_SCAN || aiToday >= AI_READS_PER_DAY) continue
       aiReads++
+      aiToday++
       const read = await chartRead(c, renderChart({ symbol: c.asset.symbol, frames: c.frames }))
       l.info(`chart read ${c.asset.symbol}: ${read.verdict} ${read.conviction}`, { why: read.why })
       if (read.verdict === 'BUY' && read.conviction >= 4) {

@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { stringToHex, type Hex } from 'viem'
+import { parseEventLogs, stringToHex, type Hex } from 'viem'
 import { presageCallsAbi } from '../lib/abi/PresageCalls'
 import { presageMarketAbi } from '../lib/abi/PresageMarket'
 import { commitmentOf, newSalt, serializePayload, type CallPayload } from '../lib/calls/payload'
@@ -73,13 +73,18 @@ export async function publishCall(input: { payload: CallPayload; revealBy: numbe
           args: [BigInt(payload.agent), commitment, input.revealBy],
           label: `seal call #${row.id} (${payload.asset.symbol})`,
         })
-    const ev = sent.logs.find(e => e.eventName === 'CallSealed')
+    // CallSealed comes from PresageCalls even when the market sealed a paid call, so decode with its ABI.
+    const ev = parseEventLogs({
+      abi: presageCallsAbi,
+      eventName: 'CallSealed',
+      logs: sent.receipt.logs.filter(x => x.address.toLowerCase() === c.calls.toLowerCase()),
+    })[0]
     if (!ev) throw new Error('No CallSealed event in the seal transaction')
     const block = await publicClient.getBlock({ blockNumber: sent.receipt.blockNumber })
     const [updated] = await db
       .update(schema.calls)
       .set({
-        chainCallId: Number(ev.args.callId as bigint),
+        chainCallId: Number(ev.args.callId),
         sealTx: sent.hash,
         sealedAt: Number(block.timestamp),
         status: 'sealed',

@@ -14,6 +14,7 @@
 // re-judged every scan until it fills or is cancelled.
 
 import { atr, mfi, bullishDivergence, hugsLine, ema } from './indicators.js';
+import { ord } from './indicators.js';
 import { supportMap, mfiExtreme, keySupports } from './sniper.js';
 import { supportZones } from './structure.js';
 import { resistanceZones, fitBoundary, patternSupport } from './structure.js';
@@ -373,15 +374,15 @@ export function armPlan(frames, token) {
     if (m15 != null && m15 > ARM.maxMfiAbsoluteAtArm) {
       blockers.push(`15m MFI ${m15.toFixed(0)} is not low (needs <= ${ARM.maxMfiAbsoluteAtArm}, ideally <= ${ARM.idealMfiAtEntry}) and the structure is not strong enough to carry the trade alone`);
     } else {
-      blockers.push(`15m MFI ${m15?.toFixed(0)} sits at the ${Math.round(x15.percentile * 100)}th percentile — not oversold, no exhaustion to buy`);
+      blockers.push(`15m MFI ${m15?.toFixed(0)} sits at the ${ord(Math.round(x15.percentile * 100))} percentile — not oversold, no exhaustion to buy`);
     }
   } else if (mfiFailed && structureCarries) {
     reasons.push(`STRUCTURE OVERRIDE: MFI ${m15?.toFixed(0)} is not low, but ${level.tf} ${level.type} has ${level.strength} touches and is confirmed by ${structural.confirmedOn} — the structure is the signal here`);
   } else {
-    reasons.push(`15m MFI ${m15?.toFixed(0)} at the ${Math.round(x15.percentile * 100)}th percentile of its own range (low ${x15.min})`);
+    reasons.push(`15m MFI ${m15?.toFixed(0)} at the ${ord(Math.round(x15.percentile * 100))} percentile of its own range (low ${x15.min})`);
   }
   if (m1h != null && m1h > 65) blockers.push(`1H MFI ${m1h.toFixed(0)} — momentum still hot, a dip here is not exhaustion`);
-  else if (x1h) reasons.push(`1H MFI ${m1h?.toFixed(0)} at the ${Math.round(x1h.percentile * 100)}th percentile`);
+  else if (x1h) reasons.push(`1H MFI ${m1h?.toFixed(0)} at the ${ord(Math.round(x1h.percentile * 100))} percentile`);
 
   const htf = HTF_EARLY;
   if (htf.weak) blockers.push(`higher timeframe is not constructive — ${htf.notes.join('; ')}`);
@@ -464,13 +465,13 @@ export function armPlan(frames, token) {
   const entryType = atLevelNow && atBottom && !htf.weak ? 'market' : 'limit';
 
   if (bottom1h && !bottom15) {
-    reasons.push(`1H MFI ${m1h?.toFixed(0)} at the ${Math.round(x1h.percentile * 100)}th percentile of its own range — bottomed on the reliable timeframe while sitting on confirmed structure, so the 15m (${m15?.toFixed(0)}) is timing noise here`);
+    reasons.push(`1H MFI ${m1h?.toFixed(0)} at the ${ord(Math.round(x1h.percentile * 100))} percentile of its own range — bottomed on the reliable timeframe while sitting on confirmed structure, so the 15m (${m15?.toFixed(0)}) is timing noise here`);
   }
   if (atLevelNow && !atBottom) {
-    blockers.push(`price is at the level but MFI is not at its bottom on either timeframe — 15m ${m15?.toFixed(0)} (${Math.round((x15?.percentile ?? 1) * 100)}th pct), 1H ${m1h?.toFixed(0)} (${Math.round((x1h?.percentile ?? 1) * 100)}th pct). MFI rising is not a signal`);
+    blockers.push(`price is at the level but MFI is not at its bottom on either timeframe — 15m ${m15?.toFixed(0)} (${ord(Math.round((x15?.percentile ?? 1) * 100))} pct), 1H ${m1h?.toFixed(0)} (${ord(Math.round((x1h?.percentile ?? 1) * 100))} pct). MFI rising is not a signal`);
   }
   if (entryType === 'market') {
-    reasons.push(`MARKET ENTRY: price is on the level with 15m MFI ${m15?.toFixed(0)} at the ${Math.round((x15?.percentile ?? 0) * 100)}th percentile — MFI is at its bottom, not merely rising`);
+    reasons.push(`MARKET ENTRY: price is on the level with 15m MFI ${m15?.toFixed(0)} at the ${ord(Math.round((x15?.percentile ?? 0) * 100))} percentile — MFI is at its bottom, not merely rising`);
   }
 
   return {

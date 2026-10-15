@@ -11,7 +11,7 @@ const VOCABULARY = `Allowed vocabulary (JSON). Timeframes: "15m" | "1h" | "4h" |
 Levels (LevelRef):
 - {"kind":"support","tf":TF,"type":"any"|"horizontal"|"trendline-rising"|"trendline-falling"|"pattern-apex"}: the nearest support of that type at or below price.
 - {"kind":"patternSupport"}: support confirmed across the higher timeframes.
-- {"kind":"firstRejection"}: the high of the biggest recent 4-hour pump candle, at most 30% up (the classic first target).
+- {"kind":"firstRejection"}: the high of the biggest recent 4-hour pump candle, at most 30% up. Traders call this the first or last rejection point, the pump tip, or TP1.
 - {"kind":"nearestResistance"}: the nearest level above price that rejected it before.
 - {"kind":"recentLow","tf":TF,"bars":N} / {"kind":"recentHigh","tf":TF,"bars":N}.
 

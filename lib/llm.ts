@@ -55,9 +55,10 @@ export async function chatJson<T>(opts: Parameters<typeof chat>[0]): Promise<T> 
   try {
     return extractJson(await chat({ ...opts, json: true })) as T
   } catch (e) {
-    // Some gateways reject response_format for some models; ask again without it.
-    if (e instanceof Error && /response_format|json_object/i.test(e.message)) {
-      return extractJson(await chat({ ...opts, json: false })) as T
+    // Some gateways reject response_format for some models, and reasoning models can spend the whole
+    // token budget thinking and return nothing. Ask once more without JSON mode and with more room.
+    if (e instanceof Error && /response_format|json_object|returned no text|No JSON object/i.test(e.message)) {
+      return extractJson(await chat({ ...opts, json: false, maxTokens: Math.max(1_200, (opts.maxTokens ?? 800) * 3) })) as T
     }
     throw e
   }

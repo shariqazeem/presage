@@ -1,6 +1,6 @@
 import type { Candle, Frames } from '../lib/market/types'
 import type { Condition, LevelRef, StrategySpec } from '../lib/spec/schema'
-import { atr, bullishDivergence, ema, mfi, volumeSpike } from './stquant/indicators.js'
+import { atr, bullishDivergence, ema, mfi, ord, volumeSpike } from './stquant/indicators.js'
 import { firstRejection, nearestRejector } from './stquant/arming.js'
 import { keySupports, mfiExtreme } from './stquant/sniper.js'
 import { patternSupport } from './stquant/structure.js'
@@ -47,7 +47,7 @@ export function check(f: Frames, c: Condition, price: number): { ok: boolean; sa
       if (!x) return { ok: false, saw: `${c.tf} MFI history too short` }
       return {
         ok: c.op === '<=' ? x.percentile <= c.value : x.percentile >= c.value,
-        saw: `${c.tf} MFI ${n(x.value, 1)}, at the ${Math.round(x.percentile * 100)}th percentile of its last 100 readings`,
+        saw: `${c.tf} MFI ${n(x.value, 1)}, at the ${ord(Math.round(x.percentile * 100))} percentile of its last 100 readings`,
       }
     }
     case 'mfiTurningUp': {

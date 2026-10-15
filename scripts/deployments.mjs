@@ -3,7 +3,8 @@
 import { readFileSync, readdirSync, writeFileSync, existsSync } from 'node:fs'
 
 const root = new URL('..', import.meta.url).pathname
-const dir = `${root}contracts/deployments`
+// Pass a directory to generate from a rehearsal instead (e.g. contracts/deployments/fork).
+const dir = process.argv[2] ? new URL(process.argv[2], `file://${root}`).pathname : `${root}contracts/deployments`
 const out = {}
 if (existsSync(dir)) {
   for (const f of readdirSync(dir).filter(f => /^\d+\.json$/.test(f))) {

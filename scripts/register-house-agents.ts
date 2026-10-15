@@ -17,7 +17,9 @@ import { SETTINGS, SIGNAL } from '../engine/stquant/settings.js'
 
 const site = (process.env.NEXT_PUBLIC_SITE_URL ?? '').replace(/\/$/, '')
 if (!deployment) throw new Error('No deployment for this network; run the deploy script first')
-if (!site || (isMainnet && /localhost|127\.0\.0\.1/.test(site))) throw new Error('Set NEXT_PUBLIC_SITE_URL to the public site first')
+if (!site || (isMainnet && /localhost|127\.0\.0\.1/.test(site) && process.env.PRESAGE_REHEARSAL !== '1')) {
+  throw new Error('Set NEXT_PUBLIC_SITE_URL to the public site first')
+}
 
 const account = privateKeyToAccount(process.env.PRESAGE_DEPLOYER_KEY as Hex)
 const wallet = createWalletClient({ account, chain, transport: fallback(rpcUrls.map(u => http(u))) })

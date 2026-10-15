@@ -57,9 +57,9 @@ export function CoinSelector({ selectedCoin, onSelectCoin, className = '' }: Coi
             {selectedCoinData?.symbol || '?'}
           </div>
           <div className="text-left">
-            <div className="font-bold text-white">{selectedCoinData?.name || 'Select Coin'}</div>
-            <div className="text-xs text-gray-400">
-              {selectedCoinData?.category ? CRYPTO_CATEGORIES[selectedCoinData.category as keyof typeof CRYPTO_CATEGORIES] : 'Choose from 150+ coins'}
+            <div className="font-bold text-black">{selectedCoinData?.name || 'Select Coin'}</div>
+            <div className="text-xs text-gray-600">
+              {selectedCoinData?.category ? CRYPTO_CATEGORIES[selectedCoinData.category as keyof typeof CRYPTO_CATEGORIES] : `Choose from ${CRYPTO_DATABASE.length} coins`}
             </div>
           </div>
         </div>

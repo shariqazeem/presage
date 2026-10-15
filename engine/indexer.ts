@@ -11,6 +11,7 @@ import { errMsg, log } from './log'
 const l = log('indexer')
 const KEY = 'indexer:lastBlock'
 const STEP = 2_000n
+let replayed = false
 
 const json = (v: unknown) => JSON.stringify(v, (_, x) => (typeof x === 'bigint' ? x.toString() : x))
 
@@ -35,6 +36,11 @@ export async function indexOnce(): Promise<void> {
   }
   const stored = db.select().from(schema.kv).where(eq(schema.kv.key, KEY)).get()
   let from = stored ? BigInt(stored.value) + 1n : BigInt(c.deployedAtBlock)
+  // INDEXER_REPLAY=1 re-reads everything once from the deployment block; every handler is idempotent.
+  if (process.env.INDEXER_REPLAY === '1' && !replayed) {
+    replayed = true
+    from = BigInt(c.deployedAtBlock)
+  }
   const latest = await publicClient.getBlockNumber()
 
   while (from <= latest) {
@@ -124,6 +130,20 @@ async function apply(ev: Log & { eventName: string; args: Record<string, unknown
         })
         .where(and(eq(schema.oracleRequests.requestId, String(a.requestId)), eq(schema.oracleRequests.status, 'quoted')))
         .run()
+      break
+    case 'CallDelivered': {
+      // The answer to a paid request was sealed. Link them, even if the process that sealed it failed.
+      const call = db.select({ id: schema.calls.id }).from(schema.calls).where(eq(schema.calls.chainCallId, Number(a.callId))).get()
+      if (call) {
+        db.update(schema.oracleRequests)
+          .set({ status: 'sealed', callId: call.id, sealedAt: timestamp, error: null })
+          .where(and(eq(schema.oracleRequests.requestId, String(a.requestId)), inArray(schema.oracleRequests.status, ['paid', 'answering', 'failed'])))
+          .run()
+      }
+      break
+    }
+    case 'CallRefunded':
+      db.update(schema.oracleRequests).set({ status: 'refunded' }).where(eq(schema.oracleRequests.requestId, String(a.requestId))).run()
       break
     case 'AgentRegistered':
       db.update(schema.agents)

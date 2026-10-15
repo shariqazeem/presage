@@ -11,7 +11,7 @@ import { CoinSelector } from '@/components/CoinSelector'
 import { WalletButton } from '@/components/WalletButton'
 import { FEATURED_COINS, TOTAL_SUPPORTED_COINS } from '@/lib/crypto-database'
 import { presageMarketAbi } from '@/lib/abi/PresageMarket'
-import { payTokens, txUrl } from '@/lib/chain'
+import { deployment, payTokens, txUrl } from '@/lib/chain'
 import { HORIZONS, type Horizon } from '@/lib/oracle'
 import { useAgent } from '@/lib/client/hooks'
 import { ago, bps, OUTCOME_STYLE, pct, price, until, when } from '@/lib/client/format'
@@ -174,6 +174,28 @@ export default function OraclePage() {
       setStage('idle')
       const msg = e instanceof Error ? e.message.split('\n')[0] : 'Something went wrong'
       toast.error(msg.includes('User rejected') ? 'Payment cancelled' : msg)
+    }
+  }
+
+  // Undelivered after 15 minutes, or forfeited: the payer takes the money back from escrow themselves.
+  const refund = async (requestId: Hex) => {
+    if (!publicClient || !deployment) return
+    try {
+      const r = await publicClient.readContract({ address: deployment.market, abi: presageMarketAbi, functionName: 'getRequest', args: [requestId] })
+      if (r.state === 1) {
+        const h = await writeContractAsync({ address: deployment.market, abi: presageMarketAbi, functionName: 'refundUndelivered', args: [requestId] })
+        await publicClient.waitForTransactionReceipt({ hash: h })
+      } else if (r.state === 2) {
+        const h = await writeContractAsync({ address: deployment.market, abi: presageMarketAbi, functionName: 'settle', args: [requestId] })
+        await publicClient.waitForTransactionReceipt({ hash: h })
+      }
+      const h2 = await writeContractAsync({ address: deployment.market, abi: presageMarketAbi, functionName: 'claim', args: [r.token] })
+      await publicClient.waitForTransactionReceipt({ hash: h2 })
+      toast.success('Refunded to your wallet')
+      setAnswer(a => (a ? { ...a } : a))
+    } catch (e) {
+      const msg = e instanceof Error ? e.message.split('\n')[0] : 'Refund failed'
+      toast.error(msg.includes('DeliveryWindowOpen') ? 'Wait 15 minutes after paying before refunding' : msg.includes('User rejected') ? 'Cancelled' : msg)
     }
   }
 
@@ -419,7 +441,7 @@ export default function OraclePage() {
             {[
               { icon: '🔒', value: record.calls, label: 'Calls sealed', border: 'border-gray-200', color: 'text-black' },
               { icon: '✅', value: pct(record.hitRate), label: 'Hit rate', border: 'border-green-200', color: 'text-green-600' },
-              { icon: '📏', value: record.avgResult == null ? '—' : bps(Math.round(record.avgResult)), label: 'Avg move called', border: 'border-blue-200', color: 'text-blue-600' },
+              { icon: '📏', value: record.avgResult == null ? '—' : bps(Math.round(record.avgResult)), label: 'Avg move called', border: 'border-blue-200', color: (record.avgResult ?? 0) < 0 ? 'text-red-600' : 'text-blue-600' },
               { icon: '⏳', value: record.open, label: 'Open now', border: 'border-purple-200', color: 'text-purple-600' },
               { icon: '🚫', value: record.forfeited, label: 'Forfeited', border: 'border-red-200', color: 'text-red-600' },
             ].map((s, i) => (
@@ -569,6 +591,11 @@ export default function OraclePage() {
                           <Link href={hc.receipt} className="text-xs font-bold text-blue-700 hover:underline">
                             receipt →
                           </Link>
+                        )}
+                        {(h.answer?.status === 'failed' || (h.answer?.status === 'paid' && Date.now() - h.at > 16 * 60_000) || hc?.status === 'forfeited') && (
+                          <button onClick={() => refund(h.requestId)} className="text-xs font-bold px-3 py-1 rounded-lg bg-black text-white hover:bg-gray-800">
+                            Get my refund
+                          </button>
                         )}
                       </div>
                     </div>

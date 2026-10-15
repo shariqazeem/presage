@@ -116,7 +116,7 @@ export function AgentCard({ a, index = 0, latest }: { a: AgentSummary; index?: n
         <div className="grid grid-cols-4 gap-3 mb-4">
           <Metric label="Calls" value={String(r.calls)} />
           <Metric label="Hit rate" value={pct(r.hitRate, 0)} color="text-green-600" />
-          <Metric label={a.kind === 'setup' ? 'Avg R' : 'Avg move'} value={r.avgResult == null ? '—' : result(a.kind, Math.round(r.avgResult))} color="text-blue-600" />
+          <Metric label={a.kind === 'setup' ? 'Avg R' : 'Avg move'} value={r.avgResult == null ? '—' : result(a.kind, Math.round(r.avgResult))} color={(r.avgResult ?? 0) < 0 ? 'text-red-600' : 'text-blue-600'} />
           <Metric label="Losses" value={String(r.losses + r.forfeited)} color="text-red-600" />
         </div>
 
@@ -171,7 +171,7 @@ export function CallSummary({ c }: { c: CallView }) {
   if (c.hidden || !c.payload) {
     return (
       <div className="text-sm text-gray-800">
-        🔒 Sealed call #{c.chainCallId}. Reveals by {until(c.revealBy)} from now
+        🔒 Sealed call #{c.chainCallId} · revealed within {until(c.revealBy)}
       </div>
     )
   }

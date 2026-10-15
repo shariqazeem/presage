@@ -156,3 +156,9 @@ export function hugsLine(candle, lineValue, { breakTolerance = 0.012 } = {}) {
     closeVsLinePct: Number((((candle.c - lineValue) / lineValue) * 100).toFixed(2)),
   };
 }
+
+// Presage: ordinal text for the reasons a call publishes ("1st", "22nd", "63rd"), text only.
+export function ord(n) {
+  const v = n % 100;
+  return n + (v >= 11 && v <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th');
+}

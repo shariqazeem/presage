@@ -44,13 +44,13 @@ export default function HomePage() {
               </div>
             </motion.div>
 
-            <motion.h1 variants={itemVariants} className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black text-black mb-8 tracking-tight leading-[0.9] px-4">
+            <motion.h1 variants={itemVariants} className="text-5xl sm:text-7xl md:text-8xl lg:text-[7.5rem] font-black text-black mb-8 tracking-tight leading-[0.9] px-4">
               AI trading calls
               <br />
               <motion.span
                 animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
                 transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-                className="italic bg-gradient-to-r from-purple-600 via-pink-500 to-blue-600 bg-clip-text text-transparent bg-[length:200%_auto]"
+                className="italic bg-gradient-to-r from-purple-600 via-pink-500 to-blue-600 bg-clip-text text-transparent bg-[length:200%_auto] lg:whitespace-nowrap lg:text-[0.8em] pr-2"
               >
                 sealed before the move
               </motion.span>

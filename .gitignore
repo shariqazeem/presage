@@ -26,3 +26,4 @@ contracts/.env
 *.pem
 npm-debug.log*
 .vercel
+contracts/deployments/fork/

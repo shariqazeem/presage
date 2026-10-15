@@ -6,6 +6,7 @@ import { parsePayload } from '../lib/calls/payload'
 import { earliestResolution, resolveDirection, resolveSetup } from '../lib/calls/rules'
 import { binanceCloseAt } from '../lib/market/binance'
 import { candles15mSince } from '../lib/market/frames'
+import { publicClient } from '../lib/chain'
 import { getDb, schema } from '../lib/db'
 import { contracts, revealCall, settlePaid } from './calls'
 import { errMsg, log } from './log'
@@ -94,6 +95,14 @@ export async function refundUndelivered(): Promise<void> {
   for (const r of stuck) {
     if (!r.paidAt || r.paidAt > cutoff) continue
     try {
+      // Only a request still in Paid can be refunded; one that was delivered after all is left to the indexer.
+      const onchain = await publicClient.readContract({
+        address: contracts().market,
+        abi: presageMarketAbi,
+        functionName: 'getRequest',
+        args: [r.requestId as Hex],
+      })
+      if (onchain.state !== 1) continue
       await write({
         address: contracts().market,
         abi: presageMarketAbi,

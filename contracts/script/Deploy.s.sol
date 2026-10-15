@@ -83,7 +83,9 @@ contract Deploy is Script {
         vm.serializeAddress(key, "agents", address(agents));
         vm.serializeAddress(key, "calls", address(calls));
         string memory json = vm.serializeAddress(key, "market", address(market));
-        vm.writeJson(json, string.concat("./deployments/", vm.toString(chainId), ".json"));
+        // A rehearsal on a local fork writes elsewhere (DEPLOY_OUT), so it can never pass for mainnet.
+        string memory out = vm.envOr("DEPLOY_OUT", string.concat("./deployments/", vm.toString(chainId), ".json"));
+        vm.writeJson(json, out);
 
         console2.log("PresageAgents", address(agents));
         console2.log("PresageCalls ", address(calls));

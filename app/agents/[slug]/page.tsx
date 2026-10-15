@@ -63,7 +63,7 @@ export default function AgentPage({ params }: { params: Promise<{ slug: string }
         {[
           { icon: '🔒', value: r.calls, label: 'Calls sealed', border: 'border-gray-200', color: 'text-black' },
           { icon: '✅', value: pct(r.hitRate), label: 'Hit rate', border: 'border-green-200', color: 'text-green-600' },
-          { icon: '📏', value: r.avgResult == null ? '—' : result(a.kind, Math.round(r.avgResult)), label: a.kind === 'setup' ? 'Average R' : 'Average move', border: 'border-blue-200', color: 'text-blue-600' },
+          { icon: '📏', value: r.avgResult == null ? '—' : result(a.kind, Math.round(r.avgResult)), label: a.kind === 'setup' ? 'Average R' : 'Average move', border: 'border-blue-200', color: (r.avgResult ?? 0) < 0 ? 'text-red-600' : 'text-blue-600' },
           { icon: '❌', value: r.losses, label: 'Losses', border: 'border-red-200', color: 'text-red-600' },
           { icon: '🚫', value: r.forfeited, label: 'Forfeited', border: 'border-red-200', color: 'text-red-700' },
         ].map((s, i) => (

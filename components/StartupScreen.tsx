@@ -627,7 +627,7 @@ export function StartupScreen({ onComplete }: StartupScreenProps) {
                 animate={{ scale: [1, 1.05, 1] }}
                 transition={{ duration: 2, repeat: Infinity, delay: 0 }}
               >
-                152+
+                84
               </motion.div>
               <div className="text-gray-400 text-xs font-mono mt-1 relative z-10">COINS</div>
             </motion.div>
@@ -644,9 +644,9 @@ export function StartupScreen({ onComplete }: StartupScreenProps) {
                 animate={{ scale: [1, 1.05, 1] }}
                 transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
               >
-                3-5
+                $0.05
               </motion.div>
-              <div className="text-gray-400 text-xs font-mono mt-1 relative z-10">NODES</div>
+              <div className="text-gray-400 text-xs font-mono mt-1 relative z-10">PER CALL</div>
             </motion.div>
 
             <motion.div
@@ -661,9 +661,9 @@ export function StartupScreen({ onComplete }: StartupScreenProps) {
                 animate={{ scale: [1, 1.05, 1] }}
                 transition={{ duration: 2, repeat: Infinity, delay: 1 }}
               >
-                ~50ms
+                80%
               </motion.div>
-              <div className="text-gray-400 text-xs font-mono mt-1 relative z-10">LATENCY</div>
+              <div className="text-gray-400 text-xs font-mono mt-1 relative z-10">TO CREATORS</div>
             </motion.div>
 
             <motion.div
@@ -678,9 +678,9 @@ export function StartupScreen({ onComplete }: StartupScreenProps) {
                 animate={{ scale: [1, 1.05, 1] }}
                 transition={{ duration: 2, repeat: Infinity, delay: 1.5 }}
               >
-                92%
+                0
               </motion.div>
-              <div className="text-gray-400 text-xs font-mono mt-1 relative z-10">SAVINGS</div>
+              <div className="text-gray-400 text-xs font-mono mt-1 relative z-10">CALLS DELETED</div>
             </motion.div>
           </motion.div>
 

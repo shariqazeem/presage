@@ -18,6 +18,7 @@
 // It is a waiting game: most scans produce nothing, and that is correct.
 
 import { mfi, atr, bullishDivergence, hugsLine } from './indicators.js';
+import { ord } from './indicators.js';
 import { supportZones, fitBoundary } from './structure.js';
 
 export const SNIPER = {
@@ -135,9 +136,9 @@ export function sniperSignal(frames) {
   const div1h = bullishDivergence(frames.h1);
   if (div15?.diverging) { score += SNIPER.divergenceBonus; notes.push(`15m bullish divergence (price ${div15.priceChangePct}%, MFI +${div15.mfiChange})`); }
   if (div1h?.diverging) { score += 2; notes.push(`1H bullish divergence (price ${div1h.priceChangePct}%, MFI +${div1h.mfiChange})`); }
-  if (x15.isExtreme) { score += SNIPER.m15Weight; notes.push(`15m MFI ${x15.value} at ${Math.round(x15.percentile * 100)}th pct (low ${x15.min})`); }
+  if (x15.isExtreme) { score += SNIPER.m15Weight; notes.push(`15m MFI ${x15.value} at ${ord(Math.round(x15.percentile * 100))} pct (low ${x15.min})`); }
   if (x15.turningUp) { score += 1; notes.push('15m MFI curling up off the low'); }
-  if (x1h?.isExtreme) { score += SNIPER.h1Weight; notes.push(`1H MFI ${x1h.value} at ${Math.round(x1h.percentile * 100)}th pct`); }
+  if (x1h?.isExtreme) { score += SNIPER.h1Weight; notes.push(`1H MFI ${x1h.value} at ${ord(Math.round(x1h.percentile * 100))} pct`); }
   else if (x1h && x1h.percentile <= 0.3) { score += 1; notes.push(`1H MFI low-ish (${x1h.value})`); }
 
   // A trendline "hug" requires the BODY to respect the line, not just a wick
@@ -180,7 +181,7 @@ export function sniperSignal(frames) {
     price,
     stop,
     reason: fire ? 'sniper: MFI extreme at support'
-      : !x15.isExtreme ? `15m MFI not extreme (${x15.value}, ${Math.round(x15.percentile * 100)}th pct)`
+      : !x15.isExtreme ? `15m MFI not extreme (${x15.value}, ${ord(Math.round(x15.percentile * 100))} pct)`
       : 'no support at this price',
   };
 }

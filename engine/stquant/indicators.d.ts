@@ -11,3 +11,4 @@ export function bullishDivergence(
   opts?: { lookback?: number; wing?: number; minGapBars?: number },
 ): { diverging: boolean; priceChangePct: number; mfiChange: number; barsAgo: number } | null
 export function hugsLine(candle: Candle, line: number, opts?: { breakTolerance?: number }): { hugging: boolean; broken: boolean; closeVsLinePct: number } | null
+export function ord(n: number): string
