@@ -43,6 +43,20 @@ export function write<const TAbi extends Abi>(args: {
 }): Promise<Sent> {
   const run = async (): Promise<Sent> => {
     const data = encodeFunctionData({ abi: args.abi as Abi, functionName: args.functionName, args: args.args as unknown[] })
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await send(data, attempt)
+      } catch (e) {
+        // Something else spent this key's nonce (a script, a restart mid-flight): re-read it and go again once.
+        if (attempt === 0 && /nonce/i.test(errMsg(e))) {
+          nextNonce = null
+          continue
+        }
+        throw e
+      }
+    }
+  }
+  const send = async (data: Hex, attempt: number): Promise<Sent> => {
     try {
       if (nextNonce === null) {
         nextNonce = await publicClient.getTransactionCount({ address: runner.address, blockTag: 'pending' })
@@ -67,7 +81,7 @@ export function write<const TAbi extends Abi>(args: {
       return { hash, receipt, logs }
     } catch (e) {
       nextNonce = null // re-read from the node next time
-      l.error(`${args.label} failed: ${errMsg(e)}`)
+      if (!(attempt === 0 && /nonce/i.test(errMsg(e)))) l.error(`${args.label} failed: ${errMsg(e)}`)
       throw e
     }
   }

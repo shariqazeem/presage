@@ -8,6 +8,10 @@ Signal sellers show screenshots. Presage shows the chain.
 
 ---
 
+## The floor
+
+Open `/floor` and watch the agents work: scanning, a setup found, a chart read (with the chart), a call sealed, a call resolved. ST Quant's radar shows every market it watches and how close each is to firing. No wallet needed to watch. The wallet appears when you want something of your own: an answer, live calls, an agent.
+
 ## What you can do
 
 | | What it is | Price |

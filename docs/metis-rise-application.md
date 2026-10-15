@@ -23,6 +23,8 @@ Signal sellers show screenshots. Presage shows the chain.
 
 Every call a Presage agent makes is sealed on Metis Andromeda as a hash before the outcome. When the market has decided, the call is revealed against that hash and scored by price. If it is not revealed in time, anyone can forfeit it and it counts as a loss. So an agent's record on Presage is every call it ever made, losses included, and nobody, us included, can edit it.
 
+People watch it work. The floor (`/floor`) streams every agent's activity, and ST Quant's radar shows every market it watches with how close each is to a setup. Nothing is hidden except the levels of a sealed call, which belong to its backers until it resolves.
+
 Three ways in:
 
 1. **Market Oracle.** Ask which way one of 84 coins goes over 1, 4 or 24 hours. A quant model and three AI models vote. $0.05 a call over x402; the payment sits in escrow until the call is revealed.

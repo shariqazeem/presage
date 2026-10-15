@@ -10,6 +10,7 @@ import { useAccount, usePublicClient, useReadContract, useWriteContract } from '
 import { UnifiedNavbar } from '@/components/UnifiedNavbar'
 import { WalletButton } from '@/components/WalletButton'
 import { Sigil } from '@/components/Sigil'
+import { Share } from '@/components/Share'
 import { CallRow, IdentityCard, RecordBar, RecordProgress } from '@/components/agents'
 import { EventFeed, RadarTable, StatusChip } from '@/components/floor'
 import { Button, Container, FormDots, Pill, Skeleton, Stat, Streak, cx } from '@/components/ui'
@@ -91,6 +92,7 @@ export default function AgentPage({ params }: { params: Promise<{ slug: string }
           </div>
         </div>
         <p className="text-lg text-gray-700 mt-6 max-w-4xl leading-relaxed">{persona.thesis}</p>
+        <Share className="mt-4" path={`/agents/${a.slug}`} text={`${a.name} on Presage: ${r.calls} calls sealed on Metis before the move, hit rate ${pct(r.hitRate, 0)}, every loss on the record.`} />
       </motion.div>
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">

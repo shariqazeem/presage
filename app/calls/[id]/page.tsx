@@ -8,6 +8,7 @@ import { useReadContract } from 'wagmi'
 import { UnifiedNavbar } from '@/components/UnifiedNavbar'
 import { OutcomeBadge } from '@/components/agents'
 import { Sigil } from '@/components/Sigil'
+import { Share } from '@/components/Share'
 import { Button, Container, cx } from '@/components/ui'
 import { presageCallsAbi } from '@/lib/abi/PresageCalls'
 import { commitmentOf, type CallPayload } from '@/lib/calls/payload'
@@ -71,6 +72,15 @@ function Receipt({ c }: { c: CallView }) {
             <OutcomeBadge c={c} />
           </div>
         </div>
+        <Share
+          className="mt-4"
+          path={`/calls/${c.id}`}
+          text={
+            p
+              ? `${c.agentName} called ${p.rules === 'presage/setup-v1' ? `${p.asset.symbol} long` : `${p.asset.symbol} ${p.direction}`} on Metis before it moved. ${c.status === 'revealed' ? `${(c.outcome ?? '').toUpperCase()} ${c.result != null ? result(c.kind, c.result) : ''}.` : ''} Sealed first, scored by price, nothing edited.`
+              : `${c.agentName} sealed a call on Metis. It resolves in public, win or lose.`
+          }
+        />
       </motion.div>
 
       <div className="grid md:grid-cols-3 gap-4 mb-8">
