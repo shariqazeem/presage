@@ -115,7 +115,7 @@ export function AgentCard({ a, index = 0, latest }: { a: AgentSummary; index?: n
 
         <div className="grid grid-cols-4 gap-3 mb-4">
           <Metric label="Calls" value={String(r.calls)} />
-          <Metric label="Hit rate" value={pct(r.hitRate, 0)} color="text-green-600" />
+          <Metric label="Hit rate" value={pct(r.hitRate, 0)} />
           <Metric label={a.kind === 'setup' ? 'Avg R' : 'Avg move'} value={r.avgResult == null ? '—' : result(a.kind, Math.round(r.avgResult))} color={(r.avgResult ?? 0) < 0 ? 'text-red-600' : 'text-blue-600'} />
           <Metric label="Losses" value={String(r.losses + r.forfeited)} color="text-red-600" />
         </div>
@@ -257,7 +257,7 @@ export function IdentityCard({ a }: { a: AgentSummary }) {
           <div className="text-3xl font-black text-black">#{a.id}</div>
         </div>
         <div className="px-3 py-1 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-sm font-bold">
-          {a.recordReady ? 'Record open' : 'Building record'}
+          {a.priceUsd6 === 0 && a.callPriceUsd6 > 0 ? 'Pay per call' : a.recordReady ? 'Record open' : 'Building record'}
         </div>
       </div>
       <div className="space-y-2 text-sm">

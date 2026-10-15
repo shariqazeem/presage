@@ -82,6 +82,15 @@ async function main() {
   if (stquantId != null && process.env.STQUANT_ENABLED !== '0') onCandleClose('stquant', 15, 60, () => scanOnce(stquantId))
   every('creators', 5 * 60_000, runCreatorAgents)
   if (!isMainnet) every('testnet-feed', 6 * 3_600_000, keepTestnetFeedFresh)
+  // A heartbeat the website reads (/api/health), so a stopped engine is visible before deadlines pass.
+  every('heartbeat', 30_000, async () => {
+    const value = JSON.stringify({ at: Math.floor(Date.now() / 1000), runner: runner.address, balance: formatEther(await runnerBalance()) })
+    getDb()
+      .insert(schema.kv)
+      .values({ key: 'engine:heartbeat', value })
+      .onConflictDoUpdate({ target: schema.kv.key, set: { value } })
+      .run()
+  })
   every('gas', 30 * 60_000, async () => {
     const b = await runnerBalance()
     if (b < 2n * 10n ** 17n) l.error(`runner is low on gas: ${formatEther(b)} METIS left at ${runner.address}`)

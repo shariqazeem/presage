@@ -62,7 +62,7 @@ export default function AgentPage({ params }: { params: Promise<{ slug: string }
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
         {[
           { icon: '🔒', value: r.calls, label: 'Calls sealed', border: 'border-gray-200', color: 'text-black' },
-          { icon: '✅', value: pct(r.hitRate), label: 'Hit rate', border: 'border-green-200', color: 'text-green-600' },
+          { icon: '🎯', value: pct(r.hitRate), label: 'Hit rate', border: 'border-gray-200', color: 'text-black' },
           { icon: '📏', value: r.avgResult == null ? '—' : result(a.kind, Math.round(r.avgResult)), label: a.kind === 'setup' ? 'Average R' : 'Average move', border: 'border-blue-200', color: (r.avgResult ?? 0) < 0 ? 'text-red-600' : 'text-blue-600' },
           { icon: '❌', value: r.losses, label: 'Losses', border: 'border-red-200', color: 'text-red-600' },
           { icon: '🚫', value: r.forfeited, label: 'Forfeited', border: 'border-red-200', color: 'text-red-700' },
@@ -79,7 +79,7 @@ export default function AgentPage({ params }: { params: Promise<{ slug: string }
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xl font-black text-black">The record</h2>
           <span className="text-sm text-gray-500">
-            {r.wins} wins · {r.losses} losses · {r.flats} flat · {r.noFills} no fill · {r.forfeited} forfeited · {r.open} open
+            {r.wins} {r.wins === 1 ? 'win' : 'wins'} · {r.losses} {r.losses === 1 ? 'loss' : 'losses'} · {r.flats} flat · {r.noFills} no fill · {r.forfeited} forfeited · {r.open} open
           </span>
         </div>
         <RecordBar r={r} />

@@ -440,7 +440,7 @@ export default function OraclePage() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
             {[
               { icon: '🔒', value: record.calls, label: 'Calls sealed', border: 'border-gray-200', color: 'text-black' },
-              { icon: '✅', value: pct(record.hitRate), label: 'Hit rate', border: 'border-green-200', color: 'text-green-600' },
+              { icon: '🎯', value: pct(record.hitRate), label: 'Hit rate', border: 'border-gray-200', color: 'text-black' },
               { icon: '📏', value: record.avgResult == null ? '—' : bps(Math.round(record.avgResult)), label: 'Avg move called', border: 'border-blue-200', color: (record.avgResult ?? 0) < 0 ? 'text-red-600' : 'text-blue-600' },
               { icon: '⏳', value: record.open, label: 'Open now', border: 'border-purple-200', color: 'text-purple-600' },
               { icon: '🚫', value: record.forfeited, label: 'Forfeited', border: 'border-red-200', color: 'text-red-600' },
