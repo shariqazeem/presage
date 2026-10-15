@@ -14,10 +14,14 @@ S() { ssh -n -o StrictHostKeyChecking=no -i "$KEY" "$VM" "$@"; }
 cd "$(dirname "$0")/.."
 
 echo "== sync"
+# lib/deployments.ts is generated on the VM from contracts/deployments, so a local rehearsal (which
+# points that file at a fork) can never reach production. The fork's own record is never shipped.
 rsync -az --delete -e "ssh -o StrictHostKeyChecking=no -i $KEY" \
   --exclude node_modules --exclude .next --exclude '.next-*' --exclude var --exclude '.env*' --exclude .git \
   --exclude contracts/lib --exclude contracts/out --exclude contracts/cache --exclude contracts/broadcast \
+  --exclude contracts/deployments/fork --exclude lib/deployments.ts \
   ./ "$VM:$R/"
+S "cd $R && export PATH=$NODE:\$PATH && node scripts/deployments.mjs"
 
 echo "== install"
 S "cd $R && export PATH=$NODE:\$PATH && npm ci --no-audit --no-fund 2>&1 | tail -1"
