@@ -2,6 +2,8 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  // A stray lockfile in the home folder otherwise makes Next guess the wrong workspace root.
+  outputFileTracingRoot: process.cwd(),
   // Native modules stay on the server and out of the bundle.
   serverExternalPackages: ['better-sqlite3', '@resvg/resvg-js'],
   eslint: { ignoreDuringBuilds: true },
