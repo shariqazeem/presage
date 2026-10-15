@@ -9,6 +9,8 @@ export const llmConfigured = () => Boolean(process.env.LLM_BASE_URL && process.e
 export const models = {
   oracle: () => (process.env.ORACLE_MODELS ?? '').split(',').map(s => s.trim()).filter(Boolean),
   vision: () => process.env.VISION_MODEL ?? '',
+  /** Tried in order when the first chart reader returns nothing; a chart read must not die on one model. */
+  visionChain: () => [process.env.VISION_MODEL ?? '', ...(process.env.VISION_FALLBACK_MODELS ?? '').split(',')].map(s => s.trim()).filter(Boolean),
   compiler: () => process.env.COMPILER_MODEL ?? '',
 }
 

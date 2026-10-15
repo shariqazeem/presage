@@ -231,21 +231,30 @@ async function chartRead(c: Candidate, png: Buffer): Promise<ChartRead> {
     'Reply with JSON only: {"verdict":"BUY"|"WAIT"|"AVOID","conviction":1-5,"why":"one or two sentences",' +
       '"wouldChangeMind":"what would invalidate this","vetoes":["any hard veto that fired"]}',
   ].join('\n')
-  return chatJson<ChartRead>({
-    model: models.vision(),
-    temperature: 0.1,
-    maxTokens: 500,
-    timeoutMs: 90_000,
-    messages: [
-      {
-        role: 'user',
-        content: [
-          { type: 'text', text },
-          { type: 'image_url', image_url: { url: `data:image/png;base64,${png.toString('base64')}` } },
+  let lastErr: unknown
+  for (const model of models.visionChain()) {
+    try {
+      return await chatJson<ChartRead>({
+        model,
+        temperature: 0.1,
+        maxTokens: 600,
+        timeoutMs: 90_000,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text },
+              { type: 'image_url', image_url: { url: `data:image/png;base64,${png.toString('base64')}` } },
+            ],
+          },
         ],
-      },
-    ],
-  })
+      })
+    } catch (e) {
+      lastErr = e
+      l.warn(`chart read on ${model} failed, trying the next reader: ${errMsg(e)}`)
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error('No chart reader answered')
 }
 
 async function recentlyCalled(agentId: number, symbol: string): Promise<boolean> {
@@ -398,6 +407,8 @@ async function scan(agentId: number): Promise<void> {
         published++
       }
     } catch (e) {
+      // The floor should show a setup that was dropped, not just the log.
+      emit(agentId, 'skipped', { symbol: c.asset.symbol, why: `could not finish: ${errMsg(e).slice(0, 120)}` })
       l.error(`${c.asset.symbol} not published: ${errMsg(e)}`)
     }
   }
