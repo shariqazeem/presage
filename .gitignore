@@ -18,7 +18,8 @@ next-env.d.ts
 # foundry
 contracts/out/
 contracts/cache/
-contracts/broadcast/*/31337/
+# Foundry's scratch broadcasts; the real deploy record is archived in contracts/deployments/.
+contracts/broadcast/
 contracts/.env
 
 # misc
