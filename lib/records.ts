@@ -17,6 +17,10 @@ export type Record_ = {
   avgResult: number | null
   firstCallAt: number | null
   lastCallAt: number | null
+  /** The last ten resolved calls, newest last: a form guide. */
+  form: ('win' | 'loss' | 'flat' | 'nofill' | 'forfeited')[]
+  /** Consecutive wins (positive) or losses (negative) from the newest resolved call back. */
+  streak: number
 }
 
 export type AgentSummary = {
@@ -40,7 +44,9 @@ export type AgentSummary = {
 
 export type CallRow = typeof schema.calls.$inferSelect
 
-export function scoreCalls(rows: Pick<CallRow, 'status' | 'outcome' | 'result' | 'issuedAt' | 'kind'>[]): Record_ {
+export type ScoreRow = Pick<CallRow, 'status' | 'outcome' | 'result' | 'issuedAt' | 'kind'> & { revealedAt?: number | null; revealBy?: number | null }
+
+export function scoreCalls(rows: ScoreRow[]): Record_ {
   const r: Record_ = {
     calls: 0,
     open: 0,
@@ -54,6 +60,8 @@ export function scoreCalls(rows: Pick<CallRow, 'status' | 'outcome' | 'result' |
     avgResult: null,
     firstCallAt: null,
     lastCallAt: null,
+    form: [],
+    streak: 0,
   }
   let sum = 0
   let counted = 0
@@ -87,6 +95,23 @@ export function scoreCalls(rows: Pick<CallRow, 'status' | 'outcome' | 'result' |
   const decided = r.wins + r.losses + r.forfeited
   r.hitRate = decided ? r.wins / decided : null
   r.avgResult = counted ? sum / counted : null
+
+  const done = rows
+    .filter(c => c.status === 'revealed' || c.status === 'forfeited')
+    .map(c => ({ at: c.revealedAt ?? c.revealBy ?? c.issuedAt, o: (c.status === 'forfeited' ? 'forfeited' : c.outcome ?? 'flat') as Record_['form'][number] }))
+    .sort((a, b) => a.at - b.at)
+  r.form = done.slice(-10).map(d => d.o)
+  let streak = 0
+  for (let i = done.length - 1; i >= 0; i--) {
+    const o = done[i].o
+    const isWin = o === 'win'
+    const isLoss = o === 'loss' || o === 'forfeited'
+    if (!isWin && !isLoss) continue
+    if (streak === 0) streak = isWin ? 1 : -1
+    else if ((streak > 0) === isWin) streak += isWin ? 1 : -1
+    else break
+  }
+  r.streak = streak
   return r
 }
 

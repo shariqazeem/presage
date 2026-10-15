@@ -8,6 +8,7 @@ import type { Candle, Frames } from '../lib/market/types'
 import { getDb, schema } from '../lib/db'
 import { HORIZONS, oracleMarket, type Horizon } from '../lib/oracle'
 import { publishCall } from './calls'
+import { emit } from './events'
 import { errMsg, log } from './log'
 import { atr, ema, mfi, bullishDivergence } from './stquant/indicators.js'
 import { mfiExtreme } from './stquant/sniper.js'
@@ -116,10 +117,15 @@ async function llmVote(model: string, x: Features, horizon: Horizon): Promise<Vo
   return { model, direction, confidence, why: String(v.why ?? '').slice(0, 400) }
 }
 
-/** Ask every voter, then take the majority. Confidence is the majority's average, scaled by agreement. */
-export async function forecast(symbol: string, horizon: Horizon) {
+export type Progress = { stage: 'reading' | 'voting' | 'sealing'; votes: Vote[]; voters: string[] }
+
+/** Ask every voter, then take the majority. `onProgress` fires as the facts are read and each vote lands. */
+export async function forecast(symbol: string, horizon: Horizon, onProgress?: (p: Progress) => void) {
   const market = oracleMarket(symbol)
   if (!market) throw new Error(`No Binance market for ${symbol}`)
+  const voters = ['presage-quant-v1', ...(llmConfigured() ? models.oracle() : [])]
+  const progress: Progress = { stage: 'reading', votes: [], voters }
+  onProgress?.(progress)
   const [f, btc, last] = await Promise.all([
     loadFrames({ symbol, source: 'binance', market }),
     symbol === 'BTC' ? undefined : loadFrames({ symbol: 'BTC', source: 'binance', market: 'BTCUSDT' }),
@@ -129,13 +135,24 @@ export async function forecast(symbol: string, horizon: Horizon) {
   const x = features(symbol, f, btc)
 
   const votes: Vote[] = [quantVote(x, horizon)]
+  progress.stage = 'voting'
+  progress.votes = [...votes]
+  onProgress?.(progress)
   if (llmConfigured()) {
-    const results = await Promise.allSettled(models.oracle().map(m => llmVote(m, x, horizon)))
-    for (const r of results) {
-      if (r.status === 'fulfilled') votes.push(r.value)
-      else l.warn(`a model did not answer: ${errMsg(r.reason)}`)
-    }
+    const results = await Promise.allSettled(
+      models.oracle().map(m =>
+        llmVote(m, x, horizon).then(v => {
+          votes.push(v)
+          progress.votes = [...votes]
+          onProgress?.(progress)
+          return v
+        }),
+      ),
+    )
+    for (const r of results) if (r.status === 'rejected') l.warn(`a model did not answer: ${errMsg(r.reason)}`)
   }
+  progress.stage = 'sealing'
+  onProgress?.(progress)
   const up = votes.filter(v => v.direction === 'up')
   const down = votes.filter(v => v.direction === 'down')
   const side = up.length === down.length ? votes[0].direction : up.length > down.length ? 'up' : 'down'
@@ -157,9 +174,9 @@ export async function forecast(symbol: string, horizon: Horizon) {
 
 /** Answer paid Oracle requests: forecast, seal against the payment, record it. */
 /** Build and seal one Oracle call. Paid calls pass their requestId, so the seal releases their escrow. */
-async function sealForecast(oracleAgentId: number, asset: string, horizon: Horizon, requestId?: Hex) {
+async function sealForecast(oracleAgentId: number, asset: string, horizon: Horizon, requestId?: Hex, onProgress?: (p: Progress) => void) {
   const h = HORIZONS[horizon]
-  const fc = await forecast(asset, horizon)
+  const fc = await forecast(asset, horizon, onProgress)
   const issuedAt = Math.floor(Date.now() / 1000)
   const payload: DirectionPayload = {
     v: 1,
@@ -177,6 +194,7 @@ async function sealForecast(oracleAgentId: number, asset: string, horizon: Horiz
     ...(requestId ? { request: requestId } : {}),
   }
   const row = await publishCall({ payload, revealBy: issuedAt + h.seconds + h.graceSec, requestId })
+  emit(oracleAgentId, 'answered', { callId: row.id, chainCallId: row.chainCallId, symbol: asset, horizon, direction: fc.direction, confidence: fc.confidence, paid: Boolean(requestId), voters: fc.votes.length })
   return { row, fc }
 }
 
@@ -205,7 +223,9 @@ export async function answerPaid(oracleAgentId: number): Promise<void> {
     await db.update(schema.oracleRequests).set({ status: 'answering' }).where(eq(schema.oracleRequests.requestId, req.requestId))
     try {
       const horizon = req.horizon as Horizon
-      const { row, fc } = await sealForecast(oracleAgentId, req.asset, horizon, req.requestId as Hex)
+      const { row, fc } = await sealForecast(oracleAgentId, req.asset, horizon, req.requestId as Hex, p => {
+        db.update(schema.oracleRequests).set({ progress: JSON.stringify(p) }).where(eq(schema.oracleRequests.requestId, req.requestId)).run()
+      })
       await db
         .update(schema.oracleRequests)
         .set({ status: 'sealed', callId: row.id, sealedAt: row.sealedAt })

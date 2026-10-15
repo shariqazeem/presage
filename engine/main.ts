@@ -81,7 +81,11 @@ async function main() {
   if (oracleId != null && process.env.ORACLE_SCHEDULE !== 'off') onCandleClose('oracle-schedule', 240, 120, () => scheduledCalls(oracleId))
   else l.warn('no Oracle agent registered yet: run scripts/register-house-agents.ts')
   // ST Quant reads 15-minute candles, so it scans once per candle, a minute after each one closes.
-  if (stquantId != null && process.env.STQUANT_ENABLED !== '0') onCandleClose('stquant', 15, 60, () => scanOnce(stquantId))
+  if (stquantId != null && process.env.STQUANT_ENABLED !== '0') {
+    onCandleClose('stquant', 15, 60, () => scanOnce(stquantId))
+    // And once right after boot, so the radar is never empty after a restart.
+    setTimeout(() => scanOnce(stquantId).catch(e => l.error(`stquant: ${errMsg(e)}`)), 10_000)
+  }
   every('creators', 5 * 60_000, runCreatorAgents)
   if (!isMainnet) every('testnet-feed', 6 * 3_600_000, keepTestnetFeedFresh)
   // A heartbeat the website reads (/api/health), so a stopped engine is visible before deadlines pass.

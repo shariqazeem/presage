@@ -14,4 +14,20 @@ export type Deployment = {
   deployedAtBlock: number
 }
 
-export const deployments: Record<number, Deployment> = {}
+export const deployments: Record<number, Deployment> = {
+  "1088": {
+    "agents": "0x2882E2179f651B60ac121Fc64A4566f353E21658",
+    "calls": "0x32fd1364d7604EC78be410ff2FA59E68452b2898",
+    "market": "0x07b802d6D91c0AF6ec5DEdF3Dfab961cfeB40B56",
+    "identityRegistry": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
+    "metisUsdFeed": "0xD4a5Bb03B5D66d9bf81507379302Ac2C2DFDFa6D",
+    "stables": [
+      "0xEA32A96608495e54156Ae48931A7c20f0dcc1a21",
+      "0xbB06DCA3AE6887fAbF931640f67cab3e3a16F4dC"
+    ],
+    "runner": "0xe0184236dbc55C5F540a3Ad6DED770593b814c37",
+    "treasury": "0xDF70f6E8e656E5bb714fF0E8CA176d76F26890e3",
+    "deployer": "0x56603C83cC6f2425670AD9D123462BC3F366D151",
+    "deployedAtBlock": 23279063
+  }
+}

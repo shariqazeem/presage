@@ -103,6 +103,8 @@ export const oracleRequests = sqliteTable(
     amount: text('amount'),
     callId: integer('call_id'),
     error: text('error'),
+    /** JSON while answering: the stage and the votes as they land, so the page can show them live. */
+    progress: text('progress'),
     createdAt: integer('created_at').notNull(),
     paidAt: integer('paid_at'),
     sealedAt: integer('sealed_at'),
@@ -156,3 +158,17 @@ export const kv = sqliteTable('kv', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),
 })
+
+/** What agents are doing, as it happens. The floor streams this. Pruned after a week. */
+export const agentEvents = sqliteTable(
+  'agent_events',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    agentId: integer('agent_id').notNull(),
+    kind: text('kind').notNull(),
+    at: integer('at').notNull(),
+    /** JSON. A sealed call's levels never go in here; they stay with the call until it is revealed. */
+    data: text('data').notNull(),
+  },
+  t => [index('agent_events_at').on(t.at), index('agent_events_agent').on(t.agentId, t.at)],
+)

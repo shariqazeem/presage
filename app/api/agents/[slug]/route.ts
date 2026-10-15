@@ -5,6 +5,8 @@ import { describeSpec } from '@/lib/spec/describe'
 import { StrategySpec } from '@/lib/spec/schema'
 import { getDb, schema } from '@/lib/db'
 import { eq } from 'drizzle-orm'
+import { agentStatus, radarFor, recentEvents } from '@/lib/server/floor'
+import { HOUSE_PERSONAS, type Persona } from '@/lib/personas'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,8 +21,18 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ slug: stri
     const parsed = StrategySpec.safeParse(JSON.parse(row.specJson))
     if (parsed.success) rules = describeSpec(parsed.data)
   }
+  const persona: Persona = HOUSE_PERSONAS[agent.slug] ?? {
+    tagline: rules ? rules.rules[0].replace(/^Looks for a long setup when all of these are true: /, 'Buys when ').slice(0, 140) : agent.description,
+    thesis: agent.description,
+    method: rules?.rules ?? [],
+    honest: 'A creator strategy. Unproven until its record says otherwise; it may lose.',
+  }
   return NextResponse.json({
     agent,
+    persona,
+    status: agentStatus(agent.id, agent.kind, wallet),
+    radar: agent.kind === 'setup' ? radarFor(agent.id, wallet) : [],
+    events: recentEvents({ agentId: agent.id, limit: 30, viewer: wallet }),
     rules,
     spec: row?.specJson ?? null,
     calls: recentCalls({ agentId: agent.id, limit: 100, viewer: wallet }),

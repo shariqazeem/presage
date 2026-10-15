@@ -18,6 +18,8 @@ export function listAgents(): AgentSummary[] {
       result: schema.calls.result,
       issuedAt: schema.calls.issuedAt,
       kind: schema.calls.kind,
+      revealedAt: schema.calls.revealedAt,
+      revealBy: schema.calls.revealBy,
     })
     .from(schema.calls)
     .all()

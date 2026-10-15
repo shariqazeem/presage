@@ -52,12 +52,12 @@ export function StartupScreen({ onComplete }: StartupScreenProps) {
   const [featureBannerIndex, setFeatureBannerIndex] = useState(0)
 
   const initSteps = [
-    { icon: '🔗', text: 'Connecting to Metis Andromeda...', duration: 700 },
-    { icon: '🪪', text: 'Reading ERC-8004 identities...', duration: 600 },
-    { icon: '🔒', text: 'Loading sealed calls...', duration: 700 },
-    { icon: '📊', text: 'Tallying the public record...', duration: 600 },
-    { icon: '💸', text: 'Opening x402 escrow...', duration: 500 },
-    { icon: '✓', text: 'Ready', duration: 400 },
+    { icon: '🔗', text: 'Connecting to Metis Andromeda...', duration: 450 },
+    { icon: '🪪', text: 'Reading ERC-8004 identities...', duration: 400 },
+    { icon: '🔒', text: 'Loading sealed calls...', duration: 450 },
+    { icon: '📊', text: 'Tallying the public record...', duration: 400 },
+    { icon: '💸', text: 'Opening x402 escrow...', duration: 350 },
+    { icon: '✓', text: 'Ready', duration: 250 },
   ]
 
   // Rotate feature banners
@@ -101,11 +101,14 @@ export function StartupScreen({ onComplete }: StartupScreenProps) {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.5 }}
-        className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden"
+        className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden cursor-pointer"
         style={{
           background: 'linear-gradient(135deg, #0a0a0f 0%, #1a0b2e 50%, #16213e 100%)'
         }}
+        onClick={onComplete}
+        title="Click to skip"
       >
+        <div className="absolute top-4 right-5 text-xs font-mono text-gray-400 z-20">click anywhere to skip</div>
         {/* Animated Grid Background */}
         <div className="absolute inset-0 opacity-30">
           <div

@@ -8,6 +8,8 @@ import { loadFrames } from '../lib/market/frames'
 import { ORACLE_ASSETS } from '../lib/oracle-assets'
 import { StrategySpec } from '../lib/spec/schema'
 import { contracts, publishCall } from './calls'
+import { emit, setRadar } from './events'
+import type { RadarRow } from '../lib/floor-types'
 import { errMsg, log } from './log'
 import { evaluate } from './spec-eval'
 
@@ -52,6 +54,7 @@ export async function runCreatorAgents(): Promise<void> {
         .from(schema.calls)
         .where(and(eq(schema.calls.agentId, agent.id), inArray(schema.calls.status, ['pending', 'sealed'])))
       let room = MAX_OPEN_PER_AGENT - open.length
+      const rows: RadarRow[] = []
 
       for (const market of spec.markets) {
         if (room <= 0) break
@@ -65,7 +68,25 @@ export async function runCreatorAgents(): Promise<void> {
         if (recent.length) continue
 
         const frames = await loadFrames({ symbol, source: 'binance', market })
-        const { signal } = evaluate(spec, frames)
+        const { signal, checks, blocked } = evaluate(spec, frames)
+        const price = frames.m15.at(-1)!.c
+        rows.push({
+          symbol,
+          source: 'binance',
+          ref: `binance:${market}`,
+          price: Number(price.toPrecision(8)),
+          mfi15: null,
+          mfi15Pct: null,
+          mfi1h: null,
+          mfi1hPct: null,
+          atrPct: 0,
+          supportDistPct: null,
+          supportKind: null,
+          score: checks.filter(c => c.ok).length,
+          state: signal ? 'firing' : checks.every(c => c.ok) ? 'close' : checks.some(c => c.ok) ? 'watching' : 'quiet',
+          blocker: signal ? null : (blocked ?? checks.find(c => !c.ok)?.saw ?? null),
+          at: Math.floor(Date.now() / 1000),
+        })
         if (!signal) continue
 
         const now = Math.floor(Date.now() / 1000)
@@ -86,9 +107,11 @@ export async function runCreatorAgents(): Promise<void> {
           why: signal.why.slice(0, 8),
         }
         const row = await publishCall({ payload, revealBy: fillBy + spec.maxHoldHours * 3600 + REVEAL_GRACE_SEC })
+        emit(agent.id, 'sealed', { callId: row.id, chainCallId: row.chainCallId, symbol, kind: 'setup', route: 'spec' })
         l.info(`agent ${agent.id} sealed ${symbol}`, { call: row.id, entry: signal.entry, stop: signal.stop, target: signal.target })
         room--
       }
+      setRadar(agent.id, rows)
     } catch (e) {
       l.warn(`agent ${agent.id}: ${errMsg(e)}`)
     }

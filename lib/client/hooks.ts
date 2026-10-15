@@ -4,6 +4,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
 import { useAccount, useSignMessage } from 'wagmi'
 import type { AgentSummary, CallView } from '../server/records'
+import type { AgentEvent, AgentStatus, RadarRow } from '../floor-types'
+import type { Persona } from '../personas'
 
 const json = async <T,>(url: string): Promise<T> => {
   const r = await fetch(url, { cache: 'no-store' })
@@ -13,15 +15,34 @@ const json = async <T,>(url: string): Promise<T> => {
 
 export const useAgents = () => useQuery({ queryKey: ['agents'], queryFn: () => json<{ agents: AgentSummary[] }>('/api/agents'), refetchInterval: 30_000 })
 
+export type AgentPage = {
+  agent: AgentSummary
+  persona: Persona
+  status: AgentStatus
+  radar: RadarRow[]
+  events: AgentEvent[]
+  rules: { markets: string; rules: string[] } | null
+  spec: string | null
+  calls: CallView[]
+  viewer: string | null
+}
+
 export const useAgent = (slug: string) =>
-  useQuery({
-    queryKey: ['agent', slug],
-    queryFn: () =>
-      json<{ agent: AgentSummary; rules: { markets: string; rules: string[] } | null; spec: string | null; calls: CallView[]; viewer: string | null }>(
-        `/api/agents/${slug}`,
-      ),
-    refetchInterval: 20_000,
-  })
+  useQuery({ queryKey: ['agent', slug], queryFn: () => json<AgentPage>(`/api/agents/${slug}`), refetchInterval: 15_000 })
+
+export type FloorAgent = AgentSummary & { status: AgentStatus; tagline: string | null }
+export type Floor = {
+  now: number
+  engineUp: boolean
+  agents: FloorAgent[]
+  events: AgentEvent[]
+  radar: RadarRow[]
+  economy: { settledUsd: number; wallets: number; subscriptions: number; sealedToday: number; creators: number; actions24h: number; metisUsd: number | null }
+  stats: { callsSealed: number; resolved: number; open: number; wins: number; losses: number; forfeited: number; paidCalls: number; agents: number; onChainEvents: number }
+  viewer: string | null
+}
+
+export const useFloor = (intervalMs = 6_000) => useQuery({ queryKey: ['floor'], queryFn: () => json<Floor>('/api/floor'), refetchInterval: intervalMs })
 
 export const useFeed = () => useQuery({ queryKey: ['feed'], queryFn: () => json<{ calls: CallView[] }>('/api/feed'), refetchInterval: 15_000 })
 

@@ -70,7 +70,7 @@ const HOUSE = [
     priceUsd6: 3_000_000,
     callPriceUsd6: 0,
     description:
-      'Buys support when money flow is exhausted: 15-minute MFI at an extreme on a level confirmed across higher timeframes. Trades BSC and X Layer pools. Unproven: ST Quant has never been shown to be profitable, and this record starts on day one.',
+      'Buys support when money flow is exhausted: 15-minute MFI at an extreme on a level confirmed across higher timeframes. Watches 84 Binance markets and the hottest BSC and X Layer pools. Unproven: ST Quant has never been shown to be profitable, and this record starts on day one.',
     spec: {
       v: 1,
       agent: 'presage-st-quant',
@@ -81,7 +81,7 @@ const HOUSE = [
       signal: SIGNAL,
       rubricSha256,
       universe:
-        'GeckoTerminal trending and top pools on bsc and x-layer: liquidity >= $120k, 24h volume >= $200k, volume/liquidity >= 0.08; no wrapped, pegged, staked or tokenised assets; at most 24 pools',
+        'The Binance USDT spot markets the Oracle covers (lib/oracle-assets.ts, 84 at registration), plus GeckoTerminal trending and top pools on bsc and x-layer that pass liquidity >= $120k, 24h volume >= $200k and volume/liquidity >= 0.08, with wrapped, pegged, staked and tokenised assets excluded; at most 24 pools',
       rules: 'presage/setup-v1',
       status: 'Unproven. ST Quant has never been shown to be profitable; this record starts on day one.',
     },

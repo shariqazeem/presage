@@ -9,6 +9,7 @@ import { candles15mSince } from '../lib/market/frames'
 import { publicClient } from '../lib/chain'
 import { getDb, schema } from '../lib/db'
 import { contracts, revealCall, settlePaid } from './calls'
+import { emit } from './events'
 import { errMsg, log } from './log'
 import { write } from './tx'
 
@@ -44,6 +45,7 @@ export async function resolveDue(): Promise<void> {
           label: `forfeit call #${row.id}`,
         })
         await db.update(schema.calls).set({ status: 'forfeited' }).where(eq(schema.calls.id, row.id))
+        emit(row.agentId, 'forfeited', { callId: row.id, chainCallId: row.chainCallId, symbol: row.asset, kind: row.kind })
         continue
       }
 
@@ -58,6 +60,7 @@ export async function resolveDue(): Promise<void> {
             ...res.detail,
             candles: { source: p.asset.source, timeframe: '15m', from: row.sealedAt, to: now },
           })
+          emit(row.agentId, 'resolved', { callId: row.id, chainCallId: row.chainCallId, symbol: row.asset, kind: 'setup', outcome: res.outcome, result: res.result })
         }
       } else {
         if (p.asset.source !== 'binance') throw new Error('Direction calls resolve on Binance prices only')
@@ -69,6 +72,7 @@ export async function resolveDue(): Promise<void> {
             ...res.detail,
             candles: { source: 'binance', market: p.asset.market, timeframe: '1m', minute: close.minute },
           })
+          emit(row.agentId, 'resolved', { callId: row.id, chainCallId: row.chainCallId, symbol: row.asset, kind: 'direction', outcome: res.outcome, result: res.result })
         }
       }
     } catch (e) {

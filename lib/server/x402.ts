@@ -175,7 +175,15 @@ export function oracleAnswer(requestId: Hex, secret: string) {
   const req = db.select().from(schema.oracleRequests).where(eq(schema.oracleRequests.requestId, requestId)).get()
   if (!req) throw new HttpError(404, 'Unknown request')
   if (req.secretHash !== sha256(secret)) throw new HttpError(403, 'Wrong secret for this request')
-  const base = { requestId, status: req.status, asset: req.asset, horizon: req.horizon, payTx: req.payTx, error: req.error }
+  const base = {
+    requestId,
+    status: req.status,
+    asset: req.asset,
+    horizon: req.horizon,
+    payTx: req.payTx,
+    error: req.error,
+    progress: req.status === 'answering' && req.progress ? (JSON.parse(req.progress) as unknown) : null,
+  }
   if (req.status !== 'sealed' || req.callId == null) return { ...base, call: null }
   const call = db.select().from(schema.calls).where(eq(schema.calls.id, req.callId)).get()
   if (!call) return { ...base, call: null }

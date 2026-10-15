@@ -1,26 +1,31 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { randomBytes } from 'node:crypto'
 import { resolve } from 'node:path'
 import { and, eq, gt, inArray } from 'drizzle-orm'
 import type { SetupPayload } from '../lib/calls/payload'
 import { getDb, schema } from '../lib/db'
+import type { RadarRow, RadarState } from '../lib/floor-types'
 import { chatJson, llmConfigured, models } from '../lib/llm'
 import { loadFrames } from '../lib/market/frames'
 import { GT_POOL_BUDGET, topPools, trendingPools, type Pool } from '../lib/market/geckoterminal'
 import type { AssetRef, Frames } from '../lib/market/types'
+import { ORACLE_ASSETS } from '../lib/oracle-assets'
 import { publishCall } from './calls'
+import { emit, setRadar } from './events'
 import { errMsg, log } from './log'
 import { armPlan, firstRejection, nearestRejector } from './stquant/arming.js'
 import { renderChart } from './stquant/charts.js'
+import { atr } from './stquant/indicators.js'
 import { SIGNAL } from './stquant/settings.js'
-import { sniperSignal } from './stquant/sniper.js'
+import { mfiExtreme, sniperSignal, supportMap } from './stquant/sniper.js'
 
 const l = log('stquant')
 
-type GtAsset = Extract<AssetRef, { source: 'geckoterminal' }> & { liquidityUsd: number; volume24hUsd: number }
+type Watched = AssetRef & { liquidityUsd?: number; volume24hUsd?: number }
 
 // ST Quant's own universe filters (okxtradingagent/src/universe.js), applied to GeckoTerminal pools.
 const FILTERS = { minLiquidityUsd: 120_000, minVolume24hUsd: 200_000, minTurnover: 0.08 }
-const MAX_UNIVERSE = Number(process.env.STQUANT_MAX_UNIVERSE ?? GT_POOL_BUDGET)
+const MAX_POOLS = Number(process.env.STQUANT_MAX_UNIVERSE ?? GT_POOL_BUDGET)
 const NETWORKS = (process.env.STQUANT_NETWORKS ?? 'bsc,x-layer').split(',').map(s => s.trim())
 const MAX_OPEN = Number(process.env.STQUANT_MAX_OPEN ?? 8)
 const AI_READS_PER_SCAN = 2
@@ -39,22 +44,29 @@ const TOKENISED_MAJOR = /^x(eth|btc|sol|bnb|xrp|doge)$/i
 const CHART_DIR = resolve(process.env.PRESAGE_CHART_DIR ?? 'var/charts')
 const RUBRIC = readFileSync(new URL('./stquant/RUBRIC.md', import.meta.url), 'utf8')
 
-let universe: GtAsset[] = []
-let universeAt = 0
+/** The Binance side of the universe: every coin the Oracle covers, priced where anyone can check. */
+const BINANCE_MARKETS: Watched[] = ORACLE_ASSETS.map(a => ({ symbol: a.symbol, source: 'binance', market: a.market }))
 
-async function refreshUniverse(): Promise<void> {
-  const pools: Pool[] = []
+let pools: Watched[] = []
+let poolsAt = 0
+/** Readings from the last pass over each half of the universe, so the radar always shows the whole picture. */
+const radar = new Map<string, RadarRow>()
+
+const refOf = (a: AssetRef) => (a.source === 'binance' ? `binance:${a.market}` : `${a.network}:${a.pool}`)
+
+async function refreshPools(): Promise<void> {
+  const found: Pool[] = []
   for (const net of NETWORKS) {
     for (const fetch of [trendingPools, topPools]) {
       try {
-        pools.push(...(await fetch(net)))
+        found.push(...(await fetch(net)))
       } catch (e) {
-        l.warn(`universe feed ${net} failed: ${errMsg(e)}`)
+        l.warn(`pool feed ${net} failed: ${errMsg(e)}`)
       }
     }
   }
   const best = new Map<string, Pool>()
-  for (const p of pools) {
+  for (const p of found) {
     if (PARKING.test(p.baseSymbol) || TOKENISED_STOCK.test(p.baseSymbol) || TOKENISED_MAJOR.test(p.baseSymbol)) continue
     if (p.liquidityUsd < FILTERS.minLiquidityUsd || p.volume24hUsd < FILTERS.minVolume24hUsd) continue
     if (p.volume24hUsd / p.liquidityUsd < FILTERS.minTurnover) continue
@@ -63,8 +75,8 @@ async function refreshUniverse(): Promise<void> {
     if (!prev || p.liquidityUsd > prev.liquidityUsd) best.set(key, p)
   }
   const ranked = [...best.values()].sort((a, b) => b.volume24hUsd / b.liquidityUsd - a.volume24hUsd / a.liquidityUsd)
-  if (!ranked.length && universe.length) return // keep the old list rather than go blind
-  universe = ranked.slice(0, MAX_UNIVERSE).map(p => ({
+  if (!ranked.length && pools.length) return // keep the old list rather than go blind
+  pools = ranked.slice(0, MAX_POOLS).map(p => ({
     symbol: p.baseSymbol,
     source: 'geckoterminal',
     network: p.network,
@@ -73,12 +85,12 @@ async function refreshUniverse(): Promise<void> {
     liquidityUsd: p.liquidityUsd,
     volume24hUsd: p.volume24hUsd,
   }))
-  universeAt = Date.now()
-  l.info(`universe: ${universe.length} pools`, { symbols: universe.map(u => u.symbol).join(' ') })
+  poolsAt = Date.now()
+  l.info(`pools: ${pools.length}`, { symbols: pools.map(u => u.symbol).join(' ') })
 }
 
 type Candidate = {
-  asset: GtAsset
+  asset: Watched
   frames: Frames
   route: 'armed' | 'sniper'
   score: number
@@ -90,12 +102,37 @@ type Candidate = {
 }
 
 const fmt = (n: number) => Number(n.toPrecision(8))
+const r1 = (n: number) => Math.round(n * 10) / 10
 
-function candidateFrom(asset: GtAsset, frames: Frames): Candidate | null {
+/**
+ * One market through the whole thesis: where MFI sits in its own range, where the nearest support is,
+ * what the sniper and the arming plan say. The radar shows this; a candidate comes out of it when the
+ * rules say so.
+ */
+function read(asset: Watched, frames: Frames): { row: RadarRow; candidate: Candidate | null } {
   const price = frames.m15.at(-1)!.c
+  const x15 = mfiExtreme(frames.m15)
+  const x1h = mfiExtreme(frames.h1)
+  const a = atr(frames.m15)
+  const atrPct = a ? (a / price) * 100 : 0
+
+  let support: { price: number; type: string; tf: string } | null = null
+  for (const [tf, list] of Object.entries(supportMap(frames))) {
+    for (const s of list) {
+      const dist = (price - s.price) / price
+      if (dist >= -0.01 && (!support || s.price > support.price)) support = { price: s.price, type: s.type, tf }
+    }
+  }
+  const supportDistPct = support ? ((price - support.price) / price) * 100 : null
+
+  const sig = sniperSignal(frames)
   const plan = armPlan(frames, asset)
+  const score = 'score' in sig ? sig.score : 0
+  const blockers = 'blockers' in plan ? plan.blockers : []
+
+  let candidate: Candidate | null = null
   if (plan.arm && 'tp1' in plan) {
-    return {
+    candidate = {
       asset,
       frames,
       route: 'armed',
@@ -106,26 +143,54 @@ function candidateFrom(asset: GtAsset, frames: Frames): Candidate | null {
       conviction: plan.conviction,
       reasons: plan.reasons,
     }
+  } else if (sig.fire && 'stop' in sig) {
+    // The sniper says price is at support with MFI at an extreme: a market entry now. The target is the
+    // rubric's TP1, the first rejection point, else the nearest level that has rejected price.
+    const target = firstRejection(frames, price) ?? nearestRejector(frames, price)?.price
+    if (target && sig.stop < price) {
+      const rr = (target - price) / (price - sig.stop)
+      if (rr >= 1.5 && (target - price) / price >= 0.02) {
+        candidate = {
+          asset,
+          frames,
+          route: 'sniper',
+          score: sig.score,
+          entry: { type: 'market', price: fmt(price) },
+          stop: fmt(sig.stop),
+          target: fmt(target),
+          conviction: 'conviction' in plan ? Math.min(5, Math.max(1, plan.conviction)) : 3,
+          reasons: [...sig.notes, `${rr.toFixed(1)}R to the first rejection at ${fmt(target)}`],
+        }
+      }
+    }
   }
-  const sig = sniperSignal(frames)
-  if (!sig.fire || !('stop' in sig)) return null
-  // The sniper says price is at support with MFI at an extreme: a market entry now. The target is the
-  // rubric's TP1, the first rejection point, else the nearest level that has rejected price.
-  const target = firstRejection(frames, price) ?? nearestRejector(frames, price)?.price
-  if (!target || !(sig.stop < price)) return null
-  const rr = (target - price) / (price - sig.stop)
-  if (rr < 1.5 || (target - price) / price < 0.02) return null
-  return {
-    asset,
-    frames,
-    route: 'sniper',
-    score: sig.score,
-    entry: { type: 'market', price: fmt(price) },
-    stop: fmt(sig.stop),
-    target: fmt(target),
-    conviction: 'conviction' in plan ? Math.min(5, Math.max(1, plan.conviction)) : 3,
-    reasons: [...sig.notes, `${rr.toFixed(1)}R to the first rejection at ${fmt(target)}`],
+
+  const state: RadarState = candidate
+    ? 'firing'
+    : atrPct < 0.4
+      ? 'quiet'
+      : score >= 8 || (supportDistPct != null && supportDistPct <= 2.5 && x15 != null && x15.percentile <= 0.2)
+        ? 'close'
+        : 'watching'
+
+  const row: RadarRow = {
+    symbol: asset.symbol,
+    source: asset.source,
+    ref: refOf(asset),
+    price: fmt(price),
+    mfi15: x15 ? r1(x15.value) : null,
+    mfi15Pct: x15 ? Math.round(x15.percentile * 100) : null,
+    mfi1h: x1h ? r1(x1h.value) : null,
+    mfi1hPct: x1h ? Math.round(x1h.percentile * 100) : null,
+    atrPct: Math.round(atrPct * 100) / 100,
+    supportDistPct: supportDistPct == null ? null : Math.round(supportDistPct * 10) / 10,
+    supportKind: support ? `${support.tf} ${support.type.replace('trendline-', '')}` : null,
+    score,
+    state,
+    blocker: candidate ? null : (blockers[0] ?? ('reason' in sig && sig.reason ? sig.reason : null)),
+    at: Math.floor(Date.now() / 1000),
   }
+  return { row, candidate }
 }
 
 type ChartRead = { verdict: 'BUY' | 'WAIT' | 'AVOID'; conviction: number; why: string; wouldChangeMind: string; vetoes: string[] }
@@ -133,6 +198,11 @@ type ChartRead = { verdict: 'BUY' | 'WAIT' | 'AVOID'; conviction: number; why: s
 /** The AI chart read: the founder's rubric applied to the rendered chart. It approves or vetoes; it never sets prices. */
 async function chartRead(c: Candidate, png: Buffer): Promise<ChartRead> {
   const price = c.frames.m15.at(-1)!.c
+  const where = c.asset.source === 'binance' ? `Binance spot ${c.asset.market}` : `${c.asset.network} DEX pool`
+  const liquidity =
+    c.asset.liquidityUsd != null && c.asset.volume24hUsd != null
+      ? `Liquidity $${Math.round(c.asset.liquidityUsd / 1000)}k. 24h volume $${Math.round(c.asset.volume24hUsd / 1000)}k.`
+      : 'A centralised spot market: liquidity and volume are not a concern here.'
   const text = [
     'You are a disciplined crypto chart analyst. Apply the rubric exactly as written.',
     'Do not invent rules, and do not add criteria the rubric does not contain.',
@@ -149,8 +219,8 @@ async function chartRead(c: Candidate, png: Buffer): Promise<ChartRead> {
     RUBRIC,
     '=== END RUBRIC ===',
     '',
-    `Coin: ${c.asset.symbol} on ${c.asset.network}. Last price ${price}.`,
-    `Liquidity $${Math.round(c.asset.liquidityUsd / 1000)}k. 24h volume $${Math.round(c.asset.volume24hUsd / 1000)}k.`,
+    `Coin: ${c.asset.symbol} (${where}). Last price ${price}.`,
+    liquidity,
     `The deterministic plan you are grading: ${c.entry.type} entry ${c.entry.price}, stop ${c.stop}, target ${c.target}.`,
     `What the rules engine saw: ${c.reasons.slice(0, 8).join(' | ')}`,
     '',
@@ -221,23 +291,44 @@ async function publish(agentId: number, c: Candidate, aiWhy?: string): Promise<v
   const row = await publishCall({ payload, revealBy })
   mkdirSync(CHART_DIR, { recursive: true })
   writeFileSync(`${CHART_DIR}/call-${row.id}.png`, renderChart({ symbol: c.asset.symbol, frames: c.frames }))
+  emit(agentId, 'sealed', { callId: row.id, chainCallId: row.chainCallId, symbol: c.asset.symbol, kind: 'setup', route: c.route })
   l.info(`sealed ${c.route} setup ${c.asset.symbol}`, { call: row.id, chainCallId: row.chainCallId, entry: c.entry, stop: c.stop, target: c.target })
 }
 
-async function findCandidates(agentId: number | null): Promise<Candidate[]> {
-  if (Date.now() - universeAt > 30 * 60_000 || !universe.length) await refreshUniverse()
+/** Run `fn` over `items` with at most `n` in flight. */
+async function pool<T>(items: T[], n: number, fn: (t: T) => Promise<void>) {
+  let i = 0
+  await Promise.all(
+    Array.from({ length: Math.min(n, items.length) }, async () => {
+      while (i < items.length) await fn(items[i++])
+    }),
+  )
+}
+
+/** Read every market in one half of the universe, updating the radar as each one comes in. */
+async function pass(agentId: number | null, assets: Watched[], concurrency: number): Promise<Candidate[]> {
   const found: Candidate[] = []
-  for (const asset of universe) {
-    if (agentId != null && (await recentlyCalled(agentId, asset.symbol))) continue
+  await pool(assets, concurrency, async asset => {
     try {
       const frames = await loadFrames(asset)
-      if (frames.m15.length < 120 || frames.h1.length < 60 || frames.d1.length < 7) continue
-      const c = candidateFrom(asset, frames)
-      if (c) found.push(c)
+      if (frames.m15.length < 120 || frames.h1.length < 60 || frames.d1.length < 7) return
+      const { row, candidate } = read(asset, frames)
+      radar.set(row.ref, row)
+      if (agentId != null) setRadar(agentId, [...radar.values()])
+      if (candidate && (agentId == null || !(await recentlyCalled(agentId, asset.symbol)))) found.push(candidate)
     } catch (e) {
       l.warn(`${asset.symbol}: ${errMsg(e)}`)
     }
-  }
+  })
+  return found
+}
+
+async function findCandidates(agentId: number | null): Promise<Candidate[]> {
+  if (Date.now() - poolsAt > 30 * 60_000 || !pools.length) await refreshPools()
+  // Drop pools that left the universe, so the radar never shows a stale market.
+  const live = new Set([...BINANCE_MARKETS, ...pools].map(refOf))
+  for (const key of radar.keys()) if (!live.has(key)) radar.delete(key)
+  const found = [...(await pass(agentId, BINANCE_MARKETS, 4)), ...(await pass(agentId, pools, 1))]
   return found.sort((a, b) => b.score - a.score)
 }
 
@@ -245,16 +336,32 @@ async function findCandidates(agentId: number | null): Promise<Candidate[]> {
 export async function previewScan() {
   const found = await findCandidates(null)
   return {
-    universe: universe.map(u => `${u.symbol}@${u.network}`),
-    candidates: found.map(c => ({ symbol: c.asset.symbol, network: c.asset.network, route: c.route, score: c.score, entry: c.entry, stop: c.stop, target: c.target, conviction: c.conviction, reasons: c.reasons })),
+    universe: [...BINANCE_MARKETS, ...pools].map(u => refOf(u)),
+    radar: [...radar.values()].sort((a, b) => b.score - a.score),
+    candidates: found.map(c => ({ symbol: c.asset.symbol, ref: refOf(c.asset), route: c.route, score: c.score, entry: c.entry, stop: c.stop, target: c.target, conviction: c.conviction, reasons: c.reasons })),
   }
 }
 
+let scanning = false
+
 /** One pass over the universe: find setups, let the chart read veto the sniper's, seal what survives. */
 export async function scanOnce(agentId: number): Promise<void> {
+  if (scanning) return // the DEX pass can outlast a candle; never run two scans at once
+  scanning = true
+  try {
+    await scan(agentId)
+  } finally {
+    scanning = false
+  }
+}
+
+async function scan(agentId: number): Promise<void> {
+  const started = Date.now()
   const room = MAX_OPEN - (await openCount(agentId))
-  if (room <= 0) return
+  const markets = BINANCE_MARKETS.length + (pools.length || MAX_POOLS)
+  emit(agentId, 'scan', { phase: 'start', markets })
   const found = await findCandidates(agentId)
+  for (const c of found) emit(agentId, 'candidate', { symbol: c.asset.symbol, route: c.route, score: c.score })
 
   let published = 0
   let aiReads = 0
@@ -272,10 +379,19 @@ export async function scanOnce(agentId: number): Promise<void> {
         aiDay = today
         aiToday = 0
       }
-      if (!llmConfigured() || !models.vision() || aiReads >= AI_READS_PER_SCAN || aiToday >= AI_READS_PER_DAY) continue
+      if (!llmConfigured() || !models.vision() || aiReads >= AI_READS_PER_SCAN || aiToday >= AI_READS_PER_DAY) {
+        emit(agentId, 'skipped', { symbol: c.asset.symbol, why: 'no chart read available right now' })
+        continue
+      }
       aiReads++
       aiToday++
-      const read = await chartRead(c, renderChart({ symbol: c.asset.symbol, frames: c.frames }))
+      const png = renderChart({ symbol: c.asset.symbol, frames: c.frames })
+      const read = await chartRead(c, png)
+      // The chart the model looked at is kept so the floor can show it with the verdict.
+      mkdirSync(CHART_DIR, { recursive: true })
+      const file = `read-${randomBytes(6).toString('hex')}.png`
+      writeFileSync(`${CHART_DIR}/${file}`, png)
+      emit(agentId, 'chart_read', { symbol: c.asset.symbol, verdict: read.verdict, conviction: read.conviction, why: read.why, vetoes: read.vetoes ?? [], chart: file })
       l.info(`chart read ${c.asset.symbol}: ${read.verdict} ${read.conviction}`, { why: read.why })
       if (read.verdict === 'BUY' && read.conviction >= 4) {
         await publish(agentId, { ...c, conviction: read.conviction }, read.why)
@@ -285,5 +401,6 @@ export async function scanOnce(agentId: number): Promise<void> {
       l.error(`${c.asset.symbol} not published: ${errMsg(e)}`)
     }
   }
-  l.info(`scan done: ${universe.length} pools, ${found.length} candidates, ${published} sealed`)
+  emit(agentId, 'scan', { phase: 'done', markets: radar.size, candidates: found.length, sealed: published, ms: Date.now() - started })
+  l.info(`scan done: ${radar.size} markets, ${found.length} candidates, ${published} sealed, ${Math.round((Date.now() - started) / 1000)}s`)
 }

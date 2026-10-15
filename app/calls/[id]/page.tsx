@@ -2,11 +2,13 @@
 
 import { use, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
 import { useReadContract } from 'wagmi'
 import { UnifiedNavbar } from '@/components/UnifiedNavbar'
 import { OutcomeBadge } from '@/components/agents'
+import { Sigil } from '@/components/Sigil'
+import { Button, Container, cx } from '@/components/ui'
 import { presageCallsAbi } from '@/lib/abi/PresageCalls'
 import { commitmentOf, type CallPayload } from '@/lib/calls/payload'
 import { DIRECTION_RULES, SETUP_RULES, resolveDirection, resolveSetup } from '@/lib/calls/rules'
@@ -34,7 +36,7 @@ export default function CallPage({ params }: { params: Promise<{ id: string }> }
   return (
     <div className="min-h-screen bg-white">
       <UnifiedNavbar currentPage="record" />
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <Container className="py-8 max-w-6xl">
         {isLoading && <div className="py-24 text-center text-gray-500">Loading the receipt…</div>}
         {!isLoading && !c && (
           <div className="py-24 text-center">
@@ -43,7 +45,7 @@ export default function CallPage({ params }: { params: Promise<{ id: string }> }
           </div>
         )}
         {c && <Receipt c={c} />}
-      </div>
+      </Container>
     </div>
   )
 }
@@ -58,18 +60,14 @@ function Receipt({ c }: { c: CallView }) {
   return (
     <>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-        <div className="text-sm text-gray-500 mb-2">
-          <Link href={`/agents/${c.agentSlug}`} className="font-bold hover:underline">
-            {c.agentName}
-          </Link>{' '}
-          • call #{c.chainCallId}
-        </div>
+        <Link href={`/agents/${c.agentSlug}`} className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-black mb-3">
+          <Sigil id={c.agentId} slug={c.agentSlug === 'oracle' || c.agentSlug === 'st-quant' ? c.agentSlug : undefined} size={24} className="rounded-md" />
+          <span className="font-bold">{c.agentName}</span> · call #{c.chainCallId}
+        </Link>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <h1 className="text-4xl sm:text-5xl font-black text-black">
-            {p ? (p.rules === 'presage/setup-v1' ? `${p.asset.symbol} long` : `${p.asset.symbol} ${p.direction}`) : 'A sealed call'}
-          </h1>
+          <h1 className="text-4xl sm:text-5xl font-black text-black tracking-tight">{p ? (p.rules === 'presage/setup-v1' ? `${p.asset.symbol} long` : `${p.asset.symbol} ${p.direction}`) : 'A sealed call'}</h1>
           <div className="flex items-center gap-3">
-            {c.result != null && <span className="text-3xl font-black text-black">{result(c.kind, c.result)}</span>}
+            {c.result != null && <span className={cx('text-3xl font-black tabular-nums', c.result > 0 ? 'text-green-600' : c.result < 0 ? 'text-red-600' : 'text-black')}>{result(c.kind, c.result)}</span>}
             <OutcomeBadge c={c} />
           </div>
         </div>
@@ -77,7 +75,7 @@ function Receipt({ c }: { c: CallView }) {
 
       <div className="grid md:grid-cols-3 gap-4 mb-8">
         {steps.map((s, i) => (
-          <div key={s.title} className={`rounded-2xl p-5 border-2 ${s.done ? (s.icon === '🚫' ? 'bg-red-50 border-red-300' : 'bg-green-50 border-green-300') : 'bg-gray-50 border-gray-200'}`}>
+          <motion.div key={s.title} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }} className={cx('rounded-2xl p-5 border-2', s.done ? (s.icon === '🚫' ? 'bg-red-50 border-red-300' : 'bg-green-50 border-green-300') : 'bg-gray-50 border-gray-200')}>
             <div className="text-3xl mb-2">{s.done ? s.icon : '⏳'}</div>
             <div className="font-black text-black">
               {i + 1}. {s.title}
@@ -88,21 +86,16 @@ function Receipt({ c }: { c: CallView }) {
                 {short(s.tx, 8)}
               </a>
             )}
-          </div>
+          </motion.div>
         ))}
       </div>
 
       {!p ? (
-        <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-8 border-2 border-purple-200 mb-8">
-          <div className="text-5xl mb-3">🔒</div>
-          <h2 className="text-2xl font-black text-black mb-2">This call is sealed</h2>
-          <p className="text-gray-700 mb-4">
-            Its contents stay secret until it is scored, so subscribers get it first and nobody can copy it for free. What everyone can see is its
-            fingerprint, written to Metis at {when(c.sealedAt)}. When the call is revealed, the reveal has to hash to exactly this, so it cannot be changed.
-            It must be revealed within {until(c.revealBy)}; after that anyone can forfeit it and it counts as a loss.
-          </p>
-          <div className="bg-white rounded-xl p-4 border border-purple-200 font-mono text-xs break-all">{c.commitment}</div>
-        </div>
+        <SealedCard c={c} />
+      ) : c.status === 'revealed' ? (
+        <Reveal sealed={<SealedCard c={c} resolved />}>
+          <CallBody c={c} p={p} />
+        </Reveal>
       ) : (
         <CallBody c={c} p={p} />
       )}
@@ -111,6 +104,49 @@ function Receipt({ c }: { c: CallView }) {
 
       <div className="text-xs text-gray-500 mt-8">Not financial advice. This page shows what an AI agent said and what happened, nothing more.</div>
     </>
+  )
+}
+
+/**
+ * The sealed card flips away to show the call, the first time a revealed receipt is opened. Only the
+ * card rotates; the body underneath keeps its layout, so the price chart can measure itself.
+ */
+function Reveal({ sealed, children }: { sealed: React.ReactNode; children: React.ReactNode }) {
+  const [flipped, setFlipped] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setFlipped(true), 900)
+    return () => clearTimeout(t)
+  }, [])
+  return (
+    <div className="relative [perspective:1400px]">
+      <AnimatePresence>
+        {!flipped && (
+          <motion.div key="front" initial={{ rotateY: 0, opacity: 1 }} exit={{ rotateY: 90, opacity: 0 }} transition={{ duration: 0.5, ease: 'easeIn' }} className="absolute inset-0 z-10 origin-left">
+            {sealed}
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <motion.div initial={{ opacity: 0, scale: 0.985 }} animate={flipped ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.985 }} transition={{ duration: 0.4, ease: 'easeOut', delay: flipped ? 0.35 : 0 }}>
+        {children}
+      </motion.div>
+    </div>
+  )
+}
+
+function SealedCard({ c, resolved = false }: { c: CallView; resolved?: boolean }) {
+  return (
+    <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-8 border-2 border-purple-200 mb-8 h-full">
+      <motion.div animate={{ rotate: resolved ? [0, -8, 8, 0] : 0 }} transition={{ duration: 0.6 }} className="text-5xl mb-3 inline-block">
+        🔒
+      </motion.div>
+      <h2 className="text-2xl font-black text-black mb-2">{resolved ? 'This call was sealed' : 'This call is sealed'}</h2>
+      <p className="text-gray-700 mb-4">
+        {resolved
+          ? `Its fingerprint was written to Metis at ${when(c.sealedAt)}, before the outcome. The reveal had to hash to exactly this.`
+          : `Its contents stay secret until it is scored, so backers get it first and nobody can copy it for free. What everyone can see is its fingerprint, written to Metis at ${when(c.sealedAt)}. When the call is revealed, the reveal has to hash to exactly this, so it cannot be changed. It must be revealed within ${until(c.revealBy)}; after that anyone can forfeit it and it counts as a loss.`}
+      </p>
+      <div className="bg-white rounded-xl p-4 border border-purple-200 font-mono text-xs break-all">{c.commitment}</div>
+    </div>
   )
 }
 
@@ -134,7 +170,8 @@ function CallBody({ c, p }: { c: CallView; p: CallPayload }) {
           </div>
         )}
         <div className="text-sm text-gray-600 mb-2">
-          {p.asset.source === 'binance' ? `Binance ${p.asset.market}` : `${p.asset.network} pool ${short(p.asset.pool)}`} • price at issue {price(p.priceAtIssue)}
+          {p.asset.source === 'binance' ? `Binance ${p.asset.market}` : `${p.asset.network} pool ${short(p.asset.pool)}`} · price at issue {price(p.priceAtIssue)}
+          {p.rules === 'presage/setup-v1' && p.conviction ? ` · conviction ${p.conviction}/5` : ''}
         </div>
         <div className="bg-gray-50 rounded-xl p-4">
           <div className="text-sm font-semibold text-gray-600 mb-2">Why</div>
@@ -151,21 +188,25 @@ function CallBody({ c, p }: { c: CallView; p: CallPayload }) {
         {p.rules === 'presage/direction-v1' && (
           <div className="mt-4 space-y-2">
             {p.models.map(m => (
-              <div key={m.model} className="flex items-center justify-between bg-gray-50 rounded-lg p-3 text-sm">
-                <span className="font-bold">{m.model}</span>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${m.direction === 'up' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+              <div key={m.model} className="flex items-center justify-between bg-gray-50 rounded-xl p-3 text-sm">
+                <span className="font-bold">{m.model.split('/').pop()}</span>
+                <span className={cx('px-2 py-0.5 rounded-full text-xs font-bold', m.direction === 'up' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
                   {m.direction.toUpperCase()} {m.confidence}%
                 </span>
               </div>
             ))}
           </div>
         )}
+        {p.rules === 'presage/setup-v1' && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={`/api/charts/${c.id}`} alt="" className="mt-4 rounded-xl border border-gray-200 w-full" onError={e => ((e.target as HTMLImageElement).style.display = 'none')} />
+        )}
       </div>
 
       <div className="space-y-6">
         <PriceChart p={p} c={c} />
         {res?.reason && (
-          <div className={`rounded-2xl p-5 border-2 ${c.outcome === 'win' ? 'bg-green-50 border-green-300' : c.outcome === 'loss' ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-300'}`}>
+          <div className={cx('rounded-2xl p-5 border-2', c.outcome === 'win' ? 'bg-green-50 border-green-300' : c.outcome === 'loss' ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-300')}>
             <div className="font-black text-black mb-1">How it resolved</div>
             <div className="text-sm text-gray-700">{res.reason}</div>
             <div className="text-xs text-gray-500 mt-2">
@@ -183,17 +224,16 @@ function Box({ label, value, cls = 'text-black' }: { label: string; value: strin
   return (
     <div className="bg-gray-50 rounded-xl p-3 text-center">
       <div className="text-xs text-gray-500">{label}</div>
-      <div className={`text-lg font-black ${cls}`}>{value}</div>
+      <div className={cx('text-lg font-black', cls)}>{value}</div>
     </div>
   )
 }
 
 async function publicCandles(p: CallPayload, fromSec: number, toSec: number, tf: '15m' | '1m'): Promise<Candle[]> {
   if (p.asset.source === 'binance') return binanceKlines(p.asset.market, tf, { startMs: fromSec * 1000, endMs: toSec * 1000, limit: 1000 })
-  const r = await fetch(
-    `https://api.geckoterminal.com/api/v2/networks/${p.asset.network}/pools/${p.asset.pool}/ohlcv/minute?aggregate=15&limit=1000&currency=usd&before_timestamp=${toSec + 900}`,
-    { headers: { accept: 'application/json;version=20230302' } },
-  )
+  const r = await fetch(`https://api.geckoterminal.com/api/v2/networks/${p.asset.network}/pools/${p.asset.pool}/ohlcv/minute?aggregate=15&limit=1000&currency=usd&before_timestamp=${toSec + 900}`, {
+    headers: { accept: 'application/json;version=20230302' },
+  })
   if (!r.ok) throw new Error(`GeckoTerminal answered ${r.status}`)
   const j = (await r.json()) as { data: { attributes: { ohlcv_list: number[][] } } }
   return j.data.attributes.ohlcv_list.map(([t, o, h, l, cl, v]) => ({ ts: t * 1000, o, h, l, c: cl, v })).sort((a, b) => a.ts - b.ts)
@@ -297,9 +337,9 @@ function Verify({ c, p }: { c: CallView; p: CallPayload }) {
           <h2 className="text-3xl font-black mb-1">Check it yourself</h2>
           <p className="text-gray-400">Your browser reads the chain and the public price feed. Presage’s servers are not involved.</p>
         </div>
-        <button onClick={run} className="px-8 py-4 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-all">
+        <Button variant="secondary" size="lg" onClick={run}>
           Run the checks
-        </button>
+        </Button>
       </div>
       <div className="grid md:grid-cols-2 gap-4 mb-6">
         <CheckCard title="1. The call was not changed" check={hashCheck} />
@@ -336,7 +376,7 @@ function Verify({ c, p }: { c: CallView; p: CallPayload }) {
 function CheckCard({ title, check }: { title: string; check: Check }) {
   const tone = check.state === 'pass' ? 'border-green-400' : check.state === 'fail' ? 'border-red-400' : 'border-gray-700'
   return (
-    <div className={`rounded-xl p-5 border-2 ${tone} bg-gray-900`}>
+    <div className={cx('rounded-xl p-5 border-2 bg-gray-900', tone)}>
       <div className="flex items-center justify-between mb-2">
         <div className="font-bold">{title}</div>
         <div className="text-2xl">{check.state === 'pass' ? '✅' : check.state === 'fail' ? '⚠️' : check.state === 'running' ? '⏳' : '○'}</div>
