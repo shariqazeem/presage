@@ -2,6 +2,9 @@
 // seals its spec in PresageAgents. Safe to re-run: agents already in the database are skipped.
 //
 //   npx tsx scripts/register-house-agents.ts
+//
+// Without PRESAGE_DEPLOYER_KEY (on the server) it sends nothing: it finds the house agents the deployer
+// already registered, by their sealed spec hashes, and writes only the database rows.
 import '../engine/env'
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
@@ -21,8 +24,11 @@ if (!site || (isMainnet && /localhost|127\.0\.0\.1/.test(site) && process.env.PR
   throw new Error('Set NEXT_PUBLIC_SITE_URL to the public site first')
 }
 
-const account = privateKeyToAccount(process.env.PRESAGE_DEPLOYER_KEY as Hex)
-const wallet = createWalletClient({ account, chain, transport: fallback(rpcUrls.map(u => http(u))) })
+const dbOnly = !process.env.PRESAGE_DEPLOYER_KEY
+const account = dbOnly ? null : privateKeyToAccount(process.env.PRESAGE_DEPLOYER_KEY as Hex)
+const deployerAddress = (account?.address ?? process.env.PRESAGE_DEPLOYER_ADDRESS) as Hex
+if (!deployerAddress) throw new Error('Set PRESAGE_DEPLOYER_KEY, or PRESAGE_DEPLOYER_ADDRESS for db-only mode')
+const wallet = account ? createWalletClient({ account, chain, transport: fallback(rpcUrls.map(u => http(u))) }) : null
 
 const sortKeys = (v: unknown): unknown =>
   Array.isArray(v)
@@ -83,6 +89,7 @@ const HOUSE = [
 ]
 
 async function send(address: Hex, abi: readonly unknown[], functionName: string, args: unknown[]) {
+  if (!wallet) throw new Error('No deployer key')
   const gasPrice = ((await publicClient.getGasPrice()) * 12n) / 10n
   const hash = await wallet.writeContract({ address, abi: abi as never, functionName: functionName as never, args: args as never, gasPrice, type: 'legacy' } as never)
   const receipt = await publicClient.waitForTransactionReceipt({ hash })
@@ -100,6 +107,39 @@ async function main() {
     const specJson = JSON.stringify(sortKeys(h.spec))
     const specHash = keccak256(stringToBytes(specJson))
     const agentURI = `${site}/api/agents/${h.slug}/card`
+
+    if (dbOnly) {
+      // Find the agent the deployer registered with exactly this spec, and record it.
+      const ids = await publicClient.readContract({ address: deployment!.agents, abi: presageAgentsAbi, functionName: 'agentsOf', args: [deployerAddress] })
+      let found: { id: bigint; registeredAt: number } | null = null
+      for (const id of ids) {
+        const a = await publicClient.readContract({ address: deployment!.agents, abi: presageAgentsAbi, functionName: 'getAgent', args: [id] })
+        if (a.specHash.toLowerCase() === specHash.toLowerCase()) found = { id, registeredAt: Number(a.registeredAt) }
+      }
+      if (!found) {
+        console.log(`${h.slug}: not registered on chain with this spec (${specHash}); register it from the deployer first`)
+        continue
+      }
+      db.insert(schema.agents)
+        .values({
+          id: Number(found.id),
+          slug: h.slug,
+          name: h.name,
+          kind: h.kind,
+          house: true,
+          creator: deployerAddress.toLowerCase(),
+          description: h.description,
+          specJson,
+          specHash,
+          priceUsd6: h.priceUsd6,
+          callPriceUsd6: h.callPriceUsd6,
+          registeredAt: found.registeredAt,
+          createdAt: Math.floor(Date.now() / 1000),
+        })
+        .run()
+      console.log(`${h.slug}: recorded ERC-8004 #${found.id} from the chain (db only)`)
+      continue
+    }
 
     const minted = await send(erc8004.identity, identityRegistryAbi, 'register', [agentURI])
     const reg = parseEventLogs({ abi: identityRegistryAbi, eventName: 'Registered', logs: minted.logs })[0]
@@ -122,7 +162,7 @@ async function main() {
         name: h.name,
         kind: h.kind,
         house: true,
-        creator: account.address.toLowerCase(),
+        creator: deployerAddress.toLowerCase(),
         description: h.description,
         specJson,
         specHash,
