@@ -52,3 +52,15 @@ export function useSession() {
   }, [address, signMessageAsync, qc])
   return { signedIn, wallet: q.data?.wallet ?? null, signIn }
 }
+
+/** Link this wallet to Telegram: sign in once, then open the bot with a one-time code. */
+export function useTelegramLink() {
+  const { signedIn, signIn } = useSession()
+  return useCallback(async () => {
+    if (!signedIn) await signIn()
+    const r = await fetch('/api/telegram/code', { method: 'POST' })
+    const j = await r.json()
+    if (!r.ok) throw new Error(j.error)
+    window.open(j.url, '_blank')
+  }, [signedIn, signIn])
+}

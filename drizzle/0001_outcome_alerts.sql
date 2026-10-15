@@ -1,0 +1,1 @@
+ALTER TABLE `calls` ADD `result_alerted_at` integer;

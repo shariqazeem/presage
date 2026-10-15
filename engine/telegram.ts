@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { and, eq, gt, isNull } from 'drizzle-orm'
+import { and, eq, gt, inArray, isNull } from 'drizzle-orm'
 import { parsePayload } from '../lib/calls/payload'
 import { txUrl } from '../lib/chain'
 import { getDb, schema } from '../lib/db'
@@ -143,6 +143,55 @@ async function alertNewCalls() {
   }
 }
 
+const OUTCOME_WORD: Record<string, string> = { win: 'WIN', loss: 'LOSS', flat: 'FLAT', nofill: 'NO FILL' }
+
+/** Tell subscribers, and the payer of a paid call, how each call turned out. Losses go out the same way. */
+async function alertOutcomes() {
+  const db = getDb()
+  const now = Math.floor(Date.now() / 1000)
+  const done = await db
+    .select()
+    .from(schema.calls)
+    .where(and(inArray(schema.calls.status, ['revealed', 'forfeited']), isNull(schema.calls.resultAlertedAt)))
+  for (const row of done) {
+    const agent = db.select().from(schema.agents).where(eq(schema.agents.id, row.agentId)).get()
+    const chats = new Set<string>()
+    const subs = await db
+      .select({ chatId: schema.telegramLinks.chatId })
+      .from(schema.subscriptions)
+      .innerJoin(schema.telegramLinks, eq(schema.telegramLinks.wallet, schema.subscriptions.subscriber))
+      .where(and(eq(schema.subscriptions.agentId, row.agentId), gt(schema.subscriptions.until, now)))
+    for (const s of subs) chats.add(s.chatId)
+    if (row.requestId) {
+      const req = db.select().from(schema.oracleRequests).where(eq(schema.oracleRequests.requestId, row.requestId)).get()
+      const payer = req?.payer ? db.select().from(schema.telegramLinks).where(eq(schema.telegramLinks.wallet, req.payer)).get() : undefined
+      if (payer) chats.add(payer.chatId)
+    }
+    if (chats.size) {
+      const p = parsePayload(row.payload)
+      const what = p.rules === 'presage/setup-v1' ? `${p.asset.symbol} long from ${p.entry.price}` : `${p.asset.symbol} ${p.direction} over ${p.horizonSec / 3600}h`
+      const result =
+        row.status === 'forfeited'
+          ? 'FORFEITED: it was not revealed in time, so it counts as a loss'
+          : `${OUTCOME_WORD[row.outcome ?? ''] ?? row.outcome} ${row.result != null ? (row.kind === 'setup' ? `${(row.result / 100).toFixed(2)}R` : `${(row.result / 100).toFixed(2)}%`) : ''}`
+      const text = [
+        `<b>${esc(agent?.name ?? `Agent ${row.agentId}`)}</b> · call #${row.chainCallId} resolved`,
+        `${esc(what)}`,
+        `<b>${result}</b>`,
+        `Receipt: ${SITE}/calls/${row.id}`,
+      ].join('\n')
+      for (const chat of chats) {
+        try {
+          await send(chat, text)
+        } catch (e) {
+          l.warn(`outcome alert to ${chat} failed: ${errMsg(e)}`)
+        }
+      }
+    }
+    db.update(schema.calls).set({ resultAlertedAt: now }).where(eq(schema.calls.id, row.id)).run()
+  }
+}
+
 export function startTelegram() {
   if (!TOKEN) {
     l.warn('TELEGRAM_BOT_TOKEN not set: alerts are off')
@@ -160,5 +209,6 @@ export function startTelegram() {
   }
   void loop()
   setInterval(() => alertNewCalls().catch(e => l.warn(`alerts: ${errMsg(e)}`)), 10_000)
+  setInterval(() => alertOutcomes().catch(e => l.warn(`outcome alerts: ${errMsg(e)}`)), 20_000)
   l.info('telegram bot polling')
 }

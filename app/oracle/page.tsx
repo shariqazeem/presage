@@ -13,7 +13,7 @@ import { FEATURED_COINS, TOTAL_SUPPORTED_COINS } from '@/lib/crypto-database'
 import { presageMarketAbi } from '@/lib/abi/PresageMarket'
 import { deployment, payTokens, txUrl } from '@/lib/chain'
 import { HORIZONS, type Horizon } from '@/lib/oracle'
-import { useAgent } from '@/lib/client/hooks'
+import { useAgent, useTelegramLink } from '@/lib/client/hooks'
 import { ago, bps, OUTCOME_STYLE, pct, price, until, when } from '@/lib/client/format'
 
 type Accept = {
@@ -79,6 +79,7 @@ export default function OraclePage() {
   const [history, setHistory] = useState<(Saved & { answer?: Answer })[]>([])
   const [showScoring, setShowScoring] = useState(false)
   const [quote, setQuote] = useState<string | null>(null)
+  const openTelegram = useTelegramLink()
 
   const payToken = payTokens.find(t => t.symbol === token) ?? payTokens[0]
   const { data: balance } = useBalance({ address, token: payToken.native ? undefined : payToken.address, query: { enabled: Boolean(address) } })
@@ -555,6 +556,12 @@ export default function OraclePage() {
                     <Link href={c.receipt}>
                       <button className="mt-4 w-full bg-black text-white px-4 py-3 rounded-xl font-bold hover:bg-gray-800 transition-all">Open the receipt →</button>
                     </Link>
+                    <button
+                      onClick={() => openTelegram().catch(e => toast.error(e instanceof Error ? e.message : 'Could not link Telegram'))}
+                      className="mt-2 w-full border-2 border-blue-200 text-blue-700 px-4 py-3 rounded-xl font-bold hover:bg-blue-50 hover:border-blue-400 transition-all"
+                    >
+                      ✈️ Tell me the outcome on Telegram
+                    </button>
                   </div>
                 </div>
               </div>

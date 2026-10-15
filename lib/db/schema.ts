@@ -72,6 +72,8 @@ export const calls = sqliteTable(
     settleTx: text('settle_tx'),
     feedbackTx: text('feedback_tx'),
     alertedAt: integer('alerted_at'),
+    /** When the outcome went out on Telegram to subscribers and, for a paid call, its payer. */
+    resultAlertedAt: integer('result_alerted_at'),
     error: text('error'),
   },
   t => [

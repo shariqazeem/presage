@@ -156,6 +156,48 @@ export async function forecast(symbol: string, horizon: Horizon) {
 }
 
 /** Answer paid Oracle requests: forecast, seal against the payment, record it. */
+/** Build and seal one Oracle call. Paid calls pass their requestId, so the seal releases their escrow. */
+async function sealForecast(oracleAgentId: number, asset: string, horizon: Horizon, requestId?: Hex) {
+  const h = HORIZONS[horizon]
+  const fc = await forecast(asset, horizon)
+  const issuedAt = Math.floor(Date.now() / 1000)
+  const payload: DirectionPayload = {
+    v: 1,
+    rules: 'presage/direction-v1',
+    agent: oracleAgentId,
+    asset: { symbol: asset, source: 'binance', market: fc.market },
+    direction: fc.direction,
+    confidence: fc.confidence,
+    horizonSec: h.seconds,
+    issuedAt,
+    priceAtIssue: fc.price,
+    flatBandBps: h.flatBandBps,
+    why: fc.why,
+    models: fc.votes.map(v => ({ model: v.model, direction: v.direction, confidence: v.confidence })),
+    ...(requestId ? { request: requestId } : {}),
+  }
+  const row = await publishCall({ payload, revealBy: issuedAt + h.seconds + h.graceSec, requestId })
+  return { row, fc }
+}
+
+/**
+ * The Oracle's own calls, on a schedule, so its record keeps growing whether or not anyone is paying.
+ * They are sealed and scored exactly like paid calls. ORACLE_SCHEDULE is "BTC,ETH,METIS:4h".
+ */
+export async function scheduledCalls(oracleAgentId: number): Promise<void> {
+  const [list, hz] = (process.env.ORACLE_SCHEDULE ?? 'BTC,ETH,METIS:4h').split(':')
+  const horizon = (hz ?? '4h') as Horizon
+  if (!HORIZONS[horizon]) throw new Error(`Bad ORACLE_SCHEDULE horizon ${hz}`)
+  for (const asset of list.split(',').map(s => s.trim()).filter(Boolean)) {
+    try {
+      const { row, fc } = await sealForecast(oracleAgentId, asset, horizon)
+      l.info(`scheduled call ${asset} ${horizon}: ${fc.direction} ${fc.confidence}%`, { call: row.id })
+    } catch (e) {
+      l.error(`scheduled call ${asset} failed: ${errMsg(e)}`)
+    }
+  }
+}
+
 export async function answerPaid(oracleAgentId: number): Promise<void> {
   const db = getDb()
   const paid = await db.select().from(schema.oracleRequests).where(eq(schema.oracleRequests.status, 'paid'))
@@ -163,25 +205,7 @@ export async function answerPaid(oracleAgentId: number): Promise<void> {
     await db.update(schema.oracleRequests).set({ status: 'answering' }).where(eq(schema.oracleRequests.requestId, req.requestId))
     try {
       const horizon = req.horizon as Horizon
-      const h = HORIZONS[horizon]
-      const fc = await forecast(req.asset, horizon)
-      const issuedAt = Math.floor(Date.now() / 1000)
-      const payload: DirectionPayload = {
-        v: 1,
-        rules: 'presage/direction-v1',
-        agent: oracleAgentId,
-        asset: { symbol: req.asset, source: 'binance', market: fc.market },
-        direction: fc.direction,
-        confidence: fc.confidence,
-        horizonSec: h.seconds,
-        issuedAt,
-        priceAtIssue: fc.price,
-        flatBandBps: h.flatBandBps,
-        why: fc.why,
-        models: fc.votes.map(v => ({ model: v.model, direction: v.direction, confidence: v.confidence })),
-        request: req.requestId as Hex,
-      }
-      const row = await publishCall({ payload, revealBy: issuedAt + h.seconds + h.graceSec, requestId: req.requestId as Hex })
+      const { row, fc } = await sealForecast(oracleAgentId, req.asset, horizon, req.requestId as Hex)
       await db
         .update(schema.oracleRequests)
         .set({ status: 'sealed', callId: row.id, sealedAt: row.sealedAt })

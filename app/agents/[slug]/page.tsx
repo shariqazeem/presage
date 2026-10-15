@@ -12,7 +12,7 @@ import { WalletButton } from '@/components/WalletButton'
 import { CallRow, IdentityCard, RecordBar, RecordProgress, agentEmoji } from '@/components/agents'
 import { presageMarketAbi } from '@/lib/abi/PresageMarket'
 import { deployment, payTokens } from '@/lib/chain'
-import { useAgent, useSession } from '@/lib/client/hooks'
+import { useAgent, useSession, useTelegramLink } from '@/lib/client/hooks'
 import { pct, result, short, usd6, when } from '@/lib/client/format'
 
 export default function AgentPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -221,13 +221,10 @@ function SubscribePanel({ agentId, priceUsd6, ready, retired, onDone }: { agentI
     }
   }
 
+  const openTelegram = useTelegramLink()
   const linkTelegram = async () => {
     try {
-      if (!signedIn) await signIn()
-      const r = await fetch('/api/telegram/code', { method: 'POST' })
-      const j = await r.json()
-      if (!r.ok) throw new Error(j.error)
-      window.open(j.url, '_blank')
+      await openTelegram()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Could not link Telegram')
     }
