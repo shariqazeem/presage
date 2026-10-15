@@ -1,7 +1,8 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
+  // Deploys build into .next-new while the live server keeps serving .next, then swap.
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   // A stray lockfile in the home folder otherwise makes Next guess the wrong workspace root.
   outputFileTracingRoot: process.cwd(),
   // Native modules stay on the server and out of the bundle.
