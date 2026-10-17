@@ -41,6 +41,10 @@ export function PingButton({ target, id, label = 'Ping me when it opens', classN
       if (isIOS() && !isStandalone()) return setIosHelp(true)
       if (bot) {
         await openTelegram()
+        await fetch('/api/watch', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ target, id }) }).catch(() => {})
+        try {
+          localStorage.setItem(`presage_watch_${target}_${id}`, '1')
+        } catch {}
         setDone(true)
         return
       }
@@ -72,7 +76,15 @@ export function PingButton({ target, id, label = 'Ping me when it opens', classN
           <li className="flex gap-3"><span className="w-7 h-7 rounded-full grad text-white grid place-items-center text-sm font-black shrink-0">3</span>Open Presage from your home screen and tap “Ping me” again.</li>
         </ol>
         {bot && (
-          <button onClick={() => openTelegram().then(() => (setIosHelp(false), setDone(true))).catch(e => toast.error(e instanceof Error ? e.message : 'Could not link Telegram'))} className="mt-5 w-full h-12 rounded-2xl border-2 border-gray-200 font-bold hover:border-black">
+          <button
+            onClick={() =>
+              openTelegram()
+                .then(() => fetch('/api/watch', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ target, id }) }))
+                .then(() => (setIosHelp(false), setDone(true)))
+                .catch(e => toast.error(e instanceof Error ? e.message : 'Could not link Telegram'))
+            }
+            className="mt-5 w-full h-12 rounded-2xl border-2 border-gray-200 font-bold hover:border-black"
+          >
             Or get them on Telegram
           </button>
         )}
