@@ -92,7 +92,8 @@ export default function BuildPage() {
         return
       }
       setCompiled({ spec: j.spec, assumptions: j.assumptions ?? [] })
-      if (!name) setName('My agent')
+      // A name left over from a style no longer fits rules written in your own words.
+      if (!name || STYLES.some(st => name === `My ${st.name.replace(/^The /, '')}`)) setName('My agent')
     } finally {
       setCompiling(false)
     }
@@ -290,7 +291,16 @@ export default function BuildPage() {
                 <div>· {plan.target}</div>
                 <div>· {plan.hold}</div>
               </div>
-              {own && compiled?.assumptions.length ? <div className="mt-3 text-[12px] text-gray-500">Filled in for you: {compiled.assumptions.join('; ')}.</div> : null}
+              {own && compiled?.assumptions.length ? (
+                <details className="mt-3 text-[12px] text-gray-500">
+                  <summary className="cursor-pointer font-bold text-gray-600">What it filled in for you ({compiled.assumptions.length})</summary>
+                  <ul className="mt-2 space-y-1">
+                    {compiled.assumptions.map(a => (
+                      <li key={a}>· {a}</li>
+                    ))}
+                  </ul>
+                </details>
+              ) : null}
             </Panel>
           )}
 
