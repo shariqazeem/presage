@@ -28,7 +28,13 @@ export type AgentPage = {
 }
 
 export const useAgent = (slug: string) =>
-  useQuery({ queryKey: ['agent', slug], queryFn: () => json<AgentPage>(`/api/agents/${slug}`), refetchInterval: 15_000 })
+  useQuery({
+    queryKey: ['agent', slug],
+    queryFn: () => json<AgentPage>(`/api/agents/${slug}`),
+    refetchInterval: 15_000,
+    // An agent that doesn't exist (yet) won't appear by asking again.
+    retry: (n, e) => !/No such agent|404/.test(e instanceof Error ? e.message : '') && n < 2,
+  })
 
 export type FloorAgent = AgentSummary & { status: AgentStatus; tagline: string | null }
 export type Floor = {

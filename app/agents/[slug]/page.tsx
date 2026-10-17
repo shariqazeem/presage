@@ -21,6 +21,7 @@ import { pct, price as fmtPrice, short, usd6, when } from '@/lib/client/format'
 import { RECORD_BAR, type AgentSummary } from '@/lib/records'
 import type { RadarRow } from '@/lib/floor-types'
 import type { CallView } from '@/lib/server/records'
+import { HOUSE_PERSONAS } from '@/lib/personas'
 
 const STATE_CHIP: Record<RadarRow['state'], { label: string; cls: string }> = {
   firing: { label: 'setting up', cls: 'grad text-white' },
@@ -50,6 +51,7 @@ export default function AgentPage({ params }: { params: Promise<{ slug: string }
         <Skeleton className="h-[360px] mt-6 rounded-3xl" />
       </div>
     )
+  if (!data && HOUSE_PERSONAS[slug]) return <Prelaunch slug={slug} />
   if (!data)
     return (
       <div className="max-w-xl mx-auto px-5 py-24 text-center">
@@ -561,5 +563,61 @@ function Identity({ a }: { a: AgentSummary }) {
         )}
       </AnimatePresence>
     </Panel>
+  )
+}
+
+/** A house agent before launch: who it is and how it thinks, and that its record starts the day it goes live. */
+function Prelaunch({ slug }: { slug: string }) {
+  const p = HOUSE_PERSONAS[slug]
+  const name = slug === 'oracle' ? 'Market Oracle' : 'ST Quant'
+  return (
+    <div className="max-w-[1100px] mx-auto px-5 md:px-8 pt-4 md:pt-10">
+      <div className="flex items-start gap-4">
+        <Sigil id={0} slug={slug} size={64} className="rounded-2xl md:rounded-3xl shadow-xl shadow-pink-500/10 shrink-0 md:w-[84px] md:h-[84px]" />
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="font-heading text-[28px] md:text-[44px] leading-none font-black tracking-tight text-black">{name}</h1>
+            <span className="px-2 py-0.5 rounded-full bg-black text-white text-[10px] font-black uppercase tracking-wide">house</span>
+            {slug === 'st-quant' && <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-black uppercase tracking-wide">unproven</span>}
+          </div>
+          <p className="text-[14px] md:text-lg text-gray-600 italic mt-2 leading-snug">“{p.tagline}”</p>
+          <div className="mt-2.5 text-[13px] font-semibold text-purple-700 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-purple-500" /> Starts the day Presage goes live on Metis
+          </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-x-8 gap-y-4 mt-6 md:mt-8">
+        <div className="md:col-span-7 space-y-4">
+          <Panel className="p-5 md:p-6">
+            <PanelHead title={slug === 'st-quant' ? 'What it will watch' : 'What it will do'} />
+            <div className="grid place-items-center py-6 opacity-40">
+              <RadarViz rows={[]} size={220} />
+            </div>
+            <p className="text-sm text-gray-600 text-center max-w-md mx-auto">
+              {slug === 'st-quant'
+                ? 'Every 15 minutes it looks at 84 Binance markets and the busiest BSC and X Layer pools. Each one lands on this radar, closest to a setup in the middle, with a checklist anyone can read.'
+                : 'Ask it about any of 84 coins and four AI voters answer in front of you. It also calls BTC, ETH and METIS on its own every four hours, so its record grows from day one.'}
+            </p>
+          </Panel>
+          <Panel tone="soft" className="p-5 md:p-6">
+            <Eyebrow>The record</Eyebrow>
+            <div className="font-heading text-xl md:text-2xl font-black mt-1.5">Starts empty, on purpose</div>
+            <p className="text-sm text-gray-600 mt-1.5">Every call it makes will be sealed on Metis before the market moves and scored here by price, losses included. Nothing gets deleted, and backing only opens after 10 scored calls over 7 days.</p>
+          </Panel>
+        </div>
+        <div className="md:col-span-5 space-y-4">
+          <Panel className="p-5">
+            <Eyebrow>How it thinks</Eyebrow>
+            <p className="text-[14px] text-gray-700 mt-1.5 leading-snug">{p.thesis}</p>
+            <ol className="mt-4 space-y-2.5 text-[13px] text-gray-700 list-decimal pl-5">
+              {p.method.map(m => (
+                <li key={m}>{m}</li>
+              ))}
+            </ol>
+            <div className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-[12.5px] text-amber-900">{p.honest}</div>
+          </Panel>
+        </div>
+      </div>
+    </div>
   )
 }

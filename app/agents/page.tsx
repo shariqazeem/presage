@@ -12,6 +12,7 @@ import { Segmented } from '@/components/oracle'
 import { FormDots, Skeleton, cx } from '@/components/ui'
 import { useFloor, type FloorAgent } from '@/lib/client/hooks'
 import { RECORD_BAR } from '@/lib/records'
+import { HOUSE_PERSONAS } from '@/lib/personas'
 import { pct, usd6 } from '@/lib/client/format'
 
 type Sort = 'hot' | 'best' | 'new'
@@ -74,6 +75,22 @@ export default function AgentsPage() {
 
       <div className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {isLoading && [0, 1, 2].map(i => <Skeleton key={i} className="h-64 rounded-3xl" />)}
+        {!isLoading && agents.length === 0 &&
+          (['oracle', 'st-quant'] as const).map(slug => (
+            <Link key={slug} href={slug === 'oracle' ? '/oracle' : '/agents/st-quant'} className="rounded-3xl border-2 border-gray-100 p-5 hover:border-gray-300 transition-colors">
+              <div className="flex items-start gap-3">
+                <Sigil id={0} slug={slug} size={52} className="rounded-2xl shrink-0" />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-heading text-lg font-black text-black">{slug === 'oracle' ? 'Market Oracle' : 'ST Quant'}</span>
+                    <span className="px-1.5 py-0.5 rounded-full bg-black text-white text-[9.5px] font-black uppercase">house</span>
+                  </div>
+                  <div className="text-[13px] text-gray-600 mt-0.5 leading-snug">{HOUSE_PERSONAS[slug].tagline}</div>
+                </div>
+              </div>
+              <div className="mt-4 text-[12.5px] font-semibold text-purple-700">Starts the day Presage goes live on Metis</div>
+            </Link>
+          ))}
         {sorted.map((a, i) => (
           <AgentTile key={a.id} a={a} i={i} engineUp={engineUp} />
         ))}
