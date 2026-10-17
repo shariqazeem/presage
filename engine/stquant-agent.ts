@@ -10,7 +10,7 @@ import { loadFrames } from '../lib/market/frames'
 import { GT_POOL_BUDGET, topPools, trendingPools, type Pool } from '../lib/market/geckoterminal'
 import type { AssetRef, Frames } from '../lib/market/types'
 import { ORACLE_ASSETS } from '../lib/oracle-assets'
-import { publishCall } from './calls'
+import { LowGasError, publishCall } from './calls'
 import { emit, setRadar } from './events'
 import { errMsg, log } from './log'
 import { armPlan, firstRejection, nearestRejector } from './stquant/arming.js'
@@ -412,6 +412,10 @@ async function scan(agentId: number): Promise<void> {
         published++
       }
     } catch (e) {
+      if (e instanceof LowGasError) {
+        l.error(`${c.asset.symbol} not sealed: ${e.message}`)
+        break
+      }
       // The floor should show a setup that was dropped, not just the log.
       emit(agentId, 'skipped', { symbol: c.asset.symbol, why: `could not finish: ${errMsg(e).slice(0, 120)}` })
       l.error(`${c.asset.symbol} not published: ${errMsg(e)}`)

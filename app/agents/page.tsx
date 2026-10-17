@@ -146,7 +146,7 @@ function AgentTile({ a, i, engineUp, mine = false }: { a: FloorAgent; i: number;
             </ActionButton>
           ) : (
             <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
-              <PingButton target="agent" id={a.id} label="Follow" className="h-12 w-full" />
+              <PingButton target="agent" id={a.id} label="Follow" className="h-12 w-full" tone="white" />
               <div className="text-[11px] font-semibold text-gray-500 text-right leading-tight">
                 backing opens
                 <br />

@@ -13,16 +13,33 @@ export default async function Image({ params }: { params: Promise<{ id: string }
   const c = getCall(Number(id))
   const fonts = await ogFonts()
   const p = c?.payload
-  const outcome = c?.status === 'forfeited' ? 'FORFEITED' : c?.outcome ? c.outcome.toUpperCase() : c?.status === 'sealed' ? 'SEALED' : ''
-  const tone = outcome === 'WIN' ? '#059669' : outcome === 'LOSS' || outcome === 'FORFEITED' ? '#DC2626' : outcome === 'SEALED' ? '#7C3AED' : '#111827'
+  const dir = c?.kind === 'direction'
+  const outcome =
+    c?.status === 'forfeited'
+      ? 'FORFEITED'
+      : c?.outcome === 'win'
+        ? dir ? 'RIGHT' : 'WIN'
+        : c?.outcome === 'loss'
+          ? dir ? 'WRONG' : 'LOSS'
+          : c?.outcome === 'nofill'
+            ? 'NO FILL'
+            : c?.outcome
+              ? c.outcome.toUpperCase()
+              : c?.status === 'sealed'
+                ? 'SEALED'
+                : ''
+  const tone = outcome === 'WIN' || outcome === 'RIGHT' ? '#059669' : outcome === 'LOSS' || outcome === 'WRONG' || outcome === 'FORFEITED' ? '#DC2626' : outcome === 'SEALED' ? '#7C3AED' : '#6B7280'
+  const exit = (c?.resolution as { exitPrice?: number } | null)?.exitPrice
   const headline = !c ? 'A Presage call' : p ? (p.rules === 'presage/setup-v1' ? `${p.asset.symbol} long` : `${p.asset.symbol} ${p.direction}`) : 'A sealed call'
   const detail = !c
     ? ''
     : p
       ? p.rules === 'presage/setup-v1'
-        ? `entry ${fmtPrice(p.entry.price)} · stop ${fmtPrice(p.stop)} · target ${fmtPrice(p.target)}`
-        : `${p.confidence}% confidence over ${p.horizonSec / 3600}h from $${fmtPrice(p.priceAtIssue)}`
-      : 'Its levels stay sealed until it resolves. The fingerprint is on Metis now.'
+        ? `Buy $${fmtPrice(p.entry.price)} · stop $${fmtPrice(p.stop)} · target $${fmtPrice(p.target)}`
+        : exit != null && c.status === 'revealed'
+          ? `Said ${p.direction} at $${fmtPrice(p.priceAtIssue)} → closed at $${fmtPrice(exit)}`
+          : `${p.confidence}% sure, over ${p.horizonSec / 3600} hours from $${fmtPrice(p.priceAtIssue)}`
+      : 'What it says stays sealed until it opens. Its fingerprint is on Metis now.'
   return new ImageResponse(
     (
       <OgFrame kicker={c ? `${c.agentName} · call #${c.chainCallId}` : undefined} footer="Sealed on Metis before the move. Scored by price after it.">

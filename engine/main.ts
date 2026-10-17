@@ -9,7 +9,7 @@ import { answerPaid, scheduledCalls } from './oracle'
 import { refundUndelivered, resolveDue } from './resolver'
 import { scanOnce } from './stquant-agent'
 import { runCreatorAgents } from './creators'
-import { startTelegram } from './telegram'
+import { send as sendTelegram, startTelegram } from './telegram'
 import { keepTestnetFeedFresh } from './testnet'
 import { runner, runnerBalance } from './tx'
 
@@ -97,9 +97,18 @@ async function main() {
       .onConflictDoUpdate({ target: schema.kv.key, set: { value } })
       .run()
   })
-  every('gas', 30 * 60_000, async () => {
+  // Running out of gas means calls can't be opened, and an unopened call counts as a loss. Say so loudly,
+  // to the founder on Telegram when FOUNDER_TELEGRAM_CHAT_ID is set, well before it happens.
+  let warnedAt = 0
+  every('gas', 10 * 60_000, async () => {
     const b = await runnerBalance()
-    if (b < 2n * 10n ** 17n) l.error(`runner is low on gas: ${formatEther(b)} METIS left at ${runner.address}`)
+    if (b >= 5n * 10n ** 17n) return
+    l.error(`runner is low on gas: ${formatEther(b)} METIS left at ${runner.address}`)
+    const chat = process.env.FOUNDER_TELEGRAM_CHAT_ID
+    if (chat && Date.now() - warnedAt > 6 * 3_600_000) {
+      warnedAt = Date.now()
+      await sendTelegram(chat, `<b>Presage runner is low on gas</b>\n${formatEther(b)} METIS left at <code>${runner.address}</code>.\nBelow 0.1 it stops sealing new calls so it can still open the ones it has.`).catch(() => {})
+    }
   })
   startTelegram()
 }

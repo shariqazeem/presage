@@ -21,6 +21,7 @@ import { deployment, payTokens } from '@/lib/chain'
 import { HORIZONS, type Horizon } from '@/lib/oracle'
 import { useAgent } from '@/lib/client/hooks'
 import { saveQuestion, useMyQuestions, type OracleAnswer, type Progress } from '@/lib/client/mine'
+import { autoWatch } from '@/lib/client/push'
 import { pct, price as fmtPrice } from '@/lib/client/format'
 
 type Accept = { scheme: string; network: string; maxAmountRequired: string; payTo: Address; asset: Address; extra: { agentId: number; requestId: Hex; symbol: string; decimals: number; native: boolean } }
@@ -167,6 +168,8 @@ export default function OraclePage() {
       setAnswer(ans)
       setPhase('done')
       setMyCall(null)
+      // If pings are already allowed here, this call pings when it opens without asking again.
+      void autoWatch('call', ans.call.id, address)
     } catch (e) {
       stop()
       setPhase('ask')

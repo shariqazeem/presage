@@ -7,7 +7,7 @@ import type { Outcome } from '../lib/calls/rules'
 import { deployment, publicClient } from '../lib/chain'
 import { getDb, schema } from '../lib/db'
 import { errMsg, log } from './log'
-import { write } from './tx'
+import { runnerBalance, write } from './tx'
 
 const l = log('calls')
 
@@ -24,7 +24,26 @@ type CallRow = typeof schema.calls.$inferSelect
  * Seal a call on chain. The payload and salt are written to the database before the transaction is
  * sent: if they were lost, the call could never be revealed and would be forfeited.
  */
+/**
+ * Gas kept back for opening calls. A call sealed now must be opened later; if the runner can't pay for
+ * that, the call is forfeited and counts as a loss. So below this, nothing new is sealed.
+ */
+export const REVEAL_RESERVE = 10n ** 17n // 0.1 METIS
+let balanceAt = 0
+let balanceCache = 0n
+
+export class LowGasError extends Error {
+  constructor(balance: bigint) {
+    super(`runner has ${Number(balance) / 1e18} METIS, below the reserve kept for opening calls`)
+  }
+}
+
 export async function publishCall(input: { payload: CallPayload; revealBy: number; requestId?: Hex }): Promise<CallRow> {
+  if (Date.now() - balanceAt > 60_000) {
+    balanceCache = await runnerBalance()
+    balanceAt = Date.now()
+  }
+  if (balanceCache < REVEAL_RESERVE) throw new LowGasError(balanceCache)
   const db = getDb()
   const { payload } = input
   const json = serializePayload(payload)
