@@ -26,13 +26,13 @@ export default function CreatorPage({ params }: { params: Promise<{ address: str
         <WalletAvatar address={creator} size={56} />
         <div className="min-w-0">
           <Eyebrow>Creator</Eyebrow>
-          <div className="font-heading text-[26px] md:text-[40px] leading-none font-black tracking-tight mt-1 whitespace-nowrap">{short(creator)}</div>
-          <a href={addressUrl(creator)} target="_blank" rel="noreferrer" className="text-[13px] font-bold text-gray-500 hover:text-black">
+          <div className="font-heading text-[26px] md:text-[40px] leading-none font-black tight mt-1 whitespace-nowrap">{short(creator)}</div>
+          <a href={addressUrl(creator)} target="_blank" rel="noreferrer" className="text-[13px] font-bold text-ink-3 hover:text-ink">
             on the Metis explorer ↗
           </a>
         </div>
       </div>
-      <p className="text-[14px] md:text-base text-gray-600 mt-4 max-w-2xl">Every agent this wallet built is listed here, including the ones that lost and the ones it stopped. Nothing is ever deleted, so nobody can launch twenty and show only the lucky one.</p>
+      <p className="text-[14px] md:text-base text-ink-2 mt-4 max-w-2xl">Every agent this wallet built is listed here, including the ones that lost and the ones it stopped. Nothing is ever deleted, so nobody can launch twenty and show only the lucky one.</p>
 
       {isMe && (
         <Panel className="px-4 md:px-5 pt-3 pb-1 mt-5">
@@ -43,22 +43,22 @@ export default function CreatorPage({ params }: { params: Promise<{ address: str
       <Panel className="px-4 md:px-6 pt-4 pb-2 mt-5">
         <Eyebrow>{agents.length} {agents.length === 1 ? 'agent' : 'agents'}</Eyebrow>
         {agents.length === 0 ? (
-          <div className="py-6 text-sm text-gray-500">No agents yet.</div>
+          <div className="py-6 text-sm text-ink-3">No agents yet.</div>
         ) : (
-          <div className="divide-y divide-gray-100 mt-1">
+          <div className="divide-y divide-line mt-1">
             {agents.map(a => (
               <Link key={a.id} href={`/agents/${a.slug}`} className="flex items-center gap-3 py-3.5 group">
-                <Sigil id={a.id} size={44} className="rounded-xl shrink-0" />
+                <Sigil id={a.id} size={44} className="rounded-[13px] shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <div className="font-bold text-black truncate group-hover:underline">
-                    {a.name} {a.retired && <span className="ml-1 text-[10px] font-black uppercase text-gray-400">retired</span>}
+                  <div className="font-bold text-ink truncate group-hover:underline">
+                    {a.name} {a.retired && <span className="ml-1 text-[10px] font-black uppercase text-ink-3">retired</span>}
                   </div>
-                  <div className="text-[12.5px] text-gray-500 truncate">
+                  <div className="text-[12.5px] text-ink-3 truncate">
                     <StatusLine status={a.status} engineUp={data?.engineUp ?? true} />
                   </div>
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="text-sm font-black tabular-nums">{a.record.hitRate != null ? pct(a.record.hitRate, 0) : `${a.record.calls} calls`}</div>
+                  <div className="num text-sm font-semibold">{a.record.hitRate != null ? pct(a.record.hitRate, 0) : `${a.record.calls} ${a.record.calls === 1 ? 'call' : 'calls'}`}</div>
                   <FormDots form={a.record.form} size="sm" />
                 </div>
               </Link>

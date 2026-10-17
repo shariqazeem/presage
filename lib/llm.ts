@@ -1,4 +1,4 @@
-// One client for every model Presage asks: an OpenAI-compatible chat endpoint (the founder's
+// One client for every model Called asks: an OpenAI-compatible chat endpoint (the founder's
 // CommonStack gateway in production). Models are named in env so they can change without code.
 
 export type ContentPart = { type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }
@@ -34,18 +34,25 @@ export async function chat(opts: {
 }): Promise<string> {
   if (!llmConfigured()) throw new Error('No model is configured (LLM_BASE_URL and LLM_API_KEY)')
   if (!opts.model) throw new Error('No model named for this task')
-  const res = await fetch(`${process.env.LLM_BASE_URL!.replace(/\/$/, '')}/chat/completions`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${process.env.LLM_API_KEY}` },
-    body: JSON.stringify({
-      model: opts.model,
-      messages: opts.messages,
-      temperature: opts.temperature ?? 0.2,
-      max_tokens: opts.maxTokens ?? 800,
-      ...(opts.json ? { response_format: { type: 'json_object' } } : {}),
-    }),
-    signal: AbortSignal.timeout(opts.timeoutMs ?? 60_000),
-  })
+  const send = () =>
+    fetch(`${process.env.LLM_BASE_URL!.replace(/\/$/, '')}/chat/completions`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${process.env.LLM_API_KEY}` },
+      body: JSON.stringify({
+        model: opts.model,
+        messages: opts.messages,
+        temperature: opts.temperature ?? 0.2,
+        max_tokens: opts.maxTokens ?? 800,
+        ...(opts.json ? { response_format: { type: 'json_object' } } : {}),
+      }),
+      signal: AbortSignal.timeout(opts.timeoutMs ?? 60_000),
+    })
+  let res = await send()
+  // The gateway occasionally answers 5xx or 429 for a moment; one quick retry keeps a voter in the vote.
+  if (res.status >= 500 || res.status === 429) {
+    await new Promise(r => setTimeout(r, 1_200))
+    res = await send()
+  }
   if (!res.ok) throw new Error(`${opts.model} answered ${res.status}: ${(await res.text()).slice(0, 200)}`)
   const body = (await res.json()) as { choices?: { message?: { content?: string } }[] }
   const text = body.choices?.[0]?.message?.content

@@ -1,5 +1,5 @@
 // Ported from ST Quant (okxtradingagent/src/charts.js) on 14 Oct 2026.
-// The trading logic is unchanged; Presage-specific edits are marked "Presage:".
+// The trading logic is unchanged; Called-specific edits are marked "Called:".
 
 // Chart renderer — turns candles into the picture a trader actually looks at.
 // Pure SVG -> PNG (no browser). A 2x2 grid of timeframes, each with a price
@@ -130,6 +130,6 @@ export function renderChart({ symbol, frames }) {
   });
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${body}</svg>`;
   const png = new Resvg(svg, { fitTo: { mode: 'width', value: W } }).render().asPng();
-  // Presage: return the PNG instead of writing it to disk.
+  // Called: return the PNG instead of writing it to disk.
   return png;
 }

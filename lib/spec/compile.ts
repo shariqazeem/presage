@@ -34,8 +34,8 @@ Spec:
  "target":{"type":"level","level":LevelRef} | {"type":"r","multiple":0.5-10} | {"type":"pct","pct":0.3-100},
  "minRR":0.5-10,"fillWindowHours":1-72,"maxHoldHours":1-240,"cooldownHours":1-72}`
 
-const SYSTEM = `You turn a trader's plain-English strategy into a Presage strategy spec.
-Presage runs specs, never code, and seals every call they make on chain, so the spec must say exactly what the trader meant.
+const SYSTEM = `You turn a trader's plain-English strategy into a Called strategy spec.
+Called runs specs, never code, and seals every call they make on chain, so the spec must say exactly what the trader meant.
 
 ${VOCABULARY}
 
@@ -72,7 +72,7 @@ export async function compileStrategy(prompt: string, markets: string[]): Promis
 
   let out = await ask()
   for (let attempt = 0; attempt < 2; attempt++) {
-    if (!out.spec) return { ok: false, missing: out.missing?.length ? out.missing : ['The strategy could not be expressed in Presage’s vocabulary.'] }
+    if (!out.spec) return { ok: false, missing: out.missing?.length ? out.missing : ['Called can’t express this strategy with the rules it runs yet.'] }
     const parsed = StrategySpec.safeParse({ ...(out.spec as object), markets: list })
     if (parsed.success) return { ok: true, spec: parsed.data, assumptions: out.assumptions ?? [] }
     out = await ask(`Your last spec was invalid: ${parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ')}. Fix it, using only the vocabulary.`)

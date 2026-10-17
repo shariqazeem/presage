@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic'
  * x402 Oracle endpoint.
  *   1. POST {asset, horizon, myCall?} with no X-PAYMENT → 402 with payment requirements, a requestId and a secret.
  *      myCall ("up" or "down") is your own call, sealed together with the Oracle's.
- *   2. Pay: PresageMarket.payForCall(agentId, requestId, token, maxAmount) from your own wallet.
+ *   2. Pay: CalledMarket.payForCall(agentId, requestId, token, maxAmount) from your own wallet.
  *   3. POST again with X-PAYMENT (base64 {x402Version, scheme, network, payload:{requestId, txHash}})
  *      and {secret} in the body → 200 with the sealed answer once it is on chain, or 202 while it seals.
  */

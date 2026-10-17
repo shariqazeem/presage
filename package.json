@@ -1,5 +1,5 @@
 {
-  "name": "presage",
+  "name": "called",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "engine": "tsx engine/main.ts",
     "db:generate": "drizzle-kit generate",
-    "contracts:test": "cd contracts && forge test"
+    "contracts:test": "cd contracts && forge test",
+    "test": "tsx --test tests/*.test.ts"
   },
   "dependencies": {
     "@rainbow-me/rainbowkit": "2.2.11",

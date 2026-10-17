@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto'
 import { eq } from 'drizzle-orm'
 import { parseEventLogs, toHex, type Address, type Hex } from 'viem'
-import { presageMarketAbi } from '../abi/PresageMarket'
+import { calledMarketAbi } from '../abi/CalledMarket'
 import { caip2, deployment, payTokens, publicClient, txUrl } from '../chain'
 import { getDb, schema } from '../db'
 import { HORIZONS, isHorizon, ORACLE_SYMBOLS, type Horizon } from '../oracle'
@@ -10,8 +10,8 @@ import { llmConfigured, models } from '../llm'
 
 /**
  * x402 for the Oracle. Metis has no public x402 facilitator, and m.USDC and m.USDT support neither
- * EIP-3009 nor permit, so Presage settles the payment itself: the payer's wallet calls
- * PresageMarket.payForCall, which escrows the money, and the request is retried with the transaction
+ * EIP-3009 nor permit, so Called settles the payment itself: the payer's wallet calls
+ * CalledMarket.payForCall, which escrows the money, and the request is retried with the transaction
  * hash in X-PAYMENT. The scheme is called "escrow" because that is what it is: the payment is released
  * to the agent only once the call is revealed, and refunded if it never gets sealed or is forfeited.
  */
@@ -47,7 +47,7 @@ export type PaymentRequirements = {
 }
 
 export async function quoteOracleCall(input: { asset: string; horizon: string; wallet?: string | null; myCall?: string | null; resource: string }) {
-  if (!deployment) throw new HttpError(503, 'Presage is not deployed on this network yet')
+  if (!deployment) throw new HttpError(503, 'Called is not deployed on this network yet')
   const agentId = oracleAgentId()
   if (agentId == null) throw new HttpError(503, 'The Oracle agent is not registered yet')
   const asset = input.asset.toUpperCase()
@@ -64,7 +64,7 @@ export async function quoteOracleCall(input: { asset: string; horizon: string; w
       try {
         const amount = await publicClient.readContract({
           address: deployment!.market,
-          abi: presageMarketAbi,
+          abi: calledMarketAbi,
           functionName: 'callQuote',
           args: [BigInt(agentId), t.address],
         })
@@ -82,7 +82,7 @@ export async function quoteOracleCall(input: { asset: string; horizon: string; w
       network: caip2,
       maxAmountRequired: amount.toString(),
       resource: input.resource,
-      description: `One Presage Oracle call: ${asset} up or down over ${HORIZONS[horizon].label}, sealed on Metis before the outcome.`,
+      description: `One Called Oracle call: ${asset} up or down over ${HORIZONS[horizon].label}, sealed on Metis before the outcome.`,
       mimeType: 'application/json',
       payTo: deployment!.market,
       maxTimeoutSeconds: 900,
@@ -96,7 +96,7 @@ export async function quoteOracleCall(input: { asset: string; horizon: string; w
         decimals: t.decimals,
         native: t.native,
         escrow:
-          'Held by PresageMarket until the call is revealed, then split 80/20 between the agent creator and the platform. Refunded if the call is not sealed within 15 minutes or is forfeited.',
+          'Held by CalledMarket until the call is revealed, then split 80/20 between the agent creator and the platform. Refunded if the call is not sealed within 15 minutes or is forfeited.',
       },
     }))
   if (!accepts.length) throw new HttpError(503, 'Could not price a call right now; try again shortly')
@@ -116,7 +116,7 @@ export async function quoteOracleCall(input: { asset: string; horizon: string; w
     .run()
 
   // Who will vote, so the asker sees the panel fill in rather than appear.
-  const voters = ['presage-quant-v1', ...(llmConfigured() ? models.oracle() : [])]
+  const voters = ['called-quant-v1', ...(llmConfigured() ? models.oracle() : [])]
   return { x402Version: X402_VERSION, error: 'X-PAYMENT header is required', accepts, requestId, secret, voters }
 }
 
@@ -143,7 +143,7 @@ export function decodePaymentHeader(h: string): PaymentHeader {
 
 /** Check the payment on chain: the transaction must hold a CallPaid event for this request. */
 export async function verifyPayment(requestId: Hex, secret: string, txHash: Hex) {
-  if (!deployment) throw new HttpError(503, 'Presage is not deployed on this network yet')
+  if (!deployment) throw new HttpError(503, 'Called is not deployed on this network yet')
   const db = getDb()
   const req = db.select().from(schema.oracleRequests).where(eq(schema.oracleRequests.requestId, requestId)).get()
   if (!req) throw new HttpError(404, 'Unknown request')
@@ -153,7 +153,7 @@ export async function verifyPayment(requestId: Hex, secret: string, txHash: Hex)
   const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash, timeout: 60_000 })
   if (receipt.status !== 'success') throw new HttpError(402, 'The payment transaction failed')
   const paid = parseEventLogs({
-    abi: presageMarketAbi,
+    abi: calledMarketAbi,
     eventName: 'CallPaid',
     logs: receipt.logs.filter(l => l.address.toLowerCase() === deployment!.market.toLowerCase()),
   }).find(e => e.args.requestId.toLowerCase() === requestId.toLowerCase())
@@ -196,7 +196,7 @@ export function oracleAnswer(requestId: Hex, secret: string) {
   const call = db.select().from(schema.calls).where(eq(schema.calls.id, req.callId)).get()
   if (!call) return { ...base, call: null }
   const p = parsePayload(call.payload)
-  if (p.rules !== 'presage/direction-v1') throw new HttpError(500, 'Unexpected call type')
+  if (p.rules !== 'called/direction-v1') throw new HttpError(500, 'Unexpected call type')
   return {
     ...base,
     call: {

@@ -2,9 +2,9 @@
 pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {PresageAgents, IERC8004Identity} from "../src/PresageAgents.sol";
-import {PresageCalls, IPresageAgents} from "../src/PresageCalls.sol";
-import {PresageMarket, AggregatorV3Interface} from "../src/PresageMarket.sol";
+import {CalledAgents, IERC8004Identity} from "../src/CalledAgents.sol";
+import {CalledLedger, ICalledAgents} from "../src/CalledLedger.sol";
+import {CalledMarket, AggregatorV3Interface} from "../src/CalledMarket.sol";
 
 interface IIdentityRegistry {
     function register(string calldata agentURI) external returns (uint256 agentId);
@@ -25,9 +25,9 @@ contract AndromedaForkTest is Test {
     address constant M_USDC = 0xEA32A96608495e54156Ae48931A7c20f0dcc1a21;
     address constant M_USDT = 0xbB06DCA3AE6887fAbF931640f67cab3e3a16F4dC;
 
-    PresageAgents agents;
-    PresageCalls calls;
-    PresageMarket market;
+    CalledAgents agents;
+    CalledLedger calls;
+    CalledMarket market;
     address creator = makeAddr("creator");
     address runner = makeAddr("runner");
 
@@ -36,9 +36,9 @@ contract AndromedaForkTest is Test {
         vm.skip(bytes(rpc).length == 0);
         vm.createSelectFork(rpc);
 
-        agents = new PresageAgents(IERC8004Identity(IDENTITY));
-        calls = new PresageCalls(address(this), IPresageAgents(address(agents)));
-        market = new PresageMarket(
+        agents = new CalledAgents(IERC8004Identity(IDENTITY));
+        calls = new CalledLedger(address(this), ICalledAgents(address(agents)));
+        market = new CalledMarket(
             address(this),
             agents,
             calls,
@@ -71,16 +71,16 @@ contract AndromedaForkTest is Test {
 
     function test_realIdentityRegistryEndToEnd() public {
         vm.startPrank(creator);
-        uint256 id = IIdentityRegistry(IDENTITY).register("https://presage.trade/agents/card/test.json");
+        uint256 id = IIdentityRegistry(IDENTITY).register("https://called.xyz/agents/card/test.json");
         assertEq(IIdentityRegistry(IDENTITY).ownerOf(id), creator);
-        agents.register(id, PresageAgents.Kind.Setup, keccak256("spec"), "https://presage.trade/specs/test", 3e6, 0);
+        agents.register(id, CalledAgents.Kind.Setup, keccak256("spec"), "https://called.xyz/specs/test", 3e6, 0);
         vm.stopPrank();
 
         bytes memory payload = bytes('{"v":1,"asset":"ETH","side":"long"}');
         bytes32 salt = keccak256("s");
         vm.startPrank(runner);
         uint256 callId = calls.seal(id, keccak256(abi.encodePacked(salt, payload)), uint40(block.timestamp + 1 hours));
-        calls.reveal(callId, salt, payload, PresageCalls.Outcome.Win, 180);
+        calls.reveal(callId, salt, payload, CalledLedger.Outcome.Win, 180);
         vm.stopPrank();
 
         assertEq(calls.recordOf(id).wins, 1);

@@ -63,7 +63,7 @@ export const StrategySpec = z.object({
     .array(z.string())
     .min(1)
     .max(8)
-    .refine(ms => ms.every(m => SUPPORTED_MARKETS.has(m)), 'Every market must be one Presage supports'),
+    .refine(ms => ms.every(m => SUPPORTED_MARKETS.has(m)), 'Every market must be one Called supports'),
   /** All conditions must hold at once. */
   when: z.array(Condition).min(1).max(8),
   entry: z.discriminatedUnion('type', [

@@ -1,6 +1,6 @@
 import type { SVGProps } from 'react'
 
-/** Presage's icon set: one stroke weight, drawn on a 24px grid, coloured by the text around it. */
+/** Called's icon set: one stroke weight, drawn on a 24px grid, coloured by the text around it. */
 type P = Omit<SVGProps<SVGSVGElement>, 'stroke'> & { size?: number; weight?: number }
 
 function Svg({ size = 20, weight = 2, children, ...rest }: P & { children: React.ReactNode }) {

@@ -40,15 +40,6 @@ export function until(sec: number): string {
 export const when = (sec: number | null | undefined) =>
   sec ? new Date(sec * 1000).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' }) : '—'
 
-export const OUTCOME_STYLE: Record<string, { label: string; cls: string; emoji: string }> = {
-  win: { label: 'WIN', cls: 'bg-green-100 text-green-700', emoji: '✅' },
-  loss: { label: 'LOSS', cls: 'bg-red-100 text-red-700', emoji: '❌' },
-  flat: { label: 'FLAT', cls: 'bg-gray-100 text-gray-700', emoji: '➖' },
-  nofill: { label: 'NO FILL', cls: 'bg-gray-100 text-gray-500', emoji: '⏸️' },
-  forfeited: { label: 'FORFEITED', cls: 'bg-red-600 text-white', emoji: '🚫' },
-  sealed: { label: 'SEALED', cls: 'bg-purple-100 text-purple-700', emoji: '🔒' },
-}
-
 /** Day, month and time, without the timezone: for tight spaces. */
 export const whenShort = (sec: number | null | undefined) =>
   sec ? new Date(sec * 1000).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'

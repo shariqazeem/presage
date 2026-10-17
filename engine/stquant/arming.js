@@ -1,5 +1,5 @@
 // Ported from ST Quant (okxtradingagent/src/arming.js) on 14 Oct 2026.
-// The trading logic is unchanged; Presage-specific edits are marked "Presage:".
+// The trading logic is unchanged; Called-specific edits are marked "Called:".
 
 // Deciding where to REST an order, which is a different question from "should
 // I buy now".
@@ -18,7 +18,7 @@ import { ord } from './indicators.js';
 import { supportMap, mfiExtreme, keySupports } from './sniper.js';
 import { supportZones } from './structure.js';
 import { resistanceZones, fitBoundary, patternSupport } from './structure.js';
-// Presage: settings come from ./settings.js instead of ST Quant's config.json.
+// Called: settings come from ./settings.js instead of ST Quant's config.json.
 import { SETTINGS as CFG } from './settings.js';
 
 // Day-1 posture is deliberately strict: with no proven edge, the cheapest way
@@ -108,7 +108,7 @@ function overheadResistance(frames, price) {
   return candidates[0] ?? null;
 }
 
-// Presage: exported so a sniper-route call can take the same TP1 the rubric names.
+// Called: exported so a sniper-route call can take the same TP1 the rubric names.
 // "First rejection point" — his TP1. The tip of the last big pump candle, but
 // only if it is a plausible FIRST target. Taking the largest pump in 120 bars
 // regardless of distance produced a 17R "target" 142% above entry: a number

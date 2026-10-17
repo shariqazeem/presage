@@ -1,6 +1,6 @@
-# Presage: from a tool to a floor
+# Called: from a tool to a floor
 
-*Written 15 Oct 2026, after the founder's note: people don't use AI agents because there is no joy in using them. They get their answers from Claude Code. Metis wants agents people come back to. So does Presage.*
+*Written 15 Oct 2026, after the founder's note: people don't use AI agents because there is no joy in using them. They get their answers from Claude Code. Metis wants agents people come back to. So does Called.*
 
 ## Why agent products feel dead
 
@@ -10,7 +10,7 @@
 - Nobody else is there. No competition, no crowd, no story.
 - The first click asks for a wallet.
 
-## What Presage becomes
+## What Called becomes
 
 **A trading floor you can watch.** Agents are characters with a name, a mark, a thesis and a mood. You see them scan, find a setup, read a chart, seal a call, and wait. Calls resolve in public: win, loss, flat. Records build. The best rise. People back them, and other people build agents to beat them.
 
@@ -28,7 +28,7 @@ Every turn of the loop is a transaction from a user's own wallet on Metis: askin
 
 1. **The floor.** A live page where every agent's activity streams: "ST Quant is scanning 96 markets", "chart read on 龙虾: WAIT, pump bleeding out", "sealed call #41", "Oracle answered BTC 4h: down 56%", "call #38 revealed: WIN +1.9R". The radar shows what ST Quant is watching and how close each market is to firing. Nothing is hidden except the levels of a sealed call, which belong to subscribers.
 
-2. **Agents as characters.** Each agent has a sigil (a mark in the Presage family, generated from its identity), a thesis in one line, a "how I think" page, a form guide (its last ten outcomes as dots), a streak, and a live status. ST Quant is the founder's thesis in person: *I take entries at MFI low, at bottom support. Structure outranks the oscillator. I never chase.* The Oracle is the forecaster: *facts first, then a vote.*
+2. **Agents as characters.** Each agent has a sigil (a mark in the Called family, generated from its identity), a thesis in one line, a "how I think" page, a form guide (its last ten outcomes as dots), a streak, and a live status. ST Quant is the founder's thesis in person: *I take entries at MFI low, at bottom support. Structure outranks the oscillator. I never chase.* The Oracle is the forecaster: *facts first, then a vote.*
 
 3. **The reveal.** A call is a sealed card. When it resolves, it flips. The feed, the receipt and Telegram all carry that moment. Losses flip the same way as wins.
 
@@ -38,7 +38,7 @@ Every turn of the loop is a transaction from a user's own wallet on Metis: askin
 
 ## What stays true
 
-- The look: white, black buttons, the purple-pink-blue gradient, big black headlines, motion that means something. One design system, every page aligned to it.
+- The look: paper and ink, black cards, big black headlines, ledger-style numbers, motion that means something, and the brand gradient only as a foil seal on what is sealed, live or yours. One design system, every page aligned to it.
 - The record is the product. No hype words, losses as loud as wins, "unproven" where it is true.
 - Nothing a user writes ever runs as code. Nothing sealed is ever edited.
 
@@ -60,3 +60,9 @@ The founder kept the idea (Oracle, ST Quant, deploy your own, every call sealed)
 - The language is plain everywhere; indicator names live in "the details".
 
 Mockup: `docs/mockups/reengineered-first-screens.png`.
+
+## Renamed to Called (17 Oct 2026)
+
+The founder found "Presage" hard to say and spell next to Sage. The product is now **Called**: if an agent called it, it's on chain. The rename happened before the mainnet deploy, because the name lives in the contracts (CalledLedger, CalledAgents, CalledMarket) and in every sealed call (`called/setup-v1`, `called/direction-v1`).
+
+The look became more intentional at the same time: paper and ink, black "instrument" cards for live things, ledger-style monospace numbers, and the brand gradient only as a holographic seal on what is sealed, live or yours (the mark, a sealed call, the countdown ring, the active tab). Mockup: `docs/mockups/intentional-design.png`.

@@ -49,7 +49,7 @@ export type OracleAnswer = {
 /** What this browser keeps about a question it paid for: the secret is what unlocks the answer. */
 export type Saved = { requestId: Hex; secret: string; asset: string; horizon: string; at: number; myCall?: 'up' | 'down' | null }
 
-const key = (a?: string | null) => `presage_oracle_history_${a?.toLowerCase() ?? 'anon'}`
+const key = (a?: string | null) => `called_oracle_history_${a?.toLowerCase() ?? 'anon'}`
 
 function read(k: string): Saved[] {
   try {
@@ -63,7 +63,7 @@ export function saveQuestion(address: string | undefined | null, s: Saved) {
   try {
     const k = key(address)
     localStorage.setItem(k, JSON.stringify([s, ...read(k).filter(x => x.requestId !== s.requestId)].slice(0, 60)))
-    window.dispatchEvent(new Event('presage:questions'))
+    window.dispatchEvent(new Event('called:questions'))
   } catch {}
 }
 
@@ -79,8 +79,8 @@ export function useMyQuestions(address?: string | null) {
   const [bump, setBump] = useState(0)
   useEffect(() => {
     const on = () => setBump(b => b + 1)
-    window.addEventListener('presage:questions', on)
-    return () => window.removeEventListener('presage:questions', on)
+    window.addEventListener('called:questions', on)
+    return () => window.removeEventListener('called:questions', on)
   }, [])
   const [saved, setSaved] = useState<Saved[]>([])
   useEffect(() => setSaved(savedQuestions(address)), [address, bump])
@@ -134,7 +134,7 @@ export function answerToView(a: OracleAnswer): CallView | null {
     resolution: c.exitPrice != null ? { exitPrice: c.exitPrice } : null,
     payload: {
       v: 1,
-      rules: 'presage/direction-v1',
+      rules: 'called/direction-v1',
       agent: 0,
       asset: { symbol: c.asset, source: 'binance', market: c.market ?? '' },
       direction: c.direction,
@@ -162,12 +162,12 @@ export function answerToView(a: OracleAnswer): CallView | null {
 const today = () => new Date().toLocaleDateString('en-CA')
 const yesterday = () => new Date(Date.now() - 86_400_000).toLocaleDateString('en-CA')
 
-/** Days in a row this wallet has opened Presage, counted on this device. */
+/** Days in a row this wallet has opened Called, counted on this device. */
 export function useStreak(address?: string | null): { count: number; best: number } {
   const [s, setS] = useState({ count: 0, best: 0 })
   useEffect(() => {
     if (!address) return setS({ count: 0, best: 0 })
-    const k = `presage_streak_${address.toLowerCase()}`
+    const k = `called_streak_${address.toLowerCase()}`
     try {
       const prev = JSON.parse(localStorage.getItem(k) ?? 'null') as { day: string; count: number; best: number } | null
       const d = today()
@@ -186,9 +186,9 @@ export function useLastVisit(): number | null {
   const [last, setLast] = useState<number | null>(null)
   useEffect(() => {
     try {
-      const prev = Number(localStorage.getItem('presage_last_visit') ?? 0) || null
+      const prev = Number(localStorage.getItem('called_last_visit') ?? 0) || null
       setLast(prev)
-      const mark = () => localStorage.setItem('presage_last_visit', String(Math.floor(Date.now() / 1000)))
+      const mark = () => localStorage.setItem('called_last_visit', String(Math.floor(Date.now() / 1000)))
       const t = setTimeout(mark, 4000)
       return () => clearTimeout(t)
     } catch {}

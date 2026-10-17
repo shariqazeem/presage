@@ -64,49 +64,42 @@ export function Countdown({ to, className = '', done = 'opening…' }: { to: num
   return <span className={cx('tabular-nums', className)}>{!mounted ? '' : left > 0 ? clock(left) : done}</span>
 }
 
-/** A progress ring in the brand gradient with a label in the middle. */
-export function Ring({ progress, size = 60, stroke = 6, label, labelClass = '' }: { progress: number; size?: number; stroke?: number; label?: ReactNode; labelClass?: string }) {
+/** A countdown ring: the part still to come in foil, the part already gone as a quiet track. */
+export function Ring({ progress, size = 60, stroke = 5, label, dark = true, labelClass = '' }: { progress: number; size?: number; stroke?: number; label?: ReactNode; dark?: boolean; labelClass?: string }) {
   const id = useId().replace(/:/g, '')
-  const r = size / 2 - stroke / 2 - 1
+  const p = Math.max(0, Math.min(1, progress))
+  const r = (size - stroke) / 2
   const c = 2 * Math.PI * r
-  const p = Math.max(0.02, Math.min(1, progress))
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90" aria-hidden>
         <defs>
           <linearGradient id={`r${id}`} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#9333EA" />
-            <stop offset="0.55" stopColor="#EC4899" />
-            <stop offset="1" stopColor="#2563EB" />
+            <stop offset="0" stopColor="#7C3AED" />
+            <stop offset="0.45" stopColor="#EC4899" />
+            <stop offset="0.8" stopColor="#3B82F6" />
+            <stop offset="1" stopColor="#22D3EE" />
           </linearGradient>
         </defs>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#F3F4F6" strokeWidth={stroke} />
-        <motion.circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke={`url(#r${id})`}
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          strokeDasharray={c}
-          initial={{ strokeDashoffset: c }}
-          animate={{ strokeDashoffset: c * (1 - p) }}
-          transition={{ duration: 0.9, ease: 'easeOut' }}
-        />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={dark ? '#2A2A2E' : '#E6E6E3'} strokeWidth={stroke} />
+        {p > 0.002 && <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={`url(#r${id})`} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={`${p * c} ${c}`} />}
       </svg>
-      {label != null && <div className={cx('absolute inset-0 grid place-items-center font-mono font-bold text-gray-900 tabular-nums', labelClass)} style={{ fontSize: size / 4.6 }}>{label}</div>}
+      {label != null && (
+        <div className={cx('absolute inset-0 grid place-items-center num font-semibold', dark ? 'text-white' : 'text-ink', labelClass)} style={{ fontSize: size / 4.4 }}>
+          {label}
+        </div>
+      )}
     </div>
   )
 }
 
 /** A ring that counts down to `to`, full when `from` was. */
-export function CountdownRing({ from, to, size = 60 }: { from: number; to: number; size?: number }) {
+export function CountdownRing({ from, to, size = 60, dark = true }: { from: number; to: number; size?: number; dark?: boolean }) {
   const now = useNow(1000)
   const mounted = useMounted()
   const total = Math.max(1, to - from)
   const left = Math.max(0, to - now)
-  return <Ring size={size} progress={mounted ? left / total : 1} label={!mounted ? '' : left > 0 ? shortClock(left) : '…'} />
+  return <Ring size={size} dark={dark} progress={mounted ? left / total : 1} label={!mounted ? '' : left > 0 ? shortClock(left) : '…'} />
 }
 
 /* ---------------------------------------------------------------- outcomes */
@@ -123,20 +116,37 @@ export function outcomeWord(kind: 'direction' | 'setup', status: string, outcome
   return { label: 'FLAT', tone: 'gray' }
 }
 
-const PILL_TONE = {
-  green: 'bg-green-100 text-green-700',
-  red: 'bg-red-100 text-red-700',
-  gray: 'bg-gray-100 text-gray-600',
-  purple: 'bg-purple-100 text-purple-700',
-  darkred: 'bg-red-700 text-white',
+const VERDICT_TONE = {
+  green: 'text-up',
+  red: 'text-down',
+  gray: 'text-ink-3',
+  purple: '',
+  darkred: 'text-down line-through decoration-2',
 }
 
 export function ResultPill({ kind, status, outcome, className = '' }: { kind: 'direction' | 'setup'; status: string; outcome: Outcome; className?: string }) {
   const w = outcomeWord(kind, status, outcome)
+  if (w.tone === 'purple') return <SealedChip className={className} />
+  return <span className={cx('label whitespace-nowrap', VERDICT_TONE[w.tone], className)}>{w.label}</span>
+}
+
+/** A sealed call: a black chip with the foil seal. */
+export function SealedChip({ className = '', label = 'Sealed' }: { className?: string; label?: string }) {
   return (
-    <span className={cx('inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black tracking-wide whitespace-nowrap', PILL_TONE[w.tone], className)}>
-      {w.tone === 'purple' && <IconLock size={11} weight={2.6} />}
-      {w.label}
+    <span className={cx('inline-flex items-center gap-1.5 h-6 pl-1.5 pr-2 rounded-full bg-ink text-white label !text-[9.5px] whitespace-nowrap', className)}>
+      <span className="w-2 h-2 rounded-full foil" />
+      {label}
+    </span>
+  )
+}
+
+/** The seal itself, as a sticker: foil, with a black core and a white centre. */
+export function Seal({ size = 28 }: { size?: number }) {
+  return (
+    <span className="rounded-full foil grid place-items-center shrink-0" style={{ width: size, height: size }}>
+      <span className="rounded-full bg-ink grid place-items-center" style={{ width: size * 0.5, height: size * 0.5 }}>
+        <span className="rounded-full bg-white" style={{ width: size * 0.2, height: size * 0.2 }} />
+      </span>
     </span>
   )
 }
@@ -149,7 +159,7 @@ export function resultText(kind: 'direction' | 'setup', v: number | null | undef
 
 export function Dir({ d, className = '', word = true }: { d: 'up' | 'down'; className?: string; word?: boolean }) {
   return (
-    <span className={cx('inline-flex items-center gap-0.5 font-black', d === 'up' ? 'text-green-600' : 'text-red-600', className)}>
+    <span className={cx('inline-flex items-center gap-0.5 font-bold', d === 'up' ? 'text-up' : 'text-down', className)}>
       {d === 'up' ? <IconUp size={15} weight={3} /> : <IconDown size={15} weight={3} />}
       {word && d}
     </span>
@@ -165,25 +175,25 @@ export function CallLine({ c, mine, className = '' }: { c: CallView; mine?: { my
   const horizon = c.horizonSec ? `${c.horizonSec / 3600}h` : null
   let title: ReactNode
   let sub: ReactNode
-  if (p?.rules === 'presage/direction-v1') {
+  if (p?.rules === 'called/direction-v1') {
     title = (
       <>
-        {p.asset.symbol} <Dir d={p.direction} /> <span className="text-gray-400 font-semibold text-sm">· {p.horizonSec / 3600}h</span>
+        {p.asset.symbol} <Dir d={p.direction} /> <span className="text-ink-3 font-medium text-[13px]">· {p.horizonSec / 3600}h</span>
       </>
     )
     sub = (
       <>
-        ${fmtPrice(p.priceAtIssue)}
-        {exit != null ? ` → $${fmtPrice(exit)}` : ` · ${p.confidence}% sure`}
+        {fmtPrice(p.priceAtIssue)}
+        {exit != null ? ` → ${fmtPrice(exit)}` : ` · ${p.confidence}% sure`}
         {mine?.myCall ? ` · you said ${mine.myCall}` : ''}
       </>
     )
-  } else if (p?.rules === 'presage/setup-v1') {
+  } else if (p?.rules === 'called/setup-v1') {
     const risk = ((p.entry.price - p.stop) / p.entry.price) * 100
     const reward = ((p.target - p.entry.price) / p.entry.price) * 100
     title = (
       <>
-        {p.asset.symbol} <span className="text-green-600 font-black">long</span> <span className="text-gray-400 font-semibold text-sm">· setup</span>
+        {p.asset.symbol} <span className="text-up font-bold">long</span> <span className="text-ink-3 font-medium text-[13px]">· setup</span>
       </>
     )
     sub = (
@@ -194,7 +204,7 @@ export function CallLine({ c, mine, className = '' }: { c: CallView; mine?: { my
   } else {
     title = (
       <span className="inline-flex items-center gap-1.5">
-        <IconLock size={14} weight={2.4} className="text-purple-600" />
+        <IconLock size={14} weight={2.4} className="text-ink" />
         {c.asset ? `${c.asset}${horizon ? ` · ${horizon}` : ''}` : c.paid ? 'A paid question' : c.kind === 'setup' ? 'A sealed setup' : 'A sealed call'}
       </span>
     )
@@ -202,18 +212,18 @@ export function CallLine({ c, mine, className = '' }: { c: CallView; mine?: { my
   }
   return (
     <Link href={`/calls/${c.id}`} className={cx('flex items-center gap-3 py-3 group', className)}>
-      <Sigil id={c.agentId} slug={c.agentSlug === 'oracle' || c.agentSlug === 'st-quant' ? c.agentSlug : undefined} size={40} className="rounded-xl shrink-0" />
+      <Sigil id={c.agentId} slug={c.agentSlug === 'oracle' || c.agentSlug === 'st-quant' ? c.agentSlug : undefined} size={40} className="rounded-[12px] shrink-0" />
       <div className="flex-1 min-w-0">
-        <div className="font-bold text-[15px] text-black flex items-center gap-1.5 truncate">{title}</div>
-        <div className="text-[13px] text-gray-500 tabular-nums truncate">{sub}</div>
+        <div className="font-semibold text-[15px] text-ink flex items-center gap-1.5 truncate">{title}</div>
+        <div className="num text-[12.5px] text-ink-3 truncate">{sub}</div>
       </div>
       <div className="text-right shrink-0">
         <ResultPill kind={c.kind} status={c.status} outcome={c.outcome} />
         {c.result != null && c.outcome !== 'nofill' && (
-          <div className={cx('text-sm font-black mt-1 tabular-nums', c.outcome === 'win' ? 'text-green-600' : c.outcome === 'loss' ? 'text-red-600' : 'text-gray-500')}>{resultText(c.kind, c.result)}</div>
+          <div className={cx('num text-[15px] font-semibold mt-0.5', c.outcome === 'win' ? 'text-up' : c.outcome === 'loss' ? 'text-down' : 'text-ink-3')}>{resultText(c.kind, c.result)}</div>
         )}
         {c.status === 'sealed' && c.opensAt && (
-          <div className="text-xs font-bold text-gray-500 mt-1">
+          <div className="num text-[12px] font-medium text-ink-3 mt-1">
             <Countdown to={c.opensAt} />
           </div>
         )}
@@ -281,17 +291,19 @@ export function RadarViz({
   const R = size / 2
   const placed = useMemo(() => place(rows, R), [rows, R])
   const small = size < 120
-  const ringColor = dark ? 'rgba(255,255,255,0.12)' : '#EEF0F3'
+  // Drawn for a black card: quiet markets recede, close ones are white, setups forming are foil.
+  const ringColor = '#26262A'
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="overflow-visible select-none">
       <defs>
         <linearGradient id={`g${id}`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#9333EA" />
-          <stop offset="0.55" stopColor="#EC4899" />
-          <stop offset="1" stopColor="#2563EB" />
+          <stop offset="0" stopColor="#7C3AED" />
+          <stop offset="0.45" stopColor="#EC4899" />
+          <stop offset="0.8" stopColor="#3B82F6" />
+          <stop offset="1" stopColor="#22D3EE" />
         </linearGradient>
         <radialGradient id={`s${id}`}>
-          <stop offset="0" stopColor="#EC4899" stopOpacity="0.16" />
+          <stop offset="0" stopColor="#EC4899" stopOpacity="0.35" />
           <stop offset="1" stopColor="#EC4899" stopOpacity="0" />
         </radialGradient>
       </defs>
@@ -300,7 +312,7 @@ export function RadarViz({
       ))}
       {!small && (
         <g className="radar-sweep">
-          <path d={`M${R} ${R} L${R} 1 A${R - 1} ${R - 1} 0 0 1 ${R + (R - 1) * Math.sin(0.85)} ${R - (R - 1) * Math.cos(0.85)} Z`} fill={`url(#g${id})`} opacity={dark ? 0.16 : 0.08} />
+          <path d={`M${R} ${R} L${R} 1 A${R - 1} ${R - 1} 0 0 1 ${R + (R - 1) * Math.sin(0.85)} ${R - (R - 1) * Math.cos(0.85)} Z`} fill="#FFFFFF" opacity={0.05} />
         </g>
       )}
       {placed.map(({ row, x, y, ring }) => {
@@ -315,7 +327,7 @@ export function RadarViz({
               cx={x}
               cy={y}
               r={small ? 1.3 : isSel ? 4.5 : ring === 'watching' ? 2.9 : 2.3}
-              fill={isSel ? '#111' : dark ? (ring === 'watching' ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.22)') : ring === 'watching' ? '#C7CBD3' : '#E2E5EA'}
+              fill={isSel ? '#FFFFFF' : ring === 'watching' ? '#52525B' : '#34343A'}
               className={onSelect ? 'cursor-pointer' : undefined}
               onClick={onSelect ? () => onSelect(row) : undefined}
             />
@@ -327,7 +339,8 @@ export function RadarViz({
           <g key={key} className={onSelect ? 'cursor-pointer' : undefined} onClick={onSelect ? () => onSelect(row) : undefined}>
             {onSelect && <circle cx={x} cy={y} r={16} fill="transparent" />}
             {firing && !small && <circle cx={x} cy={y} r={dot * 2.6} fill={`url(#s${id})`} />}
-            <circle cx={x} cy={y} r={dot} fill={firing ? `url(#g${id})` : '#C084FC'} className={firing ? 'glow-pink' : undefined} stroke={isSel ? '#111' : 'none'} strokeWidth={2.5} />
+            <circle cx={x} cy={y} r={dot} fill={firing ? `url(#g${id})` : '#FFFFFF'} className={firing ? 'foil-glow' : undefined} stroke={isSel ? '#FFFFFF' : 'none'} strokeWidth={isSel && !firing ? 0 : 2.5} />
+            {isSel && !firing && <circle cx={x} cy={y} r={dot + 4} fill="none" stroke="#FFFFFF" strokeWidth={1.5} />}
             {labels && !small && (() => {
               const dx = x - R
               const dy = y - R
@@ -340,12 +353,12 @@ export function RadarViz({
                   x={x + ux * off}
                   y={y + uy * off + 4}
                   textAnchor={Math.abs(ux) < 0.35 ? 'middle' : ux > 0 ? 'start' : 'end'}
-                  fontFamily={firing ? 'Inter Tight' : 'Inter'}
-                  fontWeight={firing ? 900 : 700}
-                  fontSize={firing ? 12.5 : 10.5}
-                  fill={dark ? '#fff' : firing ? '#111' : '#7E22CE'}
+                  fontFamily={firing ? 'Inter Tight' : 'IBM Plex Mono'}
+                  fontWeight={firing ? 900 : 600}
+                  fontSize={firing ? 12.5 : 9.5}
+                  fill={firing ? '#FFFFFF' : '#9C9CA3'}
                   paintOrder="stroke"
-                  stroke={dark ? '#030712' : '#fff'}
+                  stroke="#0B0B0C"
                   strokeWidth={3}
                 >
                   {hidden ? '🔒' : row.symbol}
@@ -400,17 +413,33 @@ export function radarChecks(r: RadarRow): { label: string; ok: boolean | null; n
   ]
 }
 
-export function CheckRow({ label, ok, note }: { label: string; ok: boolean | null; note?: string }) {
+export function CheckRow({ label, ok, note, dark = false }: { label: string; ok: boolean | null; note?: string; dark?: boolean }) {
   return (
     <div className="flex items-start gap-3 py-2">
-      <span className={cx('mt-0.5 w-5 h-5 rounded-full grid place-items-center shrink-0', ok ? 'bg-green-500 text-white' : ok === false ? 'bg-gray-200 text-gray-500' : 'bg-gray-100 text-gray-400')}>
-        {ok ? <IconCheck size={12} weight={3.2} /> : ok === false ? <IconX size={11} weight={3} /> : <span className="text-[10px] font-black">?</span>}
+      <span
+        className={cx(
+          'mt-0.5 w-5 h-5 rounded-full grid place-items-center shrink-0',
+          ok ? (dark ? 'bg-white text-ink' : 'bg-ink text-white') : dark ? 'border border-[#3F3F46] text-[#6B6B72]' : 'border border-line text-ink-3',
+        )}
+      >
+        {ok ? <IconCheck size={11} weight={3.2} /> : <span className="text-[11px] font-bold leading-none">{ok === false ? '–' : '?'}</span>}
       </span>
       <div className="min-w-0">
-        <div className={cx('text-sm font-bold', ok ? 'text-black' : 'text-gray-600')}>{label}</div>
-        {note && <div className="text-xs text-gray-500">{note}</div>}
+        <div className={cx('text-sm font-semibold', ok ? (dark ? 'text-white' : 'text-ink') : dark ? 'text-[#8A8A92]' : 'text-ink-3')}>{label}</div>
+        {note && <div className={cx('text-xs', dark ? 'text-[#6B6B72]' : 'text-ink-3')}>{note}</div>}
       </div>
     </div>
+  )
+}
+
+/** A small tag in mono capitals. `foil` is for what is live or yours. */
+export function Tag({ children, tone = 'outline', className = '' }: { children: ReactNode; tone?: 'solid' | 'outline' | 'soft' | 'up' | 'foil'; className?: string }) {
+  const t = { solid: 'bg-ink text-white', outline: 'border border-line text-ink-2', soft: 'bg-paper-2 text-ink-3', up: 'border border-up/30 text-up', foil: 'bg-ink text-white' }[tone]
+  return (
+    <span className={cx('label !text-[9.5px] h-[22px] px-2 rounded-full inline-flex items-center gap-1.5 whitespace-nowrap', t, className)}>
+      {tone === 'foil' && <span className="w-1.5 h-1.5 rounded-full foil" />}
+      {children}
+    </span>
   )
 }
 
@@ -422,17 +451,17 @@ type Told = { text: ReactNode; detail?: string; href?: string; tone: 'green' | '
 export function tell(e: AgentEvent): Told | null {
   const d = e.data as Record<string, unknown>
   const sym = typeof d.symbol === 'string' ? d.symbol : null
-  const who = <b className="font-bold text-black">{e.agentName}</b>
+  const who = <b className="font-semibold text-ink">{e.agentName}</b>
   switch (e.kind) {
     case 'sealed':
-      return { text: <>{who} sealed a {d.kind === 'setup' ? 'setup' : 'call'}{sym ? <> on <b className="text-black">{sym}</b></> : ''}</>, detail: e.masked ? 'The levels open to everyone when it closes.' : undefined, href: `/calls/${d.callId}`, tone: 'purple' }
+      return { text: <>{who} sealed a {d.kind === 'setup' ? 'setup' : 'call'}{sym ? <> on <b className="text-ink">{sym}</b></> : ''}</>, detail: e.masked ? 'The levels open to everyone when it closes.' : undefined, href: `/calls/${d.callId}`, tone: 'purple' }
     case 'resolved': {
       const kind = d.kind === 'setup' ? 'setup' : 'direction'
       if (d.outcome === 'nofill')
         return {
           text: (
             <>
-              {who}’s <b className="text-black">{sym}</b> setup expired unfilled
+              {who}’s <b className="text-ink">{sym}</b> setup expired unfilled
             </>
           ),
           detail: 'The price never came back to the entry, so no trade happened.',
@@ -443,7 +472,7 @@ export function tell(e: AgentEvent): Told | null {
       return {
         text: (
           <>
-            {who}’s <b className="text-black">{sym}</b> {kind === 'setup' ? 'setup' : 'call'} opened: <b className={w.tone === 'green' ? 'text-green-600' : w.tone === 'red' ? 'text-red-600' : 'text-gray-600'}>{w.label.toLowerCase()}</b> {resultText(kind, Number(d.result))}
+            {who}’s <b className="text-ink">{sym}</b> {kind === 'setup' ? 'setup' : 'call'} opened: <b className={w.tone === 'green' ? 'text-up' : w.tone === 'red' ? 'text-down' : 'text-ink-3'}>{w.label.toLowerCase()}</b> <span className="num">{resultText(kind, Number(d.result))}</span>
           </>
         ),
         href: `/calls/${d.callId}`,
@@ -453,18 +482,18 @@ export function tell(e: AgentEvent): Told | null {
     case 'answered':
       if (e.masked)
         return {
-          text: d.paid ? <>{who} answered a paid question</> : <>{who} called <b className="text-black">{sym}</b> for the next {String(d.horizon)}</>,
+          text: d.paid ? <>{who} answered a paid question</> : <>{who} called <b className="text-ink">{sym}</b> for the next {String(d.horizon)}</>,
           detail: 'Sealed on Metis. It opens when the time is up.',
           href: `/calls/${d.callId}`,
           tone: 'blue',
         }
-      return { text: <>{who} called <b className="text-black">{sym}</b> {String(d.direction)} · {String(d.horizon)}</>, href: `/calls/${d.callId}`, tone: 'blue' }
+      return { text: <>{who} called <b className="text-ink">{sym}</b> {String(d.direction)} · {String(d.horizon)}</>, href: `/calls/${d.callId}`, tone: 'blue' }
     case 'chart_read': {
       const v = String(d.verdict)
       return {
         text: (
           <>
-            {who} read {sym ? <>the <b className="text-black">{sym}</b> chart</> : 'a chart'}: <b className={v === 'BUY' ? 'text-green-600' : 'text-gray-700'}>{v === 'BUY' ? 'looks right' : v === 'WAIT' ? 'not yet' : 'no'}</b>
+            {who} read {sym ? <>the <b className="text-ink">{sym}</b> chart</> : 'a chart'}: <b className={v === 'BUY' ? 'text-up' : 'text-ink-2'}>{v === 'BUY' ? 'looks right' : v === 'WAIT' ? 'not yet' : 'no'}</b>
           </>
         ),
         detail: typeof d.plain === 'string' && d.plain ? d.plain : typeof d.why === 'string' ? d.why : undefined,
@@ -474,7 +503,7 @@ export function tell(e: AgentEvent): Told | null {
     }
     case 'skipped':
       if (typeof d.why === 'string' && /no chart read available/.test(d.why)) return null
-      return { text: <>{who} passed on {sym ? <b className="text-black">{sym}</b> : 'a setup'}</>, detail: typeof d.why === 'string' ? d.why : undefined, tone: 'gray' }
+      return { text: <>{who} passed on {sym ? <b className="text-ink">{sym}</b> : 'a setup'}</>, detail: typeof d.why === 'string' ? d.why : undefined, tone: 'gray' }
     case 'forfeited':
       return { text: <>{who} missed a reveal</>, detail: 'It counts as a loss, and the payer is refunded.', href: `/calls/${d.callId}`, tone: 'red' }
     default:
@@ -482,7 +511,7 @@ export function tell(e: AgentEvent): Told | null {
   }
 }
 
-const DOT = { green: 'bg-green-500', red: 'bg-red-500', purple: 'bg-purple-500', blue: 'bg-blue-500', gray: 'bg-gray-300' }
+const DOT = { green: 'bg-up', red: 'bg-down', purple: 'foil', blue: 'bg-ink', gray: 'bg-line' }
 
 export function FeedItem({ e, now, compact = false }: { e: AgentEvent; now: number; compact?: boolean }) {
   const t = tell(e)
@@ -491,25 +520,25 @@ export function FeedItem({ e, now, compact = false }: { e: AgentEvent; now: numb
     <div className="flex gap-3 py-3">
       <div className="relative shrink-0">
         <Sigil id={e.agentId} slug={e.agentSlug === 'oracle' || e.agentSlug === 'st-quant' ? e.agentSlug : undefined} size={32} className="rounded-lg" />
-        <span className={cx('absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full ring-2 ring-white', DOT[t.tone])} />
+        <span className={cx('absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-white', DOT[t.tone])} />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="text-[14px] text-gray-700 leading-snug">{t.text}</div>
-        {t.detail && <div className="text-[12.5px] text-gray-500 mt-0.5 line-clamp-2">{t.detail}</div>}
+        <div className="text-[14px] text-ink-2 leading-snug">{t.text}</div>
+        {t.detail && <div className="text-[12.5px] text-ink-3 mt-0.5 line-clamp-2">{t.detail}</div>}
         {t.chart &&
           (compact ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={`/api/charts/read/${t.chart}`} alt="the chart it read" className="mt-2 rounded-lg border border-gray-100 h-14 w-24 object-cover object-left-top" loading="lazy" />
+            <img src={`/api/charts/read/${t.chart}`} alt="the chart it read" className="mt-2 rounded-[8px] border border-line h-14 w-24 object-cover object-left-top" loading="lazy" />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={`/api/charts/read/${t.chart}`} alt="the chart it read" className="mt-2 rounded-xl border border-gray-100 w-full max-w-sm" loading="lazy" />
+            <img src={`/api/charts/read/${t.chart}`} alt="the chart it read" className="mt-2 rounded-[12px] border border-line w-full max-w-sm" loading="lazy" />
           ))}
       </div>
-      <div className="text-[11px] font-semibold text-gray-400 whitespace-nowrap pt-0.5">{ago(now - e.at)}</div>
+      <div className="num text-[11px] text-ink-3 whitespace-nowrap pt-0.5">{ago(now - e.at)}</div>
     </div>
   )
   return t.href ? (
-    <Link href={t.href} className="block hover:bg-gray-50/80 -mx-2 px-2 rounded-xl transition-colors">
+    <Link href={t.href} className="block hover:bg-paper-2 -mx-2 px-2 rounded-[12px] transition-colors">
       {body}
     </Link>
   ) : (
@@ -524,9 +553,9 @@ export const SHOWN_KINDS = new Set(['sealed', 'resolved', 'answered', 'chart_rea
 export function Feed({ events, max = 12, empty = 'Quiet for now. Every move the agents make lands here.', compact = false }: { events: AgentEvent[]; max?: number; empty?: string; compact?: boolean }) {
   const now = useNow(30_000)
   const shown = events.filter(e => SHOWN_KINDS.has(e.kind) && tell(e)).slice(0, max)
-  if (!shown.length) return <div className="text-sm text-gray-500 py-6 text-center">{empty}</div>
+  if (!shown.length) return <div className="text-sm text-ink-3 py-6 text-center">{empty}</div>
   return (
-    <div className="divide-y divide-gray-100">
+    <div className="divide-y divide-line">
       {shown.map(e => (
         <FeedItem key={e.id} e={e} now={now} compact={compact} />
       ))}
@@ -537,13 +566,13 @@ export function Feed({ events, max = 12, empty = 'Quiet for now. Every move the 
 /* ---------------------------------------------------------------- status */
 
 const STATUS_DOT: Record<AgentStatus['state'], string> = {
-  scanning: 'bg-blue-500',
-  reading: 'bg-purple-500',
-  sealed: 'bg-purple-600',
-  answering: 'bg-blue-500',
-  waiting: 'bg-green-500',
-  idle: 'bg-gray-300',
-  offline: 'bg-red-500',
+  scanning: 'bg-up',
+  reading: 'bg-up',
+  sealed: 'foil',
+  answering: 'bg-up',
+  waiting: 'bg-up',
+  idle: 'bg-line',
+  offline: 'bg-down',
 }
 
 export function StatusLine({ status, engineUp = true, className = '' }: { status: AgentStatus; engineUp?: boolean; className?: string }) {
@@ -562,28 +591,43 @@ export function StatusLine({ status, engineUp = true, className = '' }: { status
 
 /* ---------------------------------------------------------------- layout bits */
 
-export function Panel({ children, className = '', tone = 'white', as: As = 'section' }: { children: ReactNode; className?: string; tone?: 'white' | 'dark' | 'grad' | 'soft'; as?: 'section' | 'div' }) {
-  const t = { white: 'bg-white border-2 border-gray-100', dark: 'bg-gray-950 text-white', grad: 'grad-border', soft: 'bg-gray-50' }[tone]
-  return <As className={cx('rounded-3xl', t, className)}>{children}</As>
+export function Panel({ children, className = '', tone = 'white', as: As = 'section' }: { children: ReactNode; className?: string; tone?: 'white' | 'dark' | 'ticket' | 'soft'; as?: 'section' | 'div' }) {
+  const t = { white: 'bg-white border border-line rounded-[18px]', dark: 'bg-ink text-white rounded-[20px]', ticket: 'bg-ink text-white rounded-[20px] relative overflow-hidden', soft: 'bg-paper-2 rounded-[18px]' }[tone]
+  return (
+    <As className={cx(t, className)}>
+      {tone === 'ticket' && <span className="absolute top-0 inset-x-0 h-[3px] foil-line" />}
+      {children}
+    </As>
+  )
 }
 
 export function Eyebrow({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <div className={cx('text-[11px] font-black tracking-[0.14em] uppercase', className || 'text-gray-400')}>{children}</div>
+  return <div className={cx('label', className || 'text-ink-3')}>{children}</div>
 }
 
 export function PanelHead({ title, right, sub }: { title: ReactNode; right?: ReactNode; sub?: ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
-        <h2 className="font-heading text-lg md:text-xl font-black tracking-tight text-black">{title}</h2>
-        {sub && <div className="text-[13px] text-gray-500 mt-0.5">{sub}</div>}
+        <h2 className="font-heading text-lg md:text-xl font-black tight text-ink">{title}</h2>
+        {sub && <div className="text-[13px] text-ink-3 mt-0.5">{sub}</div>}
       </div>
       {right && <div className="shrink-0">{right}</div>}
     </div>
   )
 }
 
-/** The big primary action. On phones it can float just above the tab bar. */
+/** A phrase underlined in foil: once per screen at most, on the word that matters. */
+export function Sealed({ children }: { children: ReactNode }) {
+  return (
+    <span className="relative inline-block">
+      {children}
+      <span className="absolute left-0 right-0 -bottom-[0.06em] h-[0.09em] min-h-[3px] rounded-full foil-line" />
+    </span>
+  )
+}
+
+/** The big primary action: ink. On phones it can float just above the tab bar. */
 export function ActionButton({
   children,
   onClick,
@@ -595,22 +639,21 @@ export function ActionButton({
   children: ReactNode
   onClick?: () => void
   href?: string
-  tone?: 'black' | 'grad' | 'white'
+  tone?: 'black' | 'white'
   disabled?: boolean
   className?: string
 }) {
   const cls = cx(
-    'h-14 w-full rounded-2xl font-bold text-[16px] grid place-items-center px-5 transition-all active:scale-[0.99]',
-    tone === 'black' && 'bg-black text-white hover:bg-gray-800 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.45)]',
-    tone === 'grad' && 'grad text-white shadow-[0_10px_30px_-10px_rgba(236,72,153,0.6)] hover:brightness-110',
-    tone === 'white' && 'bg-white text-black border-2 border-gray-200 hover:border-black',
-    disabled && 'opacity-50 pointer-events-none',
+    'h-[54px] w-full rounded-[14px] font-semibold text-[16px] grid place-items-center px-5 transition-all active:scale-[0.99]',
+    tone === 'black' && 'bg-ink text-white hover:bg-[#26262A]',
+    tone === 'white' && 'bg-white text-ink border border-line hover:border-ink',
+    disabled && 'opacity-40 pointer-events-none',
     className,
   )
-  if (href) return <Link href={href} className={cls}>{children}</Link>
+  if (href) return <Link href={href} className={cls}><span>{children}</span></Link>
   return (
     <button onClick={onClick} disabled={disabled} className={cls}>
-      {children}
+      <span>{children}</span>
     </button>
   )
 }
@@ -631,18 +674,18 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
       <motion.div
         role="dialog"
         aria-modal
-        className="fixed z-[61] inset-x-0 bottom-0 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[560px] bg-white rounded-t-[28px] md:rounded-3xl max-h-[85vh] overflow-y-auto shadow-2xl"
+        className="fixed z-[61] inset-x-0 bottom-0 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[560px] bg-white rounded-t-[24px] md:rounded-[22px] max-h-[85vh] overflow-y-auto shadow-2xl"
         initial={{ y: 40, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 40, opacity: 0 }}
         transition={{ type: 'spring', stiffness: 380, damping: 34 }}
       >
         <div className="md:hidden flex justify-center pt-2.5">
-          <span className="w-10 h-1.5 rounded-full bg-gray-200" />
+          <span className="w-10 h-1.5 rounded-full bg-line" />
         </div>
         <div className="flex items-center justify-between px-5 md:px-6 pt-4 md:pt-6">
-          <div className="font-heading text-xl font-black">{title}</div>
-          <button onClick={onClose} className="w-9 h-9 rounded-full bg-gray-100 grid place-items-center text-gray-600" aria-label="Close">
+          <div className="font-heading text-xl font-black tight">{title}</div>
+          <button onClick={onClose} className="w-9 h-9 rounded-full border border-line grid place-items-center text-ink-2" aria-label="Close">
             <IconX size={16} />
           </button>
         </div>

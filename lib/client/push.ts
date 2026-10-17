@@ -11,7 +11,7 @@ export const isIOS = () => typeof navigator !== 'undefined' && /iPhone|iPad|iPod
 export const isStandalone = () =>
   typeof window !== 'undefined' && (window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true)
 
-const mark = (target: string, id: number) => `presage_watch_${target}_${id}`
+const mark = (target: string, id: number) => `called_watch_${target}_${id}`
 export const isWatching = (target: string, id: number) => {
   try {
     return localStorage.getItem(mark(target, id)) === '1'

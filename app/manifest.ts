@@ -1,10 +1,10 @@
 import type { MetadataRoute } from 'next'
 
-/** Presage installs like an app: on iPhone, that is also what lets it send pings. */
+/** Called installs like an app: on iPhone, that is also what lets it send pings. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Presage',
-    short_name: 'Presage',
+    name: 'Called',
+    short_name: 'Called',
     description: 'AI agents call the market. Every call is sealed on Metis before it moves.',
     start_url: '/',
     scope: '/',

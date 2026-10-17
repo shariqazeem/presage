@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { parseEventLogs, stringToHex, type Hex } from 'viem'
-import { presageCallsAbi } from '../lib/abi/PresageCalls'
-import { presageMarketAbi } from '../lib/abi/PresageMarket'
+import { calledLedgerAbi } from '../lib/abi/CalledLedger'
+import { calledMarketAbi } from '../lib/abi/CalledMarket'
 import { commitmentOf, newSalt, serializePayload, type CallPayload } from '../lib/calls/payload'
 import type { Outcome } from '../lib/calls/rules'
 import { deployment, publicClient } from '../lib/chain'
@@ -14,7 +14,7 @@ const l = log('calls')
 export const OUTCOME_CODE: Record<Outcome, number> = { win: 1, loss: 2, flat: 3, nofill: 4 }
 
 export function contracts() {
-  if (!deployment) throw new Error('Presage is not deployed on this network yet')
+  if (!deployment) throw new Error('Called is not deployed on this network yet')
   return deployment
 }
 
@@ -49,8 +49,8 @@ export async function publishCall(input: { payload: CallPayload; revealBy: numbe
   const json = serializePayload(payload)
   const salt = newSalt()
   const commitment = commitmentOf(salt, json)
-  const setup = payload.rules === 'presage/setup-v1' ? payload : null
-  const dir = payload.rules === 'presage/direction-v1' ? payload : null
+  const setup = payload.rules === 'called/setup-v1' ? payload : null
+  const dir = payload.rules === 'called/direction-v1' ? payload : null
 
   const [row] = await db
     .insert(schema.calls)
@@ -80,21 +80,21 @@ export async function publishCall(input: { payload: CallPayload; revealBy: numbe
     const sent = input.requestId
       ? await write({
           address: c.market,
-          abi: presageMarketAbi,
+          abi: calledMarketAbi,
           functionName: 'sealPaidCall',
           args: [input.requestId, commitment, input.revealBy],
           label: `seal paid call #${row.id} (${payload.asset.symbol})`,
         })
       : await write({
           address: c.calls,
-          abi: presageCallsAbi,
+          abi: calledLedgerAbi,
           functionName: 'seal',
           args: [BigInt(payload.agent), commitment, input.revealBy],
           label: `seal call #${row.id} (${payload.asset.symbol})`,
         })
-    // CallSealed comes from PresageCalls even when the market sealed a paid call, so decode with its ABI.
+    // CallSealed comes from CalledLedger even when the market sealed a paid call, so decode with its ABI.
     const ev = parseEventLogs({
-      abi: presageCallsAbi,
+      abi: calledLedgerAbi,
       eventName: 'CallSealed',
       logs: sent.receipt.logs.filter(x => x.address.toLowerCase() === c.calls.toLowerCase()),
     })[0]
@@ -126,7 +126,7 @@ export async function revealCall(row: CallRow, outcome: Outcome, result: number,
   if (row.chainCallId == null) throw new Error(`Call #${row.id} has no chain id`)
   const sent = await write({
     address: c.calls,
-    abi: presageCallsAbi,
+    abi: calledLedgerAbi,
     functionName: 'reveal',
     args: [BigInt(row.chainCallId), row.salt as Hex, stringToHex(row.payload), OUTCOME_CODE[outcome], result],
     label: `reveal call #${row.id} → ${outcome} ${result}`,
@@ -151,7 +151,7 @@ export async function settlePaid(callRowId: number, requestId: Hex): Promise<voi
   try {
     const sent = await write({
       address: contracts().market,
-      abi: presageMarketAbi,
+      abi: calledMarketAbi,
       functionName: 'settle',
       args: [requestId],
       label: `settle paid call #${callRowId}`,

@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * Every agent gets a mark in the Presage family: a black tile, a bar and a ring in the brand gradient.
+ * Every agent gets a mark in the Called family: a black tile, a bar and a ring in foil.
  * The house agents have fixed marks. A creator's agent gets one built from its identity id, so it is
  * the same everywhere and nobody picks it.
  */
@@ -53,12 +53,13 @@ export function Sigil({ id, slug, size = 48, className = '' }: { id: number; slu
     <svg width={size} height={size} viewBox="0 0 64 64" className={className} role="img" aria-label="agent mark">
       <defs>
         <linearGradient id={gid} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#9333EA" />
-          <stop offset="0.55" stopColor="#EC4899" />
-          <stop offset="1" stopColor="#2563EB" />
+          <stop offset="0" stopColor="#7C3AED" />
+          <stop offset="0.45" stopColor="#EC4899" />
+          <stop offset="0.8" stopColor="#3B82F6" />
+          <stop offset="1" stopColor="#22D3EE" />
         </linearGradient>
       </defs>
-      <rect width="64" height="64" rx="16" fill="#0A0A0A" />
+      <rect width="64" height="64" rx="16" fill="#0B0B0C" />
       {glyph}
     </svg>
   )

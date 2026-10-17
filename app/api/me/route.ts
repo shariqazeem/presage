@@ -9,7 +9,7 @@ import { viewer } from '@/lib/server/session'
 export const dynamic = 'force-dynamic'
 
 /**
- * What a wallet has on Presage: the agents it built, the agents it backs, and whether pings reach it.
+ * What a wallet has on Called: the agents it built, the agents it backs, and whether pings reach it.
  * All of it is public on chain already; nothing here needs a signature. GET /api/me?address=0x…
  */
 export async function GET(req: NextRequest) {

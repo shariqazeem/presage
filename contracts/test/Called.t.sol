@@ -3,9 +3,9 @@ pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {PresageAgents, IERC8004Identity} from "../src/PresageAgents.sol";
-import {PresageCalls, IPresageAgents} from "../src/PresageCalls.sol";
-import {PresageMarket, AggregatorV3Interface} from "../src/PresageMarket.sol";
+import {CalledAgents, IERC8004Identity} from "../src/CalledAgents.sol";
+import {CalledLedger, ICalledAgents} from "../src/CalledLedger.sol";
+import {CalledMarket, AggregatorV3Interface} from "../src/CalledMarket.sol";
 
 contract MockIdentity is IERC8004Identity {
     mapping(uint256 => address) public owners;
@@ -60,12 +60,12 @@ contract Refuser {
     }
 }
 
-contract PresageTest is Test {
+contract CalledTest is Test {
     MockIdentity identity;
     MockStable usdc;
-    PresageAgents agents;
-    PresageCalls calls;
-    PresageMarket market;
+    CalledAgents agents;
+    CalledLedger calls;
+    CalledMarket market;
     MockFeed metisUsd;
     MockFeed sequencer;
 
@@ -85,13 +85,13 @@ contract PresageTest is Test {
         vm.warp(1_760_000_000);
         identity = new MockIdentity();
         usdc = new MockStable();
-        agents = new PresageAgents(identity);
-        calls = new PresageCalls(owner, IPresageAgents(address(agents)));
+        agents = new CalledAgents(identity);
+        calls = new CalledLedger(owner, ICalledAgents(address(agents)));
         metisUsd = new MockFeed(8);
         metisUsd.set(20e8, block.timestamp, block.timestamp); // $20 per METIS
         sequencer = new MockFeed(0);
         sequencer.set(0, block.timestamp - 2 hours, block.timestamp);
-        market = new PresageMarket(owner, agents, calls, metisUsd, sequencer, 25 hours, treasury);
+        market = new CalledMarket(owner, agents, calls, metisUsd, sequencer, 25 hours, treasury);
 
         vm.startPrank(owner);
         calls.setCommitter(committer, true);
@@ -102,7 +102,7 @@ contract PresageTest is Test {
 
         vm.startPrank(creator);
         agentId = identity.register();
-        agents.register(agentId, PresageAgents.Kind.Setup, keccak256("spec"), "https://presage.trade/specs/1", 3e6, 0);
+        agents.register(agentId, CalledAgents.Kind.Setup, keccak256("spec"), "https://called.xyz/specs/1", 3e6, 0);
         vm.stopPrank();
 
         usdc.mint(alice, 1_000e6);
@@ -124,7 +124,7 @@ contract PresageTest is Test {
         for (uint256 i; i < n; i++) {
             uint256 id = _seal();
             vm.prank(committer);
-            calls.reveal(id, SALT, PAYLOAD, PresageCalls.Outcome.Win, 150);
+            calls.reveal(id, SALT, PAYLOAD, CalledLedger.Outcome.Win, 150);
         }
     }
 
@@ -134,19 +134,19 @@ contract PresageTest is Test {
         vm.prank(alice);
         uint256 id = identity.register();
         vm.prank(mallory);
-        vm.expectRevert(abi.encodeWithSelector(PresageAgents.NotIdentityOwner.selector, id));
-        agents.register(id, PresageAgents.Kind.Setup, keccak256("x"), "", 3e6, 0);
+        vm.expectRevert(abi.encodeWithSelector(CalledAgents.NotIdentityOwner.selector, id));
+        agents.register(id, CalledAgents.Kind.Setup, keccak256("x"), "", 3e6, 0);
     }
 
     function test_specCannotBeRegisteredTwice() public {
         vm.prank(creator);
-        vm.expectRevert(abi.encodeWithSelector(PresageAgents.AlreadyRegistered.selector, agentId));
-        agents.register(agentId, PresageAgents.Kind.Setup, keccak256("other spec"), "", 3e6, 0);
+        vm.expectRevert(abi.encodeWithSelector(CalledAgents.AlreadyRegistered.selector, agentId));
+        agents.register(agentId, CalledAgents.Kind.Setup, keccak256("other spec"), "", 3e6, 0);
     }
 
     function test_priceFloorIsTwoDollars() public {
         vm.prank(creator);
-        vm.expectRevert(PresageAgents.PriceOutOfRange.selector);
+        vm.expectRevert(CalledAgents.PriceOutOfRange.selector);
         agents.setPrices(agentId, 1_999_999, 0);
 
         vm.prank(creator);
@@ -156,11 +156,11 @@ contract PresageTest is Test {
 
     function test_onlyCreatorChangesPriceOrRetires() public {
         vm.prank(mallory);
-        vm.expectRevert(abi.encodeWithSelector(PresageAgents.NotCreator.selector, agentId));
+        vm.expectRevert(abi.encodeWithSelector(CalledAgents.NotCreator.selector, agentId));
         agents.setPrices(agentId, 5e6, 0);
 
         vm.prank(mallory);
-        vm.expectRevert(abi.encodeWithSelector(PresageAgents.NotCreator.selector, agentId));
+        vm.expectRevert(abi.encodeWithSelector(CalledAgents.NotCreator.selector, agentId));
         agents.retire(agentId);
     }
 
@@ -170,12 +170,12 @@ contract PresageTest is Test {
         agents.retire(agentId);
 
         vm.prank(committer);
-        vm.expectRevert(abi.encodeWithSelector(PresageCalls.AgentNotActive.selector, agentId));
+        vm.expectRevert(abi.encodeWithSelector(CalledLedger.AgentNotActive.selector, agentId));
         calls.seal(agentId, keccak256("x"), uint40(block.timestamp + 1 days));
 
         // An open call can still be revealed after retirement, so losses can't be dodged by retiring.
         vm.prank(committer);
-        calls.reveal(id, SALT, PAYLOAD, PresageCalls.Outcome.Loss, -100);
+        calls.reveal(id, SALT, PAYLOAD, CalledLedger.Outcome.Loss, -100);
         assertEq(calls.recordOf(agentId).losses, 1);
         assertEq(agents.agentsOf(creator).length, 1);
     }
@@ -184,15 +184,15 @@ contract PresageTest is Test {
 
     function test_onlyCommitterSeals() public {
         vm.prank(mallory);
-        vm.expectRevert(PresageCalls.NotCommitter.selector);
+        vm.expectRevert(CalledLedger.NotCommitter.selector);
         calls.seal(agentId, keccak256("x"), uint40(block.timestamp + 1 days));
     }
 
     function test_revealWindowBounds() public {
         vm.startPrank(committer);
-        vm.expectRevert(PresageCalls.BadRevealWindow.selector);
+        vm.expectRevert(CalledLedger.BadRevealWindow.selector);
         calls.seal(agentId, keccak256("x"), uint40(block.timestamp + 4 minutes));
-        vm.expectRevert(PresageCalls.BadRevealWindow.selector);
+        vm.expectRevert(CalledLedger.BadRevealWindow.selector);
         calls.seal(agentId, keccak256("x"), uint40(block.timestamp + 31 days));
         vm.stopPrank();
     }
@@ -202,55 +202,55 @@ contract PresageTest is Test {
         bytes memory edited = bytes('{"v":1,"asset":"BTC","side":"long","entry":61250,"stop":60400,"target":62000}');
 
         vm.startPrank(committer);
-        vm.expectRevert(abi.encodeWithSelector(PresageCalls.CommitmentMismatch.selector, id));
-        calls.reveal(id, SALT, edited, PresageCalls.Outcome.Win, 100);
+        vm.expectRevert(abi.encodeWithSelector(CalledLedger.CommitmentMismatch.selector, id));
+        calls.reveal(id, SALT, edited, CalledLedger.Outcome.Win, 100);
 
-        vm.expectRevert(abi.encodeWithSelector(PresageCalls.CommitmentMismatch.selector, id));
-        calls.reveal(id, keccak256("other salt"), PAYLOAD, PresageCalls.Outcome.Win, 100);
+        vm.expectRevert(abi.encodeWithSelector(CalledLedger.CommitmentMismatch.selector, id));
+        calls.reveal(id, keccak256("other salt"), PAYLOAD, CalledLedger.Outcome.Win, 100);
 
-        calls.reveal(id, SALT, PAYLOAD, PresageCalls.Outcome.Win, 218);
-        vm.expectRevert(abi.encodeWithSelector(PresageCalls.NotSealed.selector, id));
-        calls.reveal(id, SALT, PAYLOAD, PresageCalls.Outcome.Win, 218);
+        calls.reveal(id, SALT, PAYLOAD, CalledLedger.Outcome.Win, 218);
+        vm.expectRevert(abi.encodeWithSelector(CalledLedger.NotSealed.selector, id));
+        calls.reveal(id, SALT, PAYLOAD, CalledLedger.Outcome.Win, 218);
         vm.stopPrank();
 
-        PresageCalls.Call memory c = calls.getCall(id);
-        assertEq(uint8(c.status), uint8(PresageCalls.Status.Revealed));
+        CalledLedger.Call memory c = calls.getCall(id);
+        assertEq(uint8(c.status), uint8(CalledLedger.Status.Revealed));
         assertEq(c.result, 218);
     }
 
     function test_revealEmitsThePayload() public {
         uint256 id = _seal();
         vm.expectEmit(true, true, false, true, address(calls));
-        emit PresageCalls.CallRevealed(id, agentId, PresageCalls.Outcome.Loss, -100, SALT, PAYLOAD);
+        emit CalledLedger.CallRevealed(id, agentId, CalledLedger.Outcome.Loss, -100, SALT, PAYLOAD);
         vm.prank(committer);
-        calls.reveal(id, SALT, PAYLOAD, PresageCalls.Outcome.Loss, -100);
+        calls.reveal(id, SALT, PAYLOAD, CalledLedger.Outcome.Loss, -100);
     }
 
     function test_lateCallsAreForfeitedByAnyone() public {
         uint256 id = _seal();
 
-        vm.expectRevert(abi.encodeWithSelector(PresageCalls.RevealDeadlineNotPassed.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(CalledLedger.RevealDeadlineNotPassed.selector, id));
         calls.forfeit(id);
 
         vm.warp(block.timestamp + 1 days + 1);
         vm.prank(committer);
-        vm.expectRevert(abi.encodeWithSelector(PresageCalls.RevealDeadlinePassed.selector, id));
-        calls.reveal(id, SALT, PAYLOAD, PresageCalls.Outcome.Win, 300);
+        vm.expectRevert(abi.encodeWithSelector(CalledLedger.RevealDeadlinePassed.selector, id));
+        calls.reveal(id, SALT, PAYLOAD, CalledLedger.Outcome.Win, 300);
 
         vm.prank(mallory);
         calls.forfeit(id);
-        PresageCalls.Record memory r = calls.recordOf(agentId);
+        CalledLedger.Record memory r = calls.recordOf(agentId);
         assertEq(r.forfeited, 1);
         assertEq(r.wins, 0);
         assertEq(calls.resolvedCount(agentId), 1);
 
-        vm.expectRevert(abi.encodeWithSelector(PresageCalls.NotSealed.selector, id));
+        vm.expectRevert(abi.encodeWithSelector(CalledLedger.NotSealed.selector, id));
         calls.forfeit(id);
     }
 
     function test_recordCountsEveryOutcome() public {
-        PresageCalls.Outcome[4] memory outcomes =
-            [PresageCalls.Outcome.Win, PresageCalls.Outcome.Loss, PresageCalls.Outcome.Flat, PresageCalls.Outcome.NoFill];
+        CalledLedger.Outcome[4] memory outcomes =
+            [CalledLedger.Outcome.Win, CalledLedger.Outcome.Loss, CalledLedger.Outcome.Flat, CalledLedger.Outcome.NoFill];
         int32[4] memory results = [int32(250), int32(-100), int32(12), int32(0)];
         for (uint256 i; i < 4; i++) {
             uint256 id = _seal();
@@ -259,7 +259,7 @@ contract PresageTest is Test {
         }
         _seal(); // still open
 
-        PresageCalls.Record memory r = calls.recordOf(agentId);
+        CalledLedger.Record memory r = calls.recordOf(agentId);
         assertEq(r.total, 5);
         assertEq(r.revealed, 4);
         assertEq(r.wins, 1);
@@ -274,13 +274,13 @@ contract PresageTest is Test {
     function test_noSubscribersWithoutARecord() public {
         vm.startPrank(alice);
         usdc.approve(address(market), type(uint256).max);
-        vm.expectRevert(abi.encodeWithSelector(PresageMarket.RecordTooShort.selector, agentId, 0, 0));
+        vm.expectRevert(abi.encodeWithSelector(CalledMarket.RecordTooShort.selector, agentId, 0, 0));
         market.subscribe(agentId, address(usdc), 1, 3e6);
         vm.stopPrank();
 
         _buildRecord(10); // ten resolved calls, but all in one day
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(PresageMarket.RecordTooShort.selector, agentId, 10, 0));
+        vm.expectRevert(abi.encodeWithSelector(CalledMarket.RecordTooShort.selector, agentId, 10, 0));
         market.subscribe(agentId, address(usdc), 1, 3e6);
 
         vm.warp(block.timestamp + 7 days);
@@ -317,7 +317,7 @@ contract PresageTest is Test {
         assertEq(usdc.balanceOf(creator), 4_800_000);
 
         vm.prank(creator);
-        vm.expectRevert(PresageMarket.NothingToClaim.selector);
+        vm.expectRevert(CalledMarket.NothingToClaim.selector);
         market.claim(address(usdc));
     }
 
@@ -341,7 +341,7 @@ contract PresageTest is Test {
 
         vm.startPrank(alice);
         usdc.approve(address(market), type(uint256).max);
-        vm.expectRevert(abi.encodeWithSelector(PresageMarket.AboveMaxAmount.selector, 50e6, 3e6));
+        vm.expectRevert(abi.encodeWithSelector(CalledMarket.AboveMaxAmount.selector, 50e6, 3e6));
         market.subscribe(agentId, address(usdc), 1, 3e6);
         vm.stopPrank();
     }
@@ -369,7 +369,7 @@ contract PresageTest is Test {
 
     function test_stalePriceBlocksNativePayments() public {
         vm.warp(block.timestamp + 25 hours + 1);
-        vm.expectRevert(PresageMarket.PriceUnavailable.selector);
+        vm.expectRevert(CalledMarket.PriceUnavailable.selector);
         market.quote(3e6, address(0));
         // stablecoins keep working
         assertEq(market.quote(3e6, address(usdc)), 3e6);
@@ -377,25 +377,25 @@ contract PresageTest is Test {
 
     function test_sequencerDownBlocksNativePayments() public {
         sequencer.set(1, block.timestamp - 3 hours, block.timestamp);
-        vm.expectRevert(PresageMarket.PriceUnavailable.selector);
+        vm.expectRevert(CalledMarket.PriceUnavailable.selector);
         market.quote(3e6, address(0));
 
         // back up, but inside the grace period
         sequencer.set(0, block.timestamp - 10 minutes, block.timestamp);
-        vm.expectRevert(PresageMarket.PriceUnavailable.selector);
+        vm.expectRevert(CalledMarket.PriceUnavailable.selector);
         market.quote(3e6, address(0));
     }
 
     function test_feedDecimalsAreNormalised() public {
         MockFeed eighteen = new MockFeed(18);
         eighteen.set(20e18, block.timestamp, block.timestamp);
-        PresageMarket m = new PresageMarket(owner, agents, calls, eighteen, AggregatorV3Interface(address(0)), 25 hours, treasury);
+        CalledMarket m = new CalledMarket(owner, agents, calls, eighteen, AggregatorV3Interface(address(0)), 25 hours, treasury);
         assertEq(m.metisUsdE8(), 20e8);
         assertEq(m.quote(3e6, address(0)), 0.15 ether);
     }
 
     function test_unknownTokenRejected() public {
-        vm.expectRevert(abi.encodeWithSelector(PresageMarket.TokenNotAccepted.selector, address(0xBEEF)));
+        vm.expectRevert(abi.encodeWithSelector(CalledMarket.TokenNotAccepted.selector, address(0xBEEF)));
         market.quote(3e6, address(0xBEEF));
     }
 
@@ -414,25 +414,25 @@ contract PresageTest is Test {
         bytes32 req = keccak256("request-1");
         uint256 callId = _paidCall(req);
 
-        PresageMarket.PaidRequest memory r = market.getRequest(req);
-        assertEq(uint8(r.state), uint8(PresageMarket.RequestState.Sealed));
+        CalledMarket.PaidRequest memory r = market.getRequest(req);
+        assertEq(uint8(r.state), uint8(CalledMarket.RequestState.Sealed));
         assertEq(r.callId, callId);
         assertEq(r.payer, alice);
         assertEq(usdc.balanceOf(address(market)), 50_000);
         assertEq(market.earnings(creator, address(usdc)), 0);
 
-        vm.expectRevert(abi.encodeWithSelector(PresageMarket.NotResolved.selector, req));
+        vm.expectRevert(abi.encodeWithSelector(CalledMarket.NotResolved.selector, req));
         market.settle(req);
 
         vm.prank(committer);
-        calls.reveal(callId, SALT, PAYLOAD, PresageCalls.Outcome.Loss, -40);
+        calls.reveal(callId, SALT, PAYLOAD, CalledLedger.Outcome.Loss, -40);
 
         vm.prank(mallory); // anyone can settle
         market.settle(req);
         assertEq(market.earnings(creator, address(usdc)), 40_000);
         assertEq(market.earnings(treasury, address(usdc)), 10_000);
 
-        vm.expectRevert(abi.encodeWithSelector(PresageMarket.BadRequest.selector, req));
+        vm.expectRevert(abi.encodeWithSelector(CalledMarket.BadRequest.selector, req));
         market.settle(req);
     }
 
@@ -461,17 +461,17 @@ contract PresageTest is Test {
         market.payForCall(agentId, req, address(usdc), 50_000);
         vm.stopPrank();
 
-        vm.expectRevert(abi.encodeWithSelector(PresageMarket.DeliveryWindowOpen.selector, req));
+        vm.expectRevert(abi.encodeWithSelector(CalledMarket.DeliveryWindowOpen.selector, req));
         market.refundUndelivered(req);
 
         vm.warp(block.timestamp + 15 minutes + 1);
         vm.prank(operator);
-        vm.expectRevert(abi.encodeWithSelector(PresageMarket.DeliveryWindowClosed.selector, req));
+        vm.expectRevert(abi.encodeWithSelector(CalledMarket.DeliveryWindowClosed.selector, req));
         market.sealPaidCall(req, keccak256("late"), uint40(block.timestamp + 1 hours));
 
         market.refundUndelivered(req);
         assertEq(market.earnings(alice, address(usdc)), 50_000);
-        assertEq(uint8(market.getRequest(req).state), uint8(PresageMarket.RequestState.Refunded));
+        assertEq(uint8(market.getRequest(req).state), uint8(CalledMarket.RequestState.Refunded));
     }
 
     function test_requestIsPaidOnce() public {
@@ -481,9 +481,9 @@ contract PresageTest is Test {
         vm.startPrank(alice);
         usdc.approve(address(market), type(uint256).max);
         vm.expectEmit(true, true, true, true, address(market));
-        emit PresageMarket.CallPaid(req, agentId, alice, address(usdc), 50_000);
+        emit CalledMarket.CallPaid(req, agentId, alice, address(usdc), 50_000);
         market.payForCall(agentId, req, address(usdc), 50_000);
-        vm.expectRevert(abi.encodeWithSelector(PresageMarket.AlreadyPaid.selector, req));
+        vm.expectRevert(abi.encodeWithSelector(CalledMarket.AlreadyPaid.selector, req));
         market.payForCall(agentId, req, address(usdc), 50_000);
         vm.stopPrank();
     }
@@ -497,7 +497,7 @@ contract PresageTest is Test {
         market.payForCall(agentId, req, address(usdc), 50_000);
         vm.stopPrank();
         vm.prank(mallory);
-        vm.expectRevert(PresageMarket.NotOperator.selector);
+        vm.expectRevert(CalledMarket.NotOperator.selector);
         market.sealPaidCall(req, keccak256("x"), uint40(block.timestamp + 1 hours));
     }
 
@@ -514,7 +514,7 @@ contract PresageTest is Test {
 
     function test_noPaidCallsWhenAgentHasNoCallPrice() public {
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(PresageMarket.NotForSale.selector, agentId));
+        vm.expectRevert(abi.encodeWithSelector(CalledMarket.NotForSale.selector, agentId));
         market.payForCall(agentId, keccak256("r"), address(usdc), 1e6);
     }
 
@@ -524,7 +524,7 @@ contract PresageTest is Test {
         vm.prank(creator);
         agents.retire(agentId);
         vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(PresageMarket.AgentNotActive.selector, agentId));
+        vm.expectRevert(abi.encodeWithSelector(CalledMarket.AgentNotActive.selector, agentId));
         market.subscribe(agentId, address(usdc), 1, 3e6);
     }
 
@@ -535,7 +535,7 @@ contract PresageTest is Test {
         Refuser r = new Refuser();
         vm.deal(address(r), 1 ether);
         vm.prank(address(r));
-        vm.expectRevert(PresageMarket.NativeTransferFailed.selector);
+        vm.expectRevert(CalledMarket.NativeTransferFailed.selector);
         market.subscribe{value: 1 ether}(agentId, address(0), 1, 1 ether);
     }
 
@@ -543,7 +543,7 @@ contract PresageTest is Test {
         bytes32 req = keccak256("before-pause");
         uint256 callId = _paidCall(req);
         vm.prank(committer);
-        calls.reveal(callId, SALT, PAYLOAD, PresageCalls.Outcome.Win, 90);
+        calls.reveal(callId, SALT, PAYLOAD, CalledLedger.Outcome.Win, 90);
 
         vm.prank(mallory);
         vm.expectRevert();
@@ -552,7 +552,7 @@ contract PresageTest is Test {
         market.setPaymentsPaused(true);
 
         vm.prank(alice);
-        vm.expectRevert(PresageMarket.Paused.selector);
+        vm.expectRevert(CalledMarket.Paused.selector);
         market.payForCall(agentId, keccak256("after-pause"), address(usdc), 50_000);
 
         market.settle(req); // settlement still works

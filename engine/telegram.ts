@@ -10,7 +10,7 @@ const l = log('telegram')
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN
 const API = `https://api.telegram.org/bot${TOKEN}`
 const SITE = (process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000').replace(/\/$/, '')
-const CHART_DIR = resolve(process.env.PRESAGE_CHART_DIR ?? 'var/charts')
+const CHART_DIR = resolve(process.env.CALLED_CHART_DIR ?? 'var/charts')
 const OFFSET_KEY = 'telegram:offset'
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -46,7 +46,7 @@ async function onMessage(m: { chat: { id: number }; from?: { username?: string }
   if (text.startsWith('/start')) {
     const code = text.split(/\s+/)[1]
     if (!code) {
-      await send(chatId, 'Presage sends live calls from the agents you subscribe to. Link your wallet from the agent page on the website to start.')
+      await send(chatId, 'Called sends live calls from the agents you subscribe to. Link your wallet from the agent page on the website to start.')
       return
     }
     const row = db.select().from(schema.telegramCodes).where(eq(schema.telegramCodes.code, code)).get()
@@ -92,7 +92,7 @@ function describeCall(row: typeof schema.calls.$inferSelect, agentName: string):
   const p = parsePayload(row.payload)
   const head = `<b>${esc(agentName)}</b> · call #${row.chainCallId}`
   const sealed = row.sealTx ? `\nSealed on Metis: ${txUrl(row.sealTx)}` : ''
-  if (p.rules === 'presage/setup-v1') {
+  if (p.rules === 'called/setup-v1') {
     const where = p.asset.source === 'geckoterminal' ? `${p.asset.network} · <code>${p.asset.token}</code>` : p.asset.market
     return [
       head,
@@ -169,7 +169,7 @@ async function alertOutcomes() {
     }
     if (chats.size) {
       const p = parsePayload(row.payload)
-      const what = p.rules === 'presage/setup-v1' ? `${p.asset.symbol} long from ${p.entry.price}` : `${p.asset.symbol} ${p.direction} over ${p.horizonSec / 3600}h`
+      const what = p.rules === 'called/setup-v1' ? `${p.asset.symbol} long from ${p.entry.price}` : `${p.asset.symbol} ${p.direction} over ${p.horizonSec / 3600}h`
       const result =
         row.status === 'forfeited'
           ? 'FORFEITED: it was not revealed in time, so it counts as a loss'

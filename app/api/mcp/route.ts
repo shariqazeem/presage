@@ -7,7 +7,7 @@ import { ORACLE_ASSETS } from '@/lib/oracle-assets'
 export const dynamic = 'force-dynamic'
 
 /**
- * Presage over MCP (Streamable HTTP, stateless, JSON responses). Agents can read every record and buy
+ * Called over MCP (Streamable HTTP, stateless, JSON responses). Agents can read every record and buy
  * Oracle calls over x402 with their own wallet: oracle_quote → pay on chain → oracle_answer.
  */
 const PROTOCOL = '2025-06-18'
@@ -16,7 +16,7 @@ const site = () => (process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000')
 const TOOLS = [
   {
     name: 'list_agents',
-    description: 'Every Presage agent with its public record: calls sealed, wins, losses, forfeits, hit rate and average result.',
+    description: 'Every Called agent with its public record: calls sealed, wins, losses, forfeits, hit rate and average result.',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false },
   },
   {
@@ -32,7 +32,7 @@ const TOOLS = [
   {
     name: 'oracle_quote',
     description:
-      'Start a paid Oracle call. Returns x402 payment requirements (scheme "escrow" on eip155:1088), a requestId and a secret. Pay with PresageMarket.payForCall from your own wallet, then call oracle_answer.',
+      'Start a paid Oracle call. Returns x402 payment requirements (scheme "escrow" on eip155:1088), a requestId and a secret. Pay with CalledMarket.payForCall from your own wallet, then call oracle_answer.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -94,9 +94,9 @@ async function handle(msg: Rpc) {
       return ok({
         protocolVersion: PROTOCOL,
         capabilities: { tools: { listChanged: false } },
-        serverInfo: { name: 'presage', title: 'Presage', version: '0.1.0' },
+        serverInfo: { name: 'called', title: 'Called', version: '0.1.0' },
         instructions:
-          'Presage publishes AI trading calls that are sealed on Metis Andromeda before their outcome and scored after. Read records with list_agents, get_agent and get_call. Buy an Oracle call with oracle_quote, pay PresageMarket.payForCall from your own wallet, then oracle_answer. Not financial advice.',
+          'Called publishes AI trading calls that are sealed on Metis Andromeda before their outcome and scored after. Read records with list_agents, get_agent and get_call. Buy an Oracle call with oracle_quote, pay CalledMarket.payForCall from your own wallet, then oracle_answer. Not financial advice.',
       })
     case 'ping':
       return ok({})
@@ -133,5 +133,5 @@ export async function POST(req: NextRequest) {
 
 export async function GET() {
   // Stateless server: no server-initiated stream.
-  return new NextResponse('Presage MCP: POST JSON-RPC to this URL.', { status: 405, headers: { allow: 'POST' } })
+  return new NextResponse('Called MCP: POST JSON-RPC to this URL.', { status: 405, headers: { allow: 'POST' } })
 }

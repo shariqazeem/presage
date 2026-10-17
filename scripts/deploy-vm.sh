@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Ship Presage to the VM without a downtime window: sync the code (never secrets), install, build into
+# Ship Called to the VM without a downtime window: sync the code (never secrets), install, build into
 # .next-new while the live site keeps serving .next, swap, restart, verify.
 #   scripts/deploy-vm.sh            web only
 #   scripts/deploy-vm.sh --engine   web and engine
 # Contains no secrets; the key path is the operator's. Never touches the other apps on the VM.
 set -euo pipefail
-KEY="${PRESAGE_VM_KEY:-$HOME/.ssh/sage-vm.key}"
-VM="${PRESAGE_VM:-ubuntu@80.225.209.190}"
-R=/home/ubuntu/presage
+KEY="${CALLED_VM_KEY:-$HOME/.ssh/sage-vm.key}"
+VM="${CALLED_VM:-ubuntu@80.225.209.190}"
+R=/home/ubuntu/called
 NODE=/home/ubuntu/.nvm/versions/node/v22.23.2/bin
-SITE="${PRESAGE_PUBLIC_URL:-https://presage.80.225.209.190.sslip.io}"
+SITE="${CALLED_PUBLIC_URL:-https://called.80.225.209.190.sslip.io}"
 S() { ssh -n -o StrictHostKeyChecking=no -i "$KEY" "$VM" "$@"; }
 cd "$(dirname "$0")/.."
 
@@ -31,11 +31,11 @@ S "cd $R && export PATH=$NODE:\$PATH && rm -rf .next-new && NEXT_DIST_DIR=.next-
   || { echo "BUILD FAILED, live site untouched"; exit 6; }
 
 echo "== swap and restart"
-APPS=presage-web
-[ "${1:-}" = "--engine" ] && APPS=presage-web,presage-engine
+APPS=called-web
+[ "${1:-}" = "--engine" ] && APPS=called-web,called-engine
 S "cd $R && rm -rf .next-prev && { [ -d .next ] && mv .next .next-prev || true; } && mv .next-new .next && pm2 startOrReload ecosystem.config.cjs --only $APPS --update-env >/dev/null && pm2 save >/dev/null && rm -rf .next-prev"
 sleep 6
 
 echo "== verify"
 for p in / /oracle /agents /build /record /api/stats; do printf "%-12s → " "$p"; curl -s -o /dev/null -w "%{http_code}\n" --max-time 30 "$SITE$p"; done
-S "pm2 jlist | node -e 'let d=\"\";process.stdin.on(\"data\",c=>d+=c).on(\"end\",()=>{for(const p of JSON.parse(d).filter(p=>p.name.startsWith(\"presage\")))console.log(p.name,p.pm2_env.status,\"restarts\",p.pm2_env.restart_time)})'"
+S "pm2 jlist | node -e 'let d=\"\";process.stdin.on(\"data\",c=>d+=c).on(\"end\",()=>{for(const p of JSON.parse(d).filter(p=>p.name.startsWith(\"called\")))console.log(p.name,p.pm2_env.status,\"restarts\",p.pm2_env.restart_time)})'"

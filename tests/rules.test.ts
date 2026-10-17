@@ -8,7 +8,7 @@ const k = (i: number, o: number, h: number, l: number, c: number) => ({ ts: (T0 
 
 const setup = (over: Partial<SetupPayload> = {}): SetupPayload => ({
   v: 1,
-  rules: 'presage/setup-v1',
+  rules: 'called/setup-v1',
   agent: 7,
   asset: { symbol: 'TEST', source: 'binance', market: 'TESTUSDT' },
   side: 'long',
@@ -81,7 +81,7 @@ test('market entry fills at the issue price', () => {
 
 const direction = (over: Partial<DirectionPayload> = {}): DirectionPayload => ({
   v: 1,
-  rules: 'presage/direction-v1',
+  rules: 'called/direction-v1',
   agent: 1,
   asset: { symbol: 'BTC', source: 'binance', market: 'BTCUSDT' },
   direction: 'up',
@@ -112,7 +112,7 @@ test('direction: inside the band is flat', () => {
 })
 
 test('commitment matches Solidity keccak256(abi.encodePacked(salt, payload))', () => {
-  // Same salt and payload as contracts/test/Presage.t.sol; expected value computed with Foundry's cast.
+  // Same salt and payload as contracts/test/Called.t.sol; expected value computed with Foundry's cast.
   const salt = '0xa05e334153147e75f3f416139b5109d1179cb56fef6a4ecb4c4cbc92a7c37b70' as const
   const json = '{"v":1,"asset":"BTC","side":"long","entry":61250,"stop":60400,"target":63100}'
   assert.equal(commitmentOf(salt, json), '0x851924963793c71bff1c04d0156a920205e82c6575cf65b667b55a41c0bbf286')

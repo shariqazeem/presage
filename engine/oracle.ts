@@ -88,7 +88,7 @@ export function quantVote(x: Features, horizon: Horizon): Vote {
   const bigger = x.trend['4h']?.startsWith('EMA20 above') ? 'the bigger trend is up' : x.trend['4h']?.startsWith('EMA20 below') ? 'the bigger trend is down' : 'the bigger trend is unclear'
   const stretch = m > 80 ? ', but buyers look stretched' : m < 20 ? ', and sellers look exhausted' : ''
   return {
-    model: 'presage-quant-v1',
+    model: 'called-quant-v1',
     direction,
     confidence,
     why: `Price has ${moved} and ${bigger}${stretch}.`,
@@ -96,7 +96,7 @@ export function quantVote(x: Features, horizon: Horizon): Vote {
   }
 }
 
-const SYSTEM = `You are one of several independent forecasters behind Presage's Market Oracle.
+const SYSTEM = `You are one of several independent forecasters behind the Market Oracle on Called.
 Every call you make is sealed on chain before the outcome and scored in public afterwards, wins and losses alike.
 You get facts computed from public Binance candles. Decide whether the price will be higher or lower at the end of the horizon.
 Rules:
@@ -130,7 +130,7 @@ export type Progress = { stage: 'reading' | 'voting' | 'sealing'; votes: Vote[];
 export async function forecast(symbol: string, horizon: Horizon, onProgress?: (p: Progress) => void) {
   const market = oracleMarket(symbol)
   if (!market) throw new Error(`No Binance market for ${symbol}`)
-  const voters = ['presage-quant-v1', ...(llmConfigured() ? models.oracle() : [])]
+  const voters = ['called-quant-v1', ...(llmConfigured() ? models.oracle() : [])]
   const progress: Progress = { stage: 'reading', votes: [], voters }
   onProgress?.(progress)
   const [f, btc, last] = await Promise.all([
@@ -166,7 +166,7 @@ export async function forecast(symbol: string, horizon: Horizon, onProgress?: (p
   const majority = side === 'up' ? up : down
   const agreement = majority.length / votes.length
   const confidence = Math.round(50 + (majority.reduce((s, v) => s + v.confidence, 0) / majority.length - 50) * agreement)
-  const lead = majority.find(v => v.model !== 'presage-quant-v1') ?? majority[0]
+  const lead = majority.find(v => v.model !== 'called-quant-v1') ?? majority[0]
   return {
     market,
     price: last.price,
@@ -188,7 +188,7 @@ async function sealForecast(oracleAgentId: number, asset: string, horizon: Horiz
   const issuedAt = Math.floor(Date.now() / 1000)
   const payload: DirectionPayload = {
     v: 1,
-    rules: 'presage/direction-v1',
+    rules: 'called/direction-v1',
     agent: oracleAgentId,
     asset: { symbol: asset, source: 'binance', market: fc.market },
     direction: fc.direction,

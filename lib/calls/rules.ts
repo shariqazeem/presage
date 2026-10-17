@@ -136,5 +136,5 @@ export function resolveDirection(p: DirectionPayload, closeAtHorizon: number): R
 
 /** When a call can first be resolved, so the engine knows when to look. */
 export function earliestResolution(p: SetupPayload | DirectionPayload): number {
-  return p.rules === 'presage/direction-v1' ? p.issuedAt + p.horizonSec + 60 : p.issuedAt + 15 * 60
+  return p.rules === 'called/direction-v1' ? p.issuedAt + p.horizonSec + 60 : p.issuedAt + 15 * 60
 }

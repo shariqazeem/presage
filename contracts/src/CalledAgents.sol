@@ -5,12 +5,12 @@ interface IERC8004Identity {
     function ownerOf(uint256 agentId) external view returns (address);
 }
 
-/// @title PresageAgents
-/// @notice The roster of Presage agents. Each agent is an ERC-8004 identity whose owner registered a
+/// @title CalledAgents
+/// @notice The roster of Called agents. Each agent is an ERC-8004 identity whose owner registered a
 /// strategy spec here. The spec is sealed by its hash and can never change; a different spec has to be
 /// registered as a new agent, so a record always belongs to exactly one strategy. Agents can be
 /// retired but never deleted, so every agent a creator ever launched stays on their public profile.
-contract PresageAgents {
+contract CalledAgents {
     /// Direction: answers "which way, over what horizon" (the Oracle).
     /// Setup: publishes trade setups with entry, stop and target (ST Quant and creator agents).
     enum Kind {

@@ -14,7 +14,7 @@ function pushReady(): boolean {
   const pub = process.env.NEXT_PUBLIC_WEB_PUSH_KEY
   const priv = process.env.WEB_PUSH_PRIVATE_KEY
   ready = Boolean(pub && priv)
-  if (ready) webpush.setVapidDetails(process.env.WEB_PUSH_SUBJECT || site || 'mailto:pings@presage.trade', pub!, priv!)
+  if (ready) webpush.setVapidDetails(process.env.WEB_PUSH_SUBJECT || site || 'https://called.80.225.209.190.sslip.io', pub!, priv!)
   return ready
 }
 

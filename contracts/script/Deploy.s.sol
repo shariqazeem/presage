@@ -2,16 +2,16 @@
 pragma solidity 0.8.28;
 
 import {Script, console2} from "forge-std/Script.sol";
-import {PresageAgents, IERC8004Identity} from "../src/PresageAgents.sol";
-import {PresageCalls, IPresageAgents} from "../src/PresageCalls.sol";
-import {PresageMarket, AggregatorV3Interface} from "../src/PresageMarket.sol";
+import {CalledAgents, IERC8004Identity} from "../src/CalledAgents.sol";
+import {CalledLedger, ICalledAgents} from "../src/CalledLedger.sol";
+import {CalledMarket, AggregatorV3Interface} from "../src/CalledMarket.sol";
 import {ManualFeed} from "../src/testnet/ManualFeed.sol";
 import {TestDollar} from "../src/testnet/TestDollar.sol";
 
-/// Deploys Presage to Metis Andromeda (1088) or Metis Sepolia (59902).
+/// Deploys Called to Metis Andromeda (1088) or Metis Sepolia (59902).
 ///
 ///   RUNNER=0x... TREASURY=0x... forge script script/Deploy.s.sol \
-///     --rpc-url metis --broadcast --legacy --account presage-deployer
+///     --rpc-url metis --broadcast --legacy --account called-deployer
 ///
 /// RUNNER is the engine's key: it seals and reveals calls and delivers paid calls.
 /// TREASURY receives the platform's 20%. The deployer stays owner and can hand ownership on later.
@@ -56,9 +56,9 @@ contract Deploy is Script {
             stables[0] = address(new TestDollar());
         }
 
-        PresageAgents agents = new PresageAgents(IERC8004Identity(mainnet ? IDENTITY_ANDROMEDA : IDENTITY_SEPOLIA));
-        PresageCalls calls = new PresageCalls(deployer, IPresageAgents(address(agents)));
-        PresageMarket market = new PresageMarket(
+        CalledAgents agents = new CalledAgents(IERC8004Identity(mainnet ? IDENTITY_ANDROMEDA : IDENTITY_SEPOLIA));
+        CalledLedger calls = new CalledLedger(deployer, ICalledAgents(address(agents)));
+        CalledMarket market = new CalledMarket(
             deployer, agents, calls, AggregatorV3Interface(feed), AggregatorV3Interface(sequencer), MAX_PRICE_AGE, treasury
         );
 
@@ -87,8 +87,8 @@ contract Deploy is Script {
         string memory out = vm.envOr("DEPLOY_OUT", string.concat("./deployments/", vm.toString(chainId), ".json"));
         vm.writeJson(json, out);
 
-        console2.log("PresageAgents", address(agents));
-        console2.log("PresageCalls ", address(calls));
-        console2.log("PresageMarket", address(market));
+        console2.log("CalledAgents", address(agents));
+        console2.log("CalledLedger ", address(calls));
+        console2.log("CalledMarket", address(market));
     }
 }

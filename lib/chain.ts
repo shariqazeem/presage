@@ -12,16 +12,16 @@ const SEPOLIA_RPCS = ['https://sepolia.metisdevops.link', 'https://metis-sepolia
 
 export type Network = 'metis' | 'metis-sepolia'
 
-export const NETWORK: Network = process.env.NEXT_PUBLIC_PRESAGE_NETWORK === 'metis-sepolia' ? 'metis-sepolia' : 'metis'
+export const NETWORK: Network = process.env.NEXT_PUBLIC_CALLED_NETWORK === 'metis-sepolia' ? 'metis-sepolia' : 'metis'
 
 export const chain: Chain = NETWORK === 'metis' ? metis : metisSepolia
 export const isMainnet = NETWORK === 'metis'
 
 export const rpcUrls: string[] = (() => {
-  const custom = process.env.NEXT_PUBLIC_PRESAGE_RPC_URL
+  const custom = process.env.NEXT_PUBLIC_CALLED_RPC_URL
   const base = isMainnet ? ANDROMEDA_RPCS : SEPOLIA_RPCS
   // A rehearsal on a local fork must never fall back to a public RPC.
-  if (custom && process.env.NEXT_PUBLIC_PRESAGE_RPC_ONLY === '1') return [custom]
+  if (custom && process.env.NEXT_PUBLIC_CALLED_RPC_ONLY === '1') return [custom]
   return custom ? [custom, ...base] : base
 })()
 

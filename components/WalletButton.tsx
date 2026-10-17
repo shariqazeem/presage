@@ -22,27 +22,27 @@ export function WalletButton({ variant = 'nav', label = 'Connect wallet', classN
   return (
     <ConnectButton.Custom>
       {({ account, chain, openChainModal, openConnectModal, mounted }) => {
-        if (!mounted) return <div className={cx(variant === 'full' ? 'h-14 w-full' : 'h-10 w-28', 'rounded-xl bg-gray-100 animate-pulse')} aria-hidden />
-        const size = variant === 'full' ? 'h-14 px-6 text-base w-full rounded-2xl' : variant === 'chip' ? 'h-9 px-3.5 text-[13px] rounded-full' : 'h-10 px-4 text-sm rounded-xl'
+        if (!mounted) return <div className={cx(variant === 'full' ? 'h-[54px] w-full' : 'h-10 w-28', 'rounded-[14px] bg-paper-2 animate-pulse')} aria-hidden />
+        const size = variant === 'full' ? 'h-[54px] px-6 text-base w-full rounded-[14px]' : variant === 'chip' ? 'h-9 px-3.5 text-[13px] rounded-full' : 'h-10 px-4 text-sm rounded-[12px]'
         if (!account || !chain) {
           return (
-            <button onClick={openConnectModal} className={cx('bg-black text-white font-bold hover:bg-gray-800 active:scale-[0.98] transition-all shadow-sm', size, className)}>
+            <button onClick={openConnectModal} className={cx('bg-ink text-white font-semibold hover:bg-[#26262A] active:scale-[0.98] transition-all', size, className)}>
               {variant === 'chip' ? 'Connect' : label}
             </button>
           )
         }
         if (chain.unsupported) {
           return (
-            <button onClick={openChainModal} className={cx('bg-red-600 text-white font-bold hover:bg-red-700 transition-all', size, className)}>
+            <button onClick={openChainModal} className={cx('bg-down text-white font-semibold transition-all', size, className)}>
               Switch to Metis
             </button>
           )
         }
         if (variant === 'full') return null
         return (
-          <Link href="/you" className={cx('inline-flex items-center gap-2 bg-black text-white font-bold hover:bg-gray-800 transition-all', size, className)}>
+          <Link href="/you" className={cx('inline-flex items-center gap-2 bg-ink text-white font-semibold hover:bg-[#26262A] transition-all', size, className)}>
             <WalletAvatar address={account.address} size={variant === 'chip' ? 18 : 20} />
-            {account.displayName}
+            <span className="num">{account.displayName}</span>
           </Link>
         )
       }}

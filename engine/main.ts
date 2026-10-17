@@ -107,7 +107,7 @@ async function main() {
     const chat = process.env.FOUNDER_TELEGRAM_CHAT_ID
     if (chat && Date.now() - warnedAt > 6 * 3_600_000) {
       warnedAt = Date.now()
-      await sendTelegram(chat, `<b>Presage runner is low on gas</b>\n${formatEther(b)} METIS left at <code>${runner.address}</code>.\nBelow 0.1 it stops sealing new calls so it can still open the ones it has.`).catch(() => {})
+      await sendTelegram(chat, `<b>Called runner is low on gas</b>\n${formatEther(b)} METIS left at <code>${runner.address}</code>.\nBelow 0.1 it stops sealing new calls so it can still open the ones it has.`).catch(() => {})
     }
   })
   startTelegram()

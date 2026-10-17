@@ -4,7 +4,7 @@ import type { AssetRef } from '../market/types'
 /** A trade setup: entry, stop and target. ST Quant and creator agents publish these. */
 export type SetupPayload = {
   v: 1
-  rules: 'presage/setup-v1'
+  rules: 'called/setup-v1'
   agent: number
   asset: AssetRef
   side: 'long'
@@ -25,7 +25,7 @@ export type SetupPayload = {
 /** A direction call: up or down over a horizon. The Oracle publishes these. */
 export type DirectionPayload = {
   v: 1
-  rules: 'presage/direction-v1'
+  rules: 'called/direction-v1'
   agent: number
   asset: AssetRef
   direction: 'up' | 'down'
@@ -57,14 +57,14 @@ export function newSalt(): Hex {
   return toHex(bytes)
 }
 
-/** Matches PresageCalls: keccak256(abi.encodePacked(bytes32 salt, bytes payload)). */
+/** Matches CalledLedger: keccak256(abi.encodePacked(bytes32 salt, bytes payload)). */
 export function commitmentOf(salt: Hex, payloadJson: string): Hex {
   return keccak256(concat([hexToBytes(salt), stringToBytes(payloadJson)]))
 }
 
 export function parsePayload(json: string): CallPayload {
   const p = JSON.parse(json) as CallPayload
-  if (p.v !== 1 || (p.rules !== 'presage/setup-v1' && p.rules !== 'presage/direction-v1')) {
+  if (p.v !== 1 || (p.rules !== 'called/setup-v1' && p.rules !== 'called/direction-v1')) {
     throw new Error('Unknown call format')
   }
   return p

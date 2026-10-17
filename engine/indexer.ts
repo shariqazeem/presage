@@ -1,8 +1,8 @@
 import { and, eq, inArray } from 'drizzle-orm'
 import { parseEventLogs, type Address, type Log } from 'viem'
-import { presageAgentsAbi } from '../lib/abi/PresageAgents'
-import { presageCallsAbi } from '../lib/abi/PresageCalls'
-import { presageMarketAbi } from '../lib/abi/PresageMarket'
+import { calledAgentsAbi } from '../lib/abi/CalledAgents'
+import { calledLedgerAbi } from '../lib/abi/CalledLedger'
+import { calledMarketAbi } from '../lib/abi/CalledMarket'
 import { publicClient } from '../lib/chain'
 import { getDb, schema } from '../lib/db'
 import { contracts } from './calls'
@@ -25,14 +25,14 @@ async function timeOf(block: bigint): Promise<number> {
   return Number(b.timestamp)
 }
 
-/** Pull new Presage events from the chain into the database. The chain is the source of truth. */
+/** Pull new Called events from the chain into the database. The chain is the source of truth. */
 export async function indexOnce(): Promise<void> {
   const db = getDb()
   const c = contracts()
   const names: Record<string, string> = {
-    [c.agents.toLowerCase()]: 'PresageAgents',
-    [c.calls.toLowerCase()]: 'PresageCalls',
-    [c.market.toLowerCase()]: 'PresageMarket',
+    [c.agents.toLowerCase()]: 'CalledAgents',
+    [c.calls.toLowerCase()]: 'CalledLedger',
+    [c.market.toLowerCase()]: 'CalledMarket',
   }
   const stored = db.select().from(schema.kv).where(eq(schema.kv.key, KEY)).get()
   let from = stored ? BigInt(stored.value) + 1n : BigInt(c.deployedAtBlock)
@@ -47,9 +47,9 @@ export async function indexOnce(): Promise<void> {
     const to = from + STEP - 1n > latest ? latest : from + STEP - 1n
     const raw = await publicClient.getLogs({ address: [c.agents, c.calls, c.market] as Address[], fromBlock: from, toBlock: to })
     const parsed = [
-      ...parseEventLogs({ abi: presageAgentsAbi, logs: raw.filter(x => x.address.toLowerCase() === c.agents.toLowerCase()) }),
-      ...parseEventLogs({ abi: presageCallsAbi, logs: raw.filter(x => x.address.toLowerCase() === c.calls.toLowerCase()) }),
-      ...parseEventLogs({ abi: presageMarketAbi, logs: raw.filter(x => x.address.toLowerCase() === c.market.toLowerCase()) }),
+      ...parseEventLogs({ abi: calledAgentsAbi, logs: raw.filter(x => x.address.toLowerCase() === c.agents.toLowerCase()) }),
+      ...parseEventLogs({ abi: calledLedgerAbi, logs: raw.filter(x => x.address.toLowerCase() === c.calls.toLowerCase()) }),
+      ...parseEventLogs({ abi: calledMarketAbi, logs: raw.filter(x => x.address.toLowerCase() === c.market.toLowerCase()) }),
     ].sort((a, b) => Number(a.blockNumber - b.blockNumber) || a.logIndex - b.logIndex)
 
     for (const ev of parsed) {

@@ -1,6 +1,6 @@
 import type { StrategySpec } from './schema'
 
-/** Starting points that need no model. The first is ST Quant's core idea, in Presage's vocabulary. */
+/** Starting points that need no model. The first is ST Quant's core idea, in Called's vocabulary. */
 export type Style = 'dip' | 'breakout' | 'trend' | 'reversal'
 
 /** Starting points, each a style a person can recognise. No model is needed to use one. */

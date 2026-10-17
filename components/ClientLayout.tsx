@@ -10,18 +10,18 @@ import { Footer } from './shell/Footer'
 
 /**
  * The frame every page sits in. The intro plays once, on someone's very first visit, over a page
- * that is already there underneath; after that Presage opens straight onto what is happening.
+ * that is already there underneath; after that Called opens straight onto what is happening.
  */
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const [intro, setIntro] = useState(false)
   useEffect(() => {
     try {
-      if (!localStorage.getItem('presage_intro_seen')) setIntro(true)
+      if (!localStorage.getItem('called_intro_seen')) setIntro(true)
     } catch {}
   }, [])
   const done = () => {
     try {
-      localStorage.setItem('presage_intro_seen', '1')
+      localStorage.setItem('called_intro_seen', '1')
     } catch {}
     setIntro(false)
   }
@@ -37,9 +37,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         position="top-center"
         toastOptions={{
           duration: 4000,
-          style: { background: '#0A0A0A', color: '#fff', fontWeight: 600, borderRadius: '16px', padding: '12px 16px', fontSize: '14px' },
-          success: { iconTheme: { primary: '#10B981', secondary: '#fff' } },
-          error: { iconTheme: { primary: '#EF4444', secondary: '#fff' } },
+          style: { background: '#0B0B0C', color: '#fff', fontWeight: 500, borderRadius: '14px', padding: '12px 16px', fontSize: '14px' },
+          success: { iconTheme: { primary: '#3DDC84', secondary: '#0B0B0C' } },
+          error: { iconTheme: { primary: '#FF6B6B', secondary: '#0B0B0C' } },
         }}
       />
       <AnimatePresence>{intro && <StartupScreen onComplete={done} />}</AnimatePresence>

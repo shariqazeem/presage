@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { eq } from 'drizzle-orm'
 import { parseEventLogs, type Hex } from 'viem'
-import { presageAgentsAbi } from '@/lib/abi/PresageAgents'
+import { calledAgentsAbi } from '@/lib/abi/CalledAgents'
 import { deployment, publicClient } from '@/lib/chain'
 import { getDb, schema } from '@/lib/db'
 import { viewer } from '@/lib/server/session'
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
 
   const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash, timeout: 60_000 })
   const ev = parseEventLogs({
-    abi: presageAgentsAbi,
+    abi: calledAgentsAbi,
     eventName: 'AgentRegistered',
     logs: receipt.logs.filter(l => l.address.toLowerCase() === deployment!.agents.toLowerCase()),
   })[0]

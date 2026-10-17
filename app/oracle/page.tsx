@@ -13,10 +13,10 @@ import { PingButton } from '@/components/Ping'
 import { MyCalls } from '@/components/MyCalls'
 import { Share } from '@/components/Share'
 import { IconBack, IconChevron, IconLock, IconRefund, IconShare } from '@/components/icons'
-import { ActionButton, At, CountdownRing, Eyebrow, Panel, PanelHead, Sheet, StatusLine } from '@/components/kit'
+import { ActionButton, At, CountdownRing, Eyebrow, Panel, PanelHead, Seal, SealedChip, Sheet, StatusLine } from '@/components/kit'
 import { Change, CoinPicker, MyCall, Segmented, Sparkline, VoteBoard, stageLine, type Coin } from '@/components/oracle'
 import { FormDots, cx } from '@/components/ui'
-import { presageMarketAbi } from '@/lib/abi/PresageMarket'
+import { calledMarketAbi } from '@/lib/abi/CalledMarket'
 import { deployment, payTokens } from '@/lib/chain'
 import { HORIZONS, type Horizon } from '@/lib/oracle'
 import { useAgent } from '@/lib/client/hooks'
@@ -67,7 +67,7 @@ export default function OraclePage() {
 
   useEffect(() => {
     try {
-      const c = localStorage.getItem('presage_oracle_coin')
+      const c = localStorage.getItem('called_oracle_coin')
       if (c) setCoin(c)
     } catch {}
     return () => stop()
@@ -75,7 +75,7 @@ export default function OraclePage() {
   const pick = (s: string) => {
     setCoin(s)
     try {
-      localStorage.setItem('presage_oracle_coin', s)
+      localStorage.setItem('called_oracle_coin', s)
     } catch {}
   }
 
@@ -135,7 +135,7 @@ export default function OraclePage() {
       const maxAmount = req.extra.native ? (amount * 101n) / 100n : amount
       const txHash = await writeContractAsync({
         address: req.payTo,
-        abi: presageMarketAbi,
+        abi: calledMarketAbi,
         functionName: 'payForCall',
         args: [BigInt(req.extra.agentId), req.extra.requestId, req.asset, maxAmount],
         value: req.extra.native ? maxAmount : 0n,
@@ -184,21 +184,21 @@ export default function OraclePage() {
 
   const header = (
     <div className="flex items-center gap-3">
-      <Sigil id={oracle?.agent.id ?? 0} slug="oracle" size={44} className="rounded-2xl shadow-lg shadow-pink-500/10 shrink-0" />
+      <Sigil id={oracle?.agent.id ?? 0} slug="oracle" size={44} className="rounded-[14px] shrink-0" />
       <div className="flex-1 min-w-0">
-        <div className="font-heading text-lg md:text-xl font-black leading-tight text-black">Market Oracle</div>
-        <div className="text-[12px] md:text-[13px] text-gray-500 truncate">
+        <div className="font-heading text-lg md:text-xl font-black leading-tight text-ink">Market Oracle</div>
+        <div className="text-[12px] md:text-[13px] text-ink-3 truncate">
           {record?.resolved ? (
-            <>
+            <span className="num">
               {record.resolved} scored · right {pct(record.hitRate, 0)}
-              {record.streak >= 2 && <span className="text-green-600 font-bold"> · {record.streak} in a row</span>}
-            </>
+              {record.streak >= 2 && <span className="text-up"> · {record.streak} in a row</span>}
+            </span>
           ) : (
             'Four AIs vote · sealed on Metis'
           )}
         </div>
       </div>
-      <button onClick={() => setHowOpen(true)} className="text-[12px] font-bold text-gray-600 border-2 border-gray-100 rounded-full px-3 py-1.5 hover:border-gray-300 shrink-0">
+      <button onClick={() => setHowOpen(true)} className="text-[12px] font-bold text-ink-2 border border-line rounded-full px-3 py-1.5 hover:border-[#C9C9CF] shrink-0">
         How it works
       </button>
     </div>
@@ -206,24 +206,24 @@ export default function OraclePage() {
 
   const askPanel = (
     <div>
-      <h1 className="font-heading text-[30px] md:text-[40px] leading-[1.05] font-black tracking-tight text-black mt-5 md:mt-6">Where’s it heading?</h1>
+      <h1 className="font-heading text-[30px] md:text-[40px] leading-[1.05] font-black tight text-ink mt-5 md:mt-6">Where’s it heading?</h1>
       <div className="mt-4">
         <CoinPicker coins={coins} selected={coin} onSelect={pick} />
       </div>
-      <div className="mt-4 rounded-3xl bg-gray-50 p-4">
+      <div className="mt-4 rounded-[18px] bg-paper-2 p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-[12px] text-gray-500 font-semibold truncate">{selected?.name ?? coin} · now</div>
-            <div className="flex items-baseline gap-2">
-              <div className="font-heading text-[32px] leading-none font-black tabular-nums text-black mt-1">{selected ? `$${fmtPrice(selected.price)}` : '—'}</div>
-              <Change v={selected?.changePct} className="text-sm" />
+            <div className="label text-ink-3 truncate">{selected?.name ?? coin} · now</div>
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <div className="num text-[30px] leading-none font-semibold tracking-[-0.03em] text-ink mt-2">{selected ? `$${fmtPrice(selected.price)}` : '—'}</div>
+              <Change v={selected?.changePct} className="text-[13px]" />
             </div>
           </div>
           <Sparkline closes={spark?.closes ?? []} />
         </div>
         <div className="mt-4">
           <Segmented value={horizon} options={HORIZON_OPTIONS} onChange={setHorizon} />
-          <div className="text-[12px] text-gray-500 mt-2 px-1">
+          <div className="text-[12px] text-ink-3 mt-2 px-1">
             Opens at <At sec={opensAt} />
             {horizon === '24h' ? ' tomorrow' : ''} · moves under {HORIZONS[horizon].flatBandBps / 100}% count as flat
           </div>
@@ -232,19 +232,19 @@ export default function OraclePage() {
           <MyCall value={myCall} onChange={setMyCall} />
         </div>
       </div>
-      <div className="mt-4 space-y-2 text-[13px] text-gray-600 font-medium px-1">
+      <div className="mt-4 space-y-2 text-[13px] text-ink-2 font-medium px-1">
         <div className="flex items-center gap-2">
-          <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-700 grid place-items-center text-[11px] font-black">{Math.max(voters.length, 4)}</span>
+          <span className="w-5 h-5 rounded-full bg-ink text-white grid place-items-center num text-[10.5px] font-semibold">{Math.max(voters.length, 4)}</span>
           AIs vote live, in front of you
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-700 grid place-items-center">
+          <span className="w-5 h-5 rounded-full bg-ink text-white grid place-items-center">
             <IconLock size={11} weight={2.6} />
           </span>
           Sealed on Metis before the move
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-700 grid place-items-center">
+          <span className="w-5 h-5 rounded-full bg-ink text-white grid place-items-center">
             <IconRefund size={11} weight={2.6} />
           </span>
           Your $0.05 comes back if it fails
@@ -252,14 +252,14 @@ export default function OraclePage() {
       </div>
       {isConnected && (
         <div className="mt-5 flex items-center justify-between gap-3">
-          <div className="text-[12px] text-gray-500 min-w-0">
+          <div className="text-[12px] text-ink-3 min-w-0">
             {(() => {
               const p = priceOf(token)
               const cost = p?.amount ? Number(formatUnits(BigInt(p.amount), p.decimals)) : null
               return (
                 <>
                   {cost != null ? (
-                    <b className="text-gray-800">
+                    <b className="num font-semibold text-ink-2">
                       {cost.toLocaleString('en-US', { maximumFractionDigits: p!.native ? 4 : 2, minimumFractionDigits: p!.native ? 0 : 2 })} {tokenLabel(token)}
                     </b>
                   ) : (
@@ -270,7 +270,7 @@ export default function OraclePage() {
               )
             })()}
           </div>
-          <div className="flex gap-1 p-1 rounded-xl bg-gray-100 shrink-0">
+          <div className="flex gap-1 p-1 rounded-[12px] bg-paper-2 shrink-0">
             {payTokens.map(t => {
               const ok = payable(t.symbol)
               return (
@@ -279,7 +279,7 @@ export default function OraclePage() {
                   onClick={() => ok && setToken(t.symbol)}
                   disabled={!ok}
                   title={ok ? undefined : `${tokenLabel(t.symbol)} can’t be priced right now`}
-                  className={cx('px-2.5 py-1 rounded-lg text-[12px] font-black transition-all', token === t.symbol ? 'bg-white text-black shadow-sm' : ok ? 'text-gray-500' : 'text-gray-300 line-through')}
+                  className={cx('px-2.5 py-1 rounded-[9px] num text-[12px] font-semibold transition-all', token === t.symbol ? 'bg-ink text-white' : ok ? 'text-ink-3 hover:text-ink' : 'text-[#C9C9CF] line-through')}
                 >
                   {tokenLabel(t.symbol)}
                 </button>
@@ -289,8 +289,8 @@ export default function OraclePage() {
         </div>
       )}
       <div className="hidden md:block mt-4">
-        <ActionButton tone="grad" onClick={ask} disabled={busy || !deployment}>
-          {!deployment ? 'Opens when Presage is live on Metis' : !isConnected ? 'Connect a wallet to ask' : `Ask about ${coin} · $0.05`}
+        <ActionButton onClick={ask} disabled={busy || !deployment}>
+          {!deployment ? 'Opens when Called is live on Metis' : !isConnected ? 'Connect a wallet to ask' : `Ask about ${coin} · $0.05`}
         </ActionButton>
       </div>
     </div>
@@ -326,7 +326,7 @@ export default function OraclePage() {
             <Panel className="px-4 md:px-5 pt-4 pb-1">
               <PanelHead title="Your calls" sub={mine.length ? 'Saved on this device. Each opens when its time is up.' : undefined} />
               {mine.length === 0 ? (
-                <div className="py-5 text-sm text-gray-500">Nothing yet. Your questions and how they came out live here.</div>
+                <div className="py-5 text-sm text-ink-3">Nothing yet. Your questions and how they came out live here.</div>
               ) : (
                 <MyCalls items={mine} max={8} />
               )}
@@ -337,13 +337,13 @@ export default function OraclePage() {
               <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0">
                   <Eyebrow>The Oracle’s own record</Eyebrow>
-                  <div className="text-sm text-gray-600 mt-1.5">
+                  <div className="text-sm text-ink-2 mt-1.5">
                     <StatusLine status={oracle.status} />
                   </div>
                 </div>
                 <FormDots form={oracle.agent.record.form} />
               </div>
-              <Link href="/agents/oracle" className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-black hover:underline">
+              <Link href="/agents/oracle" className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-ink hover:underline">
                 Every call it has made <IconChevron size={14} />
               </Link>
             </Panel>
@@ -356,8 +356,8 @@ export default function OraclePage() {
         <>
           <div className="md:hidden h-20" />
           <div className="md:hidden fixed left-5 right-5 above-tabs z-40">
-            <ActionButton tone="grad" onClick={ask} disabled={!deployment}>
-              {!deployment ? 'Opens when Presage is live' : !isConnected ? 'Connect a wallet to ask' : `Ask about ${coin} · $0.05`}
+            <ActionButton onClick={ask} disabled={!deployment}>
+              {!deployment ? 'Opens when Called is live' : !isConnected ? 'Connect a wallet to ask' : `Ask about ${coin} · $0.05`}
             </ActionButton>
           </div>
         </>
@@ -378,12 +378,12 @@ function VotePanel({ phase, coin, horizon, voters, live, answer, onAgain }: { ph
     return (
       <Panel className="p-5 md:p-6">
         <Eyebrow>The vote</Eyebrow>
-        <div className="font-heading text-2xl font-black mt-1.5 text-black">Four AIs, one answer, sealed before the move.</div>
-        <p className="text-sm text-gray-600 mt-2 max-w-lg">
+        <div className="font-heading text-2xl font-black mt-1.5 text-ink">Four AIs, one answer, sealed before the move.</div>
+        <p className="text-sm text-ink-2 mt-2 max-w-lg">
           A quant model and three AI models each read the same facts from Binance and vote up or down. You watch every vote land. The majority is sealed on Metis, and when time is up, price decides who was right.
         </p>
         <div className="mt-5 opacity-80 pointer-events-none">
-          <VoteBoard voters={['presage-quant-v1', 'openai/gpt', 'anthropic/claude', 'x-ai/grok']} votes={[]} final={false} />
+          <VoteBoard voters={['called-quant-v1', 'openai/gpt', 'anthropic/claude', 'google/gemini']} votes={[]} final={false} />
         </div>
       </Panel>
     )
@@ -391,28 +391,24 @@ function VotePanel({ phase, coin, horizon, voters, live, answer, onAgain }: { ph
   return (
     <div>
       <div className="flex items-center justify-between h-10 md:h-auto">
-        <button onClick={phase === 'done' ? onAgain : undefined} className={cx('flex items-center gap-1.5 font-bold text-[15px] text-black', phase !== 'done' && 'cursor-default')}>
-          {phase === 'done' && <IconBack size={18} className="text-gray-400 md:hidden" />}
+        <button onClick={phase === 'done' ? onAgain : undefined} className={cx('flex items-center gap-1.5 font-bold text-[15px] text-ink', phase !== 'done' && 'cursor-default')}>
+          {phase === 'done' && <IconBack size={18} className="text-ink-3 md:hidden" />}
           {coin} · next {label}
         </button>
-        <span className={cx('px-2.5 py-1 rounded-full text-xs font-black flex items-center gap-1', phase === 'done' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600')}>
-          {phase === 'done' ? (
-            <>
-              <IconLock size={12} weight={2.6} /> Sealed
-            </>
-          ) : paying ? (
-            PHASE_LINE[phase]
-          ) : (
-            stageLine(live)
-          )}
-          {phase !== 'done' && <span className="soft-pulse">…</span>}
-        </span>
+        {phase === 'done' ? (
+          <SealedChip label="Sealed on Metis" />
+        ) : (
+          <span className="h-6 px-2.5 rounded-full bg-paper-2 text-ink-2 label !text-[9.5px] flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full foil soft-pulse" />
+            {paying ? PHASE_LINE[phase] : stageLine(live)}
+          </span>
+        )}
       </div>
 
       <Panel className="p-4 md:p-5 mt-3">
         {paying && (
-          <div className="mb-4 rounded-2xl bg-gray-50 px-4 py-3 text-sm text-gray-700 flex items-center gap-3">
-            <span className="w-2 h-2 rounded-full bg-pink-500 soft-pulse" />
+          <div className="mb-4 rounded-[14px] bg-paper-2 px-4 py-3 text-sm text-ink-2 flex items-center gap-3">
+            <span className="w-2 h-2 rounded-full foil soft-pulse shrink-0" />
             {phase === 'sign' ? 'Confirm the $0.05 payment in your wallet. It sits in escrow until the call opens.' : phase === 'approve' ? 'One approval lets the next 20 calls go through with a single signature.' : phase === 'confirm' ? 'Paying into escrow on Metis…' : 'Getting the price from the contract…'}
           </div>
         )}
@@ -429,13 +425,13 @@ function VotePanel({ phase, coin, horizon, voters, live, answer, onAgain }: { ph
             <AnswerCard a={answer} />
             <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
               <PingButton target="call" id={c.id} />
-              <Share path={c.receipt} text={`I asked Presage’s Oracle about ${c.asset}: ${c.direction.toUpperCase()} over ${c.horizonSec / 3600}h, sealed on Metis before the move.`} compact />
+              <Share path={c.receipt} text={`I asked the Oracle on Called about ${c.asset}: ${c.direction.toUpperCase()} over ${c.horizonSec / 3600}h, sealed on Metis before the move.`} compact />
             </div>
             <div className="mt-3 flex items-center justify-between text-[13px] px-1">
-              <button onClick={onAgain} className="font-bold text-black hover:underline">
+              <button onClick={onAgain} className="font-bold text-ink hover:underline">
                 Ask about another coin
               </button>
-              <Link href={c.receipt} className="font-bold text-gray-500 hover:text-black flex items-center gap-0.5">
+              <Link href={c.receipt} className="font-bold text-ink-3 hover:text-ink flex items-center gap-0.5">
                 Receipt <IconChevron size={14} />
               </Link>
             </div>
@@ -453,40 +449,63 @@ function AnswerCard({ a }: { a: OracleAnswer }) {
   const opened = c.status === 'revealed' && c.outcome
   const agree = a.myCall ? a.myCall === c.direction : null
   return (
-    <div className="rounded-[28px] grad p-[2px] shadow-xl shadow-pink-500/10">
-      <div className="rounded-[26px] bg-white p-5 md:p-6">
+    <Panel tone="ticket" as="div">
+      <div className="p-5 md:p-6">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <Eyebrow>The Oracle says</Eyebrow>
-            <div className={cx('font-heading text-[60px] md:text-[72px] leading-none font-black tracking-tight mt-1.5', up ? 'text-green-600' : 'text-red-600')}>{up ? '↑ UP' : '↓ DOWN'}</div>
-            <div className="text-sm font-bold text-gray-700 mt-2">
-              {c.confidence}% sure · from <span className="tabular-nums">${fmtPrice(c.priceAtIssue)}</span>
+          <div className="min-w-0">
+            <Eyebrow className="text-[#9C9CA3]">
+              The Oracle says{c.chainCallId != null && <> · No. {String(c.chainCallId).padStart(4, '0')}</>}
+            </Eyebrow>
+            <div className={cx('font-heading text-[60px] md:text-[72px] leading-none font-black tight mt-2', up ? 'text-up-d' : 'text-down-d')}>{up ? '↑ UP' : '↓ DOWN'}</div>
+            <div className="num text-[13px] text-[#C9C9CF] mt-3">
+              {c.confidence}% sure · from ${fmtPrice(c.priceAtIssue)}
             </div>
           </div>
-          {!opened && (
-            <div className="text-center">
+          {!opened ? (
+            <div className="text-center shrink-0">
               <CountdownRing from={c.issuedAt} to={opensAt} size={70} />
-              <div className="text-[11px] text-gray-500 font-bold mt-1">
+              <div className="label !text-[9.5px] text-[#9C9CA3] mt-2">
                 opens <At sec={opensAt} />
               </div>
             </div>
+          ) : (
+            <Seal size={48} />
           )}
         </div>
-        <div className="mt-4 text-[15px] leading-snug text-gray-700">
-          <b className="text-black">Why:</b> {c.why}
+        <div className="mt-5 text-[15px] leading-snug text-[#C9C9CF]">
+          <b className="text-white font-semibold">Why:</b> {c.why}
         </div>
-        {opened ? (
-          <div className={cx('mt-4 rounded-2xl px-4 py-3 font-bold text-[14px]', c.outcome === 'win' ? 'bg-green-50 text-green-800' : c.outcome === 'loss' ? 'bg-red-50 text-red-800' : 'bg-gray-50 text-gray-700')}>
-            {c.outcome === 'win' ? 'It was right.' : c.outcome === 'loss' ? 'It was wrong.' : 'Flat: it barely moved.'} ${fmtPrice(c.priceAtIssue)} → ${c.exitPrice != null ? fmtPrice(c.exitPrice) : '…'}
-          </div>
-        ) : agree != null ? (
-          <div className={cx('mt-4 rounded-2xl px-4 py-2.5 text-[13.5px] font-semibold', agree ? 'bg-green-50 text-green-800' : 'bg-amber-50 text-amber-900')}>
-            {agree ? `You said ${a.myCall} too. Let’s see who’s right.` : `You said ${a.myCall}. The Oracle disagrees. One of you is about to be right.`}
-          </div>
-        ) : null}
-        <div className="mt-3 text-[12px] text-gray-500">Under {c.flatBandBps / 100}% either way counts as flat. Not financial advice.</div>
       </div>
-    </div>
+      <div className="perf" />
+      <div className="px-5 md:px-6 pt-4 pb-5 flex items-center gap-3.5">
+        {!opened && <Seal size={34} />}
+        <div className="min-w-0">
+          <div className={cx('text-[14.5px] font-semibold', opened ? (c.outcome === 'win' ? 'text-up-d' : c.outcome === 'loss' ? 'text-down-d' : 'text-white') : 'text-white')}>
+            {opened
+              ? c.outcome === 'win'
+                ? 'It was right.'
+                : c.outcome === 'loss'
+                  ? 'It was wrong.'
+                  : 'Flat: it barely moved.'
+              : agree === true
+                ? `You said ${a.myCall} too. Let’s see who’s right.`
+                : agree === false
+                  ? `You said ${a.myCall}. One of you is about to be right.`
+                  : 'Sealed on Metis. Nobody can change it now.'}
+          </div>
+          <div className="text-[12px] text-[#9C9CA3] mt-0.5">
+            {opened ? (
+              <span className="num">
+                ${fmtPrice(c.priceAtIssue)} → ${c.exitPrice != null ? fmtPrice(c.exitPrice) : '…'}
+              </span>
+            ) : (
+              <>Under {c.flatBandBps / 100}% either way counts as flat.</>
+            )}{' '}
+            Not financial advice.
+          </div>
+        </div>
+      </div>
+    </Panel>
   )
 }
 
@@ -503,16 +522,16 @@ function HowItWorks({ horizon }: { horizon: Horizon }) {
       <div className="space-y-4">
         {rows.map(([t, d], i) => (
           <div key={t} className="flex gap-3">
-            <span className="w-7 h-7 rounded-full grad text-white grid place-items-center text-[13px] font-black shrink-0">{i + 1}</span>
+            <span className="w-7 h-7 rounded-full bg-ink text-white grid place-items-center num text-[12px] font-semibold shrink-0">{i + 1}</span>
             <div>
-              <div className="font-bold text-black">{t}</div>
-              <div className="text-sm text-gray-600 mt-0.5">{d}</div>
+              <div className="font-bold text-ink">{t}</div>
+              <div className="text-sm text-ink-2 mt-0.5">{d}</div>
             </div>
           </div>
         ))}
       </div>
-      <div className="mt-5 rounded-2xl bg-amber-50 px-4 py-3 text-[13px] text-amber-900">An AI forecast with a public record, nothing more. Short-term calls are close to coin flips, and the record will say so. Not financial advice.</div>
-      <Link href="/agents/oracle" className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-black hover:underline">
+      <div className="mt-5 rounded-[14px] border border-line px-4 py-3 text-[13px] text-ink-2">An AI forecast with a public record, nothing more. Short-term calls are close to coin flips, and the record will say so. Not financial advice.</div>
+      <Link href="/agents/oracle" className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-ink hover:underline">
         <IconShare size={14} /> See every call the Oracle has made
       </Link>
     </div>

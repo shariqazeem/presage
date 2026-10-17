@@ -1,5 +1,5 @@
 // Ported from ST Quant (okxtradingagent/src/structure.js) on 14 Oct 2026.
-// The trading logic is unchanged; Presage-specific edits are marked "Presage:".
+// The trading logic is unchanged; Called-specific edits are marked "Called:".
 
 // Structure mapping: the "memory levels" from Shariq's methodology.
 // 1D macro trendline -> long-term TP. 4H channel -> trade zone.

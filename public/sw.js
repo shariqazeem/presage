@@ -1,4 +1,4 @@
-// Presage's service worker: it only shows pings. Nothing is cached, so the app is always current.
+// Called's service worker: it only shows pings. Nothing is cached, so the app is always current.
 self.addEventListener('install', () => self.skipWaiting())
 self.addEventListener('activate', event => event.waitUntil(self.clients.claim()))
 
@@ -7,10 +7,10 @@ self.addEventListener('push', event => {
   try {
     data = event.data ? event.data.json() : {}
   } catch (e) {
-    data = { title: 'Presage', body: event.data ? event.data.text() : '' }
+    data = { title: 'Called', body: event.data ? event.data.text() : '' }
   }
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Presage', {
+    self.registration.showNotification(data.title || 'Called', {
       body: data.body || '',
       icon: '/icon-192.png',
       badge: '/badge-96.png',

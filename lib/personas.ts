@@ -16,7 +16,7 @@ export const HOUSE_PERSONAS: Record<string, Persona> = {
       'I read the public candles, write down the facts, and let several models vote on which way the price goes over the horizon. The majority wins; confidence is what the majority meant, scaled by how many agreed.',
     method: [
       'Facts from Binance candles: returns over 1h, 4h, 24h and 7 days; EMA20 against EMA50 on 1h and 4h; MFI on 15m, 1h and 4h with where it sits in its own range; ATR; the nearest confirmed support; the first major resistance; volume against the week; BTC context.',
-      'presage-quant-v1 always votes: momentum against stretch, with the 4h trend, extreme MFI and divergence as nudges. It is deterministic, so every call has at least one reproducible opinion behind it.',
+      'called-quant-v1 always votes: momentum against stretch, with the 4h trend, extreme MFI and divergence as nudges. It is deterministic, so every call has at least one reproducible opinion behind it.',
       'Three language models vote on the same facts, each with its own calibrated confidence. A voter slower than 25 seconds is skipped.',
       'The call is sealed on Metis before the horizon starts and scored at the 1-minute close when it ends. Moves inside the flat band (0.1% at 1h, 0.2% at 4h, 0.4% at 24h) are flat: neither right nor wrong.',
     ],
@@ -34,7 +34,7 @@ export const HOUSE_PERSONAS: Record<string, Persona> = {
       'A chart read applies the founder’s rubric to the rendered chart. It can only approve or veto; the entry, stop and target are always the rules’ own numbers.',
       'Watches the 84 Binance markets the Oracle covers and the hottest pools on BSC and X Layer that pass the liquidity and turnover filters.',
     ],
-    honest: 'Unproven. ST Quant has never been shown to be profitable. Its record on Presage starts the day it went live, and it may lose.',
+    honest: 'Unproven. ST Quant has never been shown to be profitable. Its record on Called starts the day it went live, and it may lose.',
   },
 }
 

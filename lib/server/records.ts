@@ -197,7 +197,7 @@ export function platformStats() {
 }
 
 export function describePayload(p: CallPayload): string {
-  return p.rules === 'presage/setup-v1'
+  return p.rules === 'called/setup-v1'
     ? `${p.asset.symbol} long · entry ${p.entry.price} · stop ${p.stop} · target ${p.target}`
     : `${p.asset.symbol} ${p.direction} over ${p.horizonSec / 3600}h · ${p.confidence}%`
 }

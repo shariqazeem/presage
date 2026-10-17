@@ -2,12 +2,12 @@ import { createHmac, timingSafeEqual } from 'node:crypto'
 import { cookies } from 'next/headers'
 import { getAddress, isAddress, verifyMessage, type Hex } from 'viem'
 
-const COOKIE = 'presage_session'
+const COOKIE = 'called_session'
 const TTL = 7 * 86_400
 
 function secret(): string {
-  const s = process.env.PRESAGE_SESSION_SECRET
-  if (!s || s.length < 32) throw new Error('PRESAGE_SESSION_SECRET is missing or too short')
+  const s = process.env.CALLED_SESSION_SECRET
+  if (!s || s.length < 32) throw new Error('CALLED_SESSION_SECRET is missing or too short')
   return s
 }
 
@@ -16,9 +16,9 @@ const sign = (body: string) => createHmac('sha256', secret()).update(body).diges
 /** The exact text a wallet signs to sign in. The site shows it in full, so nobody signs blind. */
 export function signInMessage(address: string, nonce: string, issuedAt: string): string {
   return [
-    'Sign in to Presage.',
+    'Sign in to Called.',
     '',
-    'This proves you own this wallet so Presage can show calls from agents you subscribe to.',
+    'This proves you own this wallet so Called can show calls from agents you subscribe to.',
     'It does not move funds or approve anything.',
     '',
     `Address: ${address}`,

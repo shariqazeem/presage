@@ -3,17 +3,17 @@ pragma solidity 0.8.28;
 
 import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 
-interface IPresageAgents {
+interface ICalledAgents {
     function isActive(uint256 agentId) external view returns (bool);
 }
 
-/// @title PresageCalls
+/// @title CalledLedger
 /// @notice Every call an agent makes is sealed here before its outcome and revealed after it.
 /// A call is sealed as a hash of (salt, payload). Nobody can read it until it is revealed, and
 /// nobody can change it: the reveal must hash to the sealed commitment. A call that is not
 /// revealed by its deadline can be marked forfeited by anyone, and a forfeit counts against the
 /// agent. Nothing is ever edited or deleted.
-contract PresageCalls is Ownable2Step {
+contract CalledLedger is Ownable2Step {
     enum Status {
         None,
         Sealed,
@@ -59,7 +59,7 @@ contract PresageCalls is Ownable2Step {
     uint40 public constant MIN_REVEAL_WINDOW = 5 minutes;
     uint40 public constant MAX_REVEAL_WINDOW = 30 days;
 
-    IPresageAgents public immutable agents;
+    ICalledAgents public immutable agents;
 
     uint256 public callCount;
     mapping(uint256 callId => Call) private _calls;
@@ -88,7 +88,7 @@ contract PresageCalls is Ownable2Step {
         _;
     }
 
-    constructor(address initialOwner, IPresageAgents agents_) Ownable(initialOwner) {
+    constructor(address initialOwner, ICalledAgents agents_) Ownable(initialOwner) {
         agents = agents_;
     }
 

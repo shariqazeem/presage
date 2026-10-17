@@ -10,27 +10,31 @@ import { cx } from './ui'
 
 /* ---------------------------------------------------------------- the voters */
 
-/** How a model is introduced: a short name and a colour. Unknown models still get a fair badge. */
-export function voterInfo(model: string): { name: string; color: string; quant?: boolean } {
+/**
+ * How a model is introduced: a short name and a two-letter code on an ink badge. The badges stay
+ * monochrome so the only colour on the board is the votes themselves, up or down.
+ */
+export function voterInfo(model: string): { name: string; code: string; quant?: boolean } {
   const m = model.toLowerCase()
-  if (m === 'presage-quant-v1') return { name: 'Quant', color: '#0A0A0A', quant: true }
-  if (m.includes('gpt') || m.startsWith('openai/')) return { name: 'GPT', color: '#10A37F' }
-  if (m.includes('claude') || m.startsWith('anthropic/')) return { name: 'Claude', color: '#D97757' }
-  if (m.includes('grok') || m.startsWith('x-ai/')) return { name: 'Grok', color: '#374151' }
-  if (m.includes('gemini') || m.startsWith('google/')) return { name: 'Gemini', color: '#4285F4' }
-  if (m.includes('deepseek')) return { name: 'DeepSeek', color: '#4D6BFE' }
-  if (m.includes('qwen')) return { name: 'Qwen', color: '#615CED' }
-  if (m.includes('llama') || m.startsWith('meta')) return { name: 'Llama', color: '#0467DF' }
+  if (m === 'called-quant-v1') return { name: 'Quant', code: 'Q', quant: true }
+  if (m.includes('gpt') || m.startsWith('openai/')) return { name: 'GPT', code: 'GP' }
+  if (m.includes('claude') || m.startsWith('anthropic/')) return { name: 'Claude', code: 'CL' }
+  if (m.includes('grok') || m.startsWith('x-ai/')) return { name: 'Grok', code: 'GK' }
+  if (m.includes('gemini') || m.startsWith('google/')) return { name: 'Gemini', code: 'GM' }
+  if (m.includes('deepseek')) return { name: 'DeepSeek', code: 'DS' }
+  if (m.includes('qwen')) return { name: 'Qwen', code: 'QW' }
+  if (m.includes('llama') || m.startsWith('meta')) return { name: 'Llama', code: 'LL' }
   const last = model.split('/').pop() ?? model
-  return { name: last.split('-')[0].replace(/^\w/, c => c.toUpperCase()), color: '#6B7280' }
+  const name = last.split('-')[0].replace(/^\w/, c => c.toUpperCase())
+  return { name, code: name.slice(0, 2).toUpperCase() }
 }
 
 export function VoterAvatar({ model, size = 34 }: { model: string; size?: number }) {
   const v = voterInfo(model)
   if (v.quant) return <Sigil id={0} slug="oracle" size={size} className="rounded-full" />
   return (
-    <div className="rounded-full grid place-items-center text-white font-black shrink-0" style={{ width: size, height: size, background: v.color, fontSize: size * 0.4 }}>
-      {v.name[0]}
+    <div className="rounded-full grid place-items-center bg-ink text-white num font-semibold shrink-0" style={{ width: size, height: size, fontSize: size * 0.3, letterSpacing: '0.02em' }}>
+      {v.code}
     </div>
   )
 }
@@ -57,24 +61,20 @@ export function VoteBoard({ voters, votes, final = false }: { voters: string[]; 
             <button
               key={`${m}-${i}`}
               onClick={() => setPicked(p => (p === m ? null : m))}
-              className={cx(
-                'rounded-2xl border-2 py-2.5 px-1 flex flex-col items-center transition-colors text-center',
-                v ? (v.direction === 'up' ? 'border-green-100 bg-green-50/70' : 'border-red-100 bg-red-50/70') : 'border-gray-100 bg-white',
-                picked === m && 'ring-2 ring-black/80',
-              )}
+              className={cx('rounded-[14px] border bg-white py-2.5 px-1 flex flex-col items-center transition-colors text-center', picked === m ? 'border-ink' : 'border-line')}
             >
               <VoterAvatar model={m} size={34} />
-              <div className="text-[11px] font-bold text-gray-600 mt-1.5 truncate max-w-full">{info.name}</div>
+              <div className="text-[11px] font-medium text-ink-3 mt-1.5 truncate max-w-full">{info.name}</div>
               <AnimatePresence mode="wait">
                 {v ? (
-                  <motion.div key="v" initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 420, damping: 18 }} className={cx('text-sm font-black tabular-nums flex items-center', v.direction === 'up' ? 'text-green-600' : 'text-red-600')}>
-                    {v.direction === 'up' ? <IconUp size={13} weight={3} /> : <IconDown size={13} weight={3} />}
-                    {v.confidence}%
+                  <motion.div key="v" initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 420, damping: 18 }} className={cx('num text-[14px] font-semibold flex items-center', v.direction === 'up' ? 'text-up' : 'text-down')}>
+                    {v.direction === 'up' ? <IconUp size={12} weight={2.8} /> : <IconDown size={12} weight={2.8} />}
+                    {v.confidence}
                   </motion.div>
                 ) : final ? (
-                  <motion.div key="n" className="text-[11px] font-bold text-gray-400">no answer</motion.div>
+                  <motion.div key="n" className="label !text-[9px] text-ink-3 mt-0.5">no answer</motion.div>
                 ) : (
-                  <motion.div key="t" className="text-[11px] font-bold text-gray-400 soft-pulse">
+                  <motion.div key="t" className="label !text-[9px] text-ink-3 soft-pulse mt-0.5">
                     thinking
                   </motion.div>
                 )}
@@ -85,20 +85,20 @@ export function VoteBoard({ voters, votes, final = false }: { voters: string[]; 
       </div>
       {votes.length > 0 && (
         <div className="mt-3">
-          <div className="flex justify-between text-[12px] font-bold">
-            <span className="text-green-600">{ups} {ups === 1 ? 'says' : 'say'} up</span>
-            <span className="text-red-500">{downs} {downs === 1 ? 'says' : 'say'} down</span>
+          <div className="flex justify-between label">
+            <span className="text-up">{ups} up</span>
+            <span className="text-down">{downs} down</span>
           </div>
-          <div className="mt-1.5 h-2.5 rounded-full bg-red-100 overflow-hidden">
-            <motion.div className="h-full grad rounded-full" initial={{ width: '50%' }} animate={{ width: `${(ups / Math.max(1, votes.length)) * 100}%` }} transition={{ type: 'spring', stiffness: 120, damping: 20 }} />
+          <div className="mt-1.5 h-1.5 rounded-full bg-[#F3D5D6] overflow-hidden">
+            <motion.div className="h-full bg-up rounded-full" initial={{ width: '50%' }} animate={{ width: `${(ups / Math.max(1, votes.length)) * 100}%` }} transition={{ type: 'spring', stiffness: 120, damping: 20 }} />
           </div>
         </div>
       )}
       <AnimatePresence>
         {pickedVote?.why && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-            <div className="mt-3 rounded-2xl bg-gray-50 px-3.5 py-2.5 text-[13px] text-gray-700">
-              <b className="text-black">{voterInfo(pickedVote.model).name}:</b> {pickedVote.why}
+            <div className="mt-3 rounded-[14px] bg-paper-2 px-3.5 py-2.5 text-[13px] text-ink-2">
+              <b className="text-ink">{voterInfo(pickedVote.model).name}:</b> {pickedVote.why}
             </div>
           </motion.div>
         )}
@@ -114,8 +114,8 @@ export const stageLine = (p: Progress | null) => (!p || p.stage === 'reading' ? 
 export type Coin = { symbol: string; name: string; price: number; changePct: number; quoteVolume: number }
 
 export function Change({ v, className = '' }: { v: number | null | undefined; className?: string }) {
-  if (v == null || Number.isNaN(v)) return <span className={cx('text-gray-400', className)}>—</span>
-  return <span className={cx('tabular-nums font-bold', v >= 0 ? 'text-green-600' : 'text-red-600', className)}>{`${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(1)}%`}</span>
+  if (v == null || Number.isNaN(v)) return <span className={cx('text-ink-3', className)}>—</span>
+  return <span className={cx('num font-semibold', v >= 0 ? 'text-up' : 'text-down', className)}>{`${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(1)}%`}</span>
 }
 
 export function Sparkline({ closes, width = 130, height = 44 }: { closes: number[]; width?: number; height?: number }) {
@@ -130,19 +130,20 @@ export function Sparkline({ closes, width = 130, height = 44 }: { closes: number
   return (
     <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`}>
       <defs>
-        <linearGradient id={`l${id}`} x1="0" x2="1">
-          <stop offset="0" stopColor="#9333EA" />
-          <stop offset="0.55" stopColor="#EC4899" />
-          <stop offset="1" stopColor="#2563EB" />
+        <linearGradient id={`l${id}`} x1="0" x2="1" y1="0" y2="1">
+          <stop offset="0" stopColor="#7C3AED" />
+          <stop offset="0.45" stopColor="#EC4899" />
+          <stop offset="0.8" stopColor="#3B82F6" />
+          <stop offset="1" stopColor="#22D3EE" />
         </linearGradient>
         <linearGradient id={`a${id}`} x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stopColor="#EC4899" stopOpacity="0.14" />
-          <stop offset="1" stopColor="#EC4899" stopOpacity="0" />
+          <stop offset="0" stopColor="#0B0B0C" stopOpacity="0.06" />
+          <stop offset="1" stopColor="#0B0B0C" stopOpacity="0" />
         </linearGradient>
       </defs>
       <path d={area} fill={`url(#a${id})`} />
-      <polyline fill="none" stroke={`url(#l${id})`} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" points={line} />
-      <circle cx={pts.at(-1)![0]} cy={pts.at(-1)![1]} r="3.2" fill="#2563EB" />
+      <polyline fill="none" stroke="#0B0B0C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" points={line} />
+      <circle cx={pts.at(-1)![0]} cy={pts.at(-1)![1]} r="4" fill={`url(#l${id})`} />
     </svg>
   )
 }
@@ -173,14 +174,14 @@ export function CoinPicker({ coins, selected, onSelect }: { coins: Coin[]; selec
   return (
     <div>
       <div className="relative">
-        <div className={cx('h-12 rounded-2xl bg-gray-100 flex items-center gap-2 px-4 transition-all', open && 'bg-white ring-2 ring-black')}>
-          <IconSearch size={17} className="text-gray-400 shrink-0" />
+        <div className={cx('h-12 rounded-[14px] border flex items-center gap-2 px-4 transition-all', open ? 'bg-white border-ink' : 'bg-paper-2 border-line')}>
+          <IconSearch size={17} className="text-ink-3 shrink-0" />
           <input
             value={q}
             onChange={e => setQ(e.target.value)}
             onFocus={() => setOpen(true)}
             placeholder={`Search ${coins.length || 84} coins`}
-            className="flex-1 bg-transparent outline-none font-semibold text-[15px] text-black placeholder:text-gray-400 placeholder:font-medium min-w-0"
+            className="flex-1 bg-transparent outline-none font-medium text-[15px] text-ink placeholder:text-ink-3 min-w-0"
           />
           {open && (
             <button
@@ -188,7 +189,7 @@ export function CoinPicker({ coins, selected, onSelect }: { coins: Coin[]; selec
                 setOpen(false)
                 setQ('')
               }}
-              className="w-7 h-7 rounded-full bg-gray-100 grid place-items-center text-gray-500"
+              className="w-7 h-7 rounded-full border border-line grid place-items-center text-ink-3"
               aria-label="Close search"
             >
               <IconX size={14} />
@@ -197,8 +198,8 @@ export function CoinPicker({ coins, selected, onSelect }: { coins: Coin[]; selec
         </div>
         <AnimatePresence>
           {open && (
-            <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} className="absolute z-30 left-0 right-0 mt-2 bg-white rounded-2xl border-2 border-gray-100 shadow-2xl max-h-[340px] overflow-y-auto p-2">
-              {found.length === 0 && <div className="p-4 text-sm text-gray-500 text-center">No coin called “{q}”. The Oracle covers {coins.length}.</div>}
+            <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} className="absolute z-30 left-0 right-0 mt-2 bg-white rounded-[16px] border border-line shadow-[0_24px_48px_-20px_rgba(11,11,12,0.25)] max-h-[340px] overflow-y-auto p-1.5">
+              {found.length === 0 && <div className="p-4 text-sm text-ink-3 text-center">No coin called “{q}”. The Oracle covers {coins.length}.</div>}
               {found.map(c => (
                 <button
                   key={c.symbol}
@@ -207,13 +208,13 @@ export function CoinPicker({ coins, selected, onSelect }: { coins: Coin[]; selec
                     setOpen(false)
                     setQ('')
                   }}
-                  className={cx('w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-left hover:bg-gray-50', c.symbol === selected && 'bg-gray-50')}
+                  className={cx('w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-[10px] text-left hover:bg-paper-2', c.symbol === selected && 'bg-paper-2')}
                 >
                   <div className="min-w-0">
-                    <span className="font-black text-black">{c.symbol}</span> <span className="text-sm text-gray-500 truncate">{c.name}</span>
+                    <span className="font-bold text-ink">{c.symbol}</span> <span className="text-sm text-ink-3 truncate">{c.name}</span>
                   </div>
-                  <div className="text-right shrink-0 text-sm">
-                    <span className="tabular-nums font-semibold text-gray-700">${fmtPrice(c.price)}</span> <Change v={c.changePct} className="ml-1" />
+                  <div className="text-right shrink-0 text-[13px]">
+                    <span className="num text-ink-2">{fmtPrice(c.price)}</span> <Change v={c.changePct} className="ml-1" />
                   </div>
                 </button>
               ))}
@@ -229,14 +230,14 @@ export function CoinPicker({ coins, selected, onSelect }: { coins: Coin[]; selec
               key={c.symbol}
               whileTap={{ scale: 0.96 }}
               onClick={() => onSelect(c.symbol)}
-              className={cx('rounded-2xl px-3 py-2 text-left transition-all', on ? 'grad text-white shadow-lg shadow-pink-500/20' : 'border-2 border-gray-100 hover:border-gray-300 bg-white')}
+              className={cx('rounded-[14px] px-3 py-2 text-left transition-all border', on ? 'bg-ink border-ink text-white' : 'border-line hover:border-ink-3 bg-white')}
             >
-              <div className="font-black text-sm">{c.symbol}</div>
-              {on ? <div className="text-[11px] font-bold tabular-nums opacity-90">{`${c.changePct >= 0 ? '+' : '−'}${Math.abs(c.changePct).toFixed(1)}%`}</div> : <Change v={c.changePct} className="text-[11px]" />}
+              <div className="font-bold text-sm">{c.symbol}</div>
+              {on ? <div className={cx('num text-[11px] font-semibold', c.changePct >= 0 ? 'text-up-d' : 'text-down-d')}>{`${c.changePct >= 0 ? '+' : '−'}${Math.abs(c.changePct).toFixed(1)}%`}</div> : <Change v={c.changePct} className="text-[11px]" />}
             </motion.button>
           )
         })}
-        {chips.length === 0 && [0, 1, 2, 3, 4, 5].map(i => <div key={i} className="h-[52px] rounded-2xl bg-gray-100 animate-pulse" />)}
+        {chips.length === 0 && [0, 1, 2, 3, 4, 5].map(i => <div key={i} className="h-[52px] rounded-[14px] bg-paper-2 animate-pulse" />)}
       </div>
     </div>
   )
@@ -244,10 +245,10 @@ export function CoinPicker({ coins, selected, onSelect }: { coins: Coin[]; selec
 
 export function Segmented<T extends string>({ value, options, onChange }: { value: T; options: { value: T; label: string }[]; onChange: (v: T) => void }) {
   return (
-    <div className="grid gap-1 p-1 bg-white rounded-2xl border-2 border-gray-100 text-sm font-bold text-center" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
+    <div className="grid gap-1 p-1 bg-white rounded-[14px] border border-line text-sm font-semibold text-center" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
       {options.map(o => (
-        <button key={o.value} onClick={() => onChange(o.value)} className={cx('relative py-2 rounded-xl transition-colors', value === o.value ? 'text-white' : 'text-gray-500 hover:text-black')}>
-          {value === o.value && <motion.span layoutId={`seg-${options.map(x => x.value).join('')}`} className="absolute inset-0 rounded-xl bg-black" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
+        <button key={o.value} onClick={() => onChange(o.value)} className={cx('relative py-2 rounded-[10px] transition-colors', value === o.value ? 'text-white' : 'text-ink-3 hover:text-ink')}>
+          {value === o.value && <motion.span layoutId={`seg-${options.map(x => x.value).join('')}`} className="absolute inset-0 rounded-[10px] bg-ink" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
           <span className="relative">{o.label}</span>
         </button>
       ))}
@@ -261,8 +262,8 @@ export function MyCall({ value, onChange }: { value: 'up' | 'down' | null; onCha
     <button
       onClick={() => onChange(value === d ? null : d)}
       className={cx(
-        'px-3 py-1.5 rounded-xl border-2 text-sm font-black flex items-center gap-1 transition-all',
-        value === d ? (d === 'up' ? 'bg-green-600 border-green-600 text-white' : 'bg-red-600 border-red-600 text-white') : cx('bg-white border-gray-200', d === 'up' ? 'text-green-600 hover:border-green-400' : 'text-red-600 hover:border-red-400'),
+        'px-3 py-1.5 rounded-[10px] border text-sm font-semibold flex items-center gap-1 transition-all',
+        value === d ? (d === 'up' ? 'bg-up border-up text-white' : 'bg-down border-down text-white') : cx('bg-white border-line', d === 'up' ? 'text-up hover:border-up' : 'text-down hover:border-down'),
       )}
     >
       {d === 'up' ? <IconUp size={14} weight={3} /> : <IconDown size={14} weight={3} />}
@@ -271,8 +272,8 @@ export function MyCall({ value, onChange }: { value: 'up' | 'down' | null; onCha
   )
   return (
     <div className="flex items-center justify-between gap-3">
-      <div className="text-[13px] font-semibold text-gray-700">
-        Your call first? <span className="text-gray-400 font-medium">optional</span>
+      <div className="text-[13px] font-semibold text-ink-2">
+        Your call first? <span className="text-ink-3 font-normal">optional</span>
       </div>
       <div className="flex gap-2">
         {b('up')}

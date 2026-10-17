@@ -4,7 +4,7 @@ import { getDb, schema } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
-/** The exact spec bytes behind a hash sealed in PresageAgents. keccak256 of this body equals the hash. */
+/** The exact spec bytes behind a hash sealed in CalledAgents. keccak256 of this body equals the hash. */
 export async function GET(_req: NextRequest, ctx: { params: Promise<{ hash: string }> }) {
   const { hash } = await ctx.params
   const db = getDb()

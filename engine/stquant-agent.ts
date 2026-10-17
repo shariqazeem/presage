@@ -41,7 +41,7 @@ const TOKENISED_STOCK = /^w?[A-Z]{1,5}x$/
 // Bridged or tokenised majors (xETH, xBTC, xSOL, ...) for the same reason.
 const TOKENISED_MAJOR = /^x(eth|btc|sol|bnb|xrp|doge)$/i
 
-const CHART_DIR = resolve(process.env.PRESAGE_CHART_DIR ?? 'var/charts')
+const CHART_DIR = resolve(process.env.CALLED_CHART_DIR ?? 'var/charts')
 const RUBRIC = readFileSync(new URL('./stquant/RUBRIC.md', import.meta.url), 'utf8')
 
 /** The Binance side of the universe: every coin the Oracle covers, priced where anyone can check. */
@@ -283,7 +283,7 @@ async function publish(agentId: number, c: Candidate, aiWhy?: string): Promise<v
   const { liquidityUsd: _l, volume24hUsd: _v, ...asset } = c.asset
   const payload: SetupPayload = {
     v: 1,
-    rules: 'presage/setup-v1',
+    rules: 'called/setup-v1',
     agent: agentId,
     asset,
     side: 'long',

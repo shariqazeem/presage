@@ -1,5 +1,5 @@
 // Self-test for pings: send one real, encrypted Web Push message to a local endpoint and check it
-// arrives with VAPID auth. Run against a throwaway database: PRESAGE_DB_PATH=/tmp/x.db npx tsx scripts/ping-selftest.ts
+// arrives with VAPID auth. Run against a throwaway database: CALLED_DB_PATH=/tmp/x.db npx tsx scripts/ping-selftest.ts
 import './../engine/env'
 import { createServer } from 'node:https'
 import { readFileSync } from 'node:fs'

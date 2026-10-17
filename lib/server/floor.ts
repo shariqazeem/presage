@@ -155,7 +155,7 @@ export function radarFor(agentId: number, viewer: string | null = null): RadarRo
 
 const stateRank = (s: RadarRow['state']) => ({ firing: 3, close: 2, watching: 1, quiet: 0 })[s]
 
-/** The economy strip: what has moved through Presage, read from the chain's events. */
+/** The economy strip: what has moved through Called, read from the chain's events. */
 export function economy() {
   const db = getDb()
   const day = Math.floor(Date.now() / 1000) - 86_400

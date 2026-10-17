@@ -1,0 +1,270 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<script>
+tailwind.config = { theme: { extend: { fontFamily: { head: ['Inter Tight', 'sans-serif'], sans: ['Inter', 'sans-serif'], mono: ['IBM Plex Mono', 'monospace'] }, colors: { ink: '#0B0B0C', ink2: '#3F3F46', ink3: '#8A8A92', line: '#E6E6E3', paper2: '#F6F6F4', up: '#12A150', down: '#E5484D', upd: '#3DDC84', downd: '#FF6B6B' } } } }
+</script>
+<style>
+  body { background: #EDEDEA; }
+  .phone { width: 390px; height: 844px; border-radius: 48px; background: #fff; overflow: hidden; position: relative; box-shadow: 0 30px 60px -24px rgba(11,11,12,.28), 0 0 0 10px #0B0B0C, 0 0 0 11px #2a2a2a; }
+  /* The holographic seal: the brand colours as foil. Only on what is sealed, live or ours. */
+  .foil { background: conic-gradient(from 210deg, #7C3AED, #EC4899, #3B82F6, #22D3EE, #7C3AED); }
+  .foil-line { background: linear-gradient(90deg, #7C3AED, #EC4899, #3B82F6, #22D3EE); }
+  .ring { -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4.5px)); mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4.5px)); }
+  .num { font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  .label { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
+  .tight { letter-spacing: -0.035em; }
+  .perf { position: relative; height: 0; border-top: 1.5px dashed #2A2A2E; margin: 14px -18px; }
+  .perf::before, .perf::after { content: ''; position: absolute; top: -10px; width: 20px; height: 20px; border-radius: 50%; background: #fff; }
+  .perf::before { left: -10px; } .perf::after { right: -10px; }
+  .tab svg { width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .ic { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+</style>
+</head>
+<body class="font-sans text-ink">
+<div class="px-16 pt-14 pb-4 flex items-end justify-between">
+  <div>
+    <div class="label text-ink3">Design · more intentional</div>
+    <div class="font-head text-[52px] leading-[1.02] font-black tight mt-2 max-w-[1400px]">Paper and ink, black instruments, and the gradient only as a <span class="relative inline-block">holographic seal<span class="absolute left-0 right-0 -bottom-1 h-[5px] rounded-full foil-line"></span></span>.</div>
+  </div>
+  <div class="text-right text-sm text-ink3 leading-relaxed max-w-[420px]">The foil appears only where something is sealed, live, or yours: the mark, a sealed call, the countdown, the active tab. Buttons, chips and headlines go solid ink. Numbers read like a ledger.</div>
+</div>
+
+<div class="flex gap-12 px-16 pb-16 pt-8 items-start">
+
+<!-- ============ TODAY ============ -->
+<div>
+  <div class="mb-4 label text-ink3">01 · Today</div>
+  <div class="phone">
+    <div data-status></div>
+    <div class="px-5 flex items-center justify-between h-12">
+      <div class="flex items-center gap-2.5"><span data-mark="28"></span><span class="font-head text-[26px] font-black tight">Today</span></div>
+      <div class="flex items-center gap-2">
+        <div class="w-9 h-9 rounded-full border border-line grid place-items-center"><svg class="ic" viewBox="0 0 24 24"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div>
+        <div class="h-9 pl-1.5 pr-3 rounded-full bg-ink text-white text-[12px] font-semibold flex items-center gap-2 num"><span class="w-6 h-6 rounded-full" style="background:linear-gradient(135deg,#34d399,#3b82f6)"></span>0x7a…3f</div>
+      </div>
+    </div>
+    <div class="px-5 pt-3">
+      <div class="label text-ink3 flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full foil"></span>Sat 17 Oct · day 4 in a row</div>
+      <div class="font-head text-[28px] leading-[1.06] font-black tight mt-1.5">Your METIS call opens at 12:18</div>
+
+      <div class="mt-4 rounded-[18px] border border-line">
+        <div class="px-4 pt-3 flex items-center justify-between"><span class="label text-ink3">Just opened</span><span class="text-[12px] font-semibold text-ink3">every call ›</span></div>
+        <div class="px-4 py-3 flex items-center gap-3">
+          <span data-sigil="oracle" data-size="36"></span>
+          <div class="flex-1"><div class="font-semibold text-[15px]">METIS <span class="text-up">↑ up</span> <span class="text-ink3 text-[13px]">· 4h</span></div><div class="num text-[12.5px] text-ink3">3.88 → 3.92</div></div>
+          <div class="text-right"><div class="label text-up">Right</div><div class="num text-[15px] font-semibold text-up">+1.03%</div></div>
+        </div>
+        <div class="h-px bg-line mx-4"></div>
+        <div class="px-4 py-3 flex items-center gap-3">
+          <span data-sigil="oracle" data-size="36"></span>
+          <div class="flex-1"><div class="font-semibold text-[15px]">ETH <span class="text-down">↓ down</span> <span class="text-ink3 text-[13px]">· 24h</span></div><div class="num text-[12.5px] text-ink3">2,461 → 2,476</div></div>
+          <div class="text-right"><div class="label text-down">Wrong</div><div class="num text-[15px] font-semibold text-down">+0.62%</div></div>
+        </div>
+      </div>
+
+      <div class="mt-3 rounded-[18px] bg-ink text-white px-[18px] py-4 relative overflow-hidden">
+        <div class="flex items-center gap-4">
+          <div data-ring="0.7" data-label="1:12" data-size="62"></div>
+          <div class="flex-1">
+            <div class="label text-[#9C9CA3]">Opens 12:18 · No. 0041</div>
+            <div class="font-head text-[22px] font-black tight mt-1">BTC <span class="text-upd">↑</span> 68% <span class="text-[#6B6B72] text-base font-bold">· 4h</span></div>
+            <div class="text-[12.5px] text-[#9C9CA3]">You said up. Sealed on Metis.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-3 grid grid-cols-2 gap-3">
+        <div class="rounded-[18px] bg-ink text-white p-4">
+          <div class="flex items-start justify-between"><span class="label text-[#9C9CA3]">ST Quant</span><div data-miniradar></div></div>
+          <div class="font-head font-black text-[18px] leading-tight tight mt-2">3 setups forming</div>
+          <div class="num text-[11.5px] text-[#9C9CA3] mt-1">93 markets · 1 sealed</div>
+        </div>
+        <div class="rounded-[18px] border border-line p-4">
+          <span data-sigil="oracle" data-size="30"></span>
+          <div class="font-head font-black text-[18px] leading-tight tight mt-2">Right 55%</div>
+          <div class="mt-2 flex gap-[3px]" data-form="wwlfwlwwfw"></div>
+        </div>
+      </div>
+    </div>
+    <div class="absolute left-5 right-5 bottom-[96px]"><div class="h-[54px] rounded-[14px] bg-ink text-white font-semibold grid place-items-center text-[16px]"><span>Ask about a coin · <span class="num">$0.05</span></span></div></div>
+    <div data-tabs="0"></div>
+  </div>
+</div>
+
+<!-- ============ ORACLE ANSWER ============ -->
+<div>
+  <div class="mb-4 label text-ink3">02 · The Oracle’s answer</div>
+  <div class="phone">
+    <div data-status></div>
+    <div class="px-5 flex items-center justify-between h-12">
+      <div class="flex items-center gap-1.5 font-semibold text-[15px]"><span class="text-ink3 text-xl leading-none">‹</span> METIS · next 4 hours</div>
+      <div class="h-7 pl-2 pr-2.5 rounded-full bg-ink text-white label !text-[10px] flex items-center gap-1.5"><span class="w-2 h-2 rounded-full foil"></span>Sealed</div>
+    </div>
+    <div class="px-5 pt-2">
+      <div class="grid grid-cols-4 gap-2">
+        <div data-voter="Quant|54|up|q"></div><div data-voter="GPT|58|up|g"></div><div data-voter="Claude|56|up|c"></div><div data-voter="Grok|51|down|x"></div>
+      </div>
+      <div class="mt-3">
+        <div class="flex justify-between label"><span class="text-up">3 up</span><span class="text-down">1 down</span></div>
+        <div class="mt-1.5 h-1.5 rounded-full bg-[#F3D5D6] overflow-hidden"><div class="h-full bg-up" style="width:75%"></div></div>
+      </div>
+
+      <div class="mt-4 rounded-[20px] bg-ink text-white px-[18px] pt-4 pb-3.5 relative overflow-hidden">
+        <div class="absolute top-0 left-0 right-0 h-[3px] foil-line"></div>
+        <div class="flex items-center justify-between"><span class="label text-[#9C9CA3]">The Oracle says</span><span class="label text-[#6B6B72]">No. 0041</span></div>
+        <div class="flex items-start justify-between mt-2">
+          <div>
+            <div class="font-head text-[64px] leading-none font-black tight text-upd">↑ UP</div>
+            <div class="num text-[13px] text-[#C9C9CF] mt-2">56% sure · from 3.88</div>
+          </div>
+          <div class="text-center"><div data-ring="0.98" data-label="3:59" data-size="68"></div><div class="label !text-[9.5px] text-[#9C9CA3] mt-1.5">Opens 16:00</div></div>
+        </div>
+        <div class="mt-3.5 text-[14px] leading-snug text-[#E4E4E7]"><span class="font-semibold text-white">Why:</span> the trend on the hourly and 4-hour charts is still rising, and today’s dip is shallow.</div>
+        <div class="perf"></div>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2.5"><span class="w-7 h-7 rounded-full foil grid place-items-center"><span class="w-3.5 h-3.5 rounded-full bg-ink grid place-items-center"><span class="w-1.5 h-1.5 rounded-full bg-white"></span></span></span><div class="num text-[11px] text-[#9C9CA3] leading-tight">Sealed on Metis 12:00<br>0x8c1f…07a2</div></div>
+          <div class="text-[12px] font-semibold text-white">Receipt ›</div>
+        </div>
+      </div>
+
+      <div class="mt-3 rounded-[14px] border border-line px-3.5 py-2.5 flex items-center gap-2.5 text-[13.5px] font-medium"><span class="w-5 h-5 rounded-full bg-up text-white grid place-items-center"><svg class="ic" style="width:11px;height:11px" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>You said up too. Let’s see who’s right.</div>
+      <div class="mt-3 grid grid-cols-[1fr_auto] gap-2">
+        <div class="h-[52px] rounded-[14px] bg-ink text-white font-semibold grid place-items-center text-[15px]">Ping me when it opens</div>
+        <div class="h-[52px] w-[52px] rounded-[14px] border border-line grid place-items-center"><svg class="ic" style="width:18px;height:18px" viewBox="0 0 24 24"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg></div>
+      </div>
+    </div>
+    <div data-tabs="1"></div>
+  </div>
+</div>
+
+<!-- ============ ST QUANT ============ -->
+<div>
+  <div class="mb-4 label text-ink3">03 · ST Quant</div>
+  <div class="phone">
+    <div data-status></div>
+    <div class="px-5 pt-1 flex items-center gap-3">
+      <span data-sigil="st-quant" data-size="52"></span>
+      <div class="flex-1">
+        <div class="flex items-center gap-1.5"><span class="font-head text-[26px] font-black tight">ST Quant</span><span class="label !text-[9px] px-1.5 py-0.5 rounded bg-ink text-white">House</span><span class="label !text-[9px] px-1.5 py-0.5 rounded border border-line text-ink2">Unproven</span></div>
+        <div class="text-[13px] text-ink3 italic">“I buy exhausted dips at strong support. I never chase.”</div>
+      </div>
+    </div>
+    <div class="px-5 mt-3 label text-ink2 flex items-center gap-2"><span class="w-1.5 h-1.5 rounded-full bg-up"></span>Checking 93 markets · next look 4:12</div>
+    <div class="px-5 mt-3">
+      <div class="rounded-[20px] bg-ink pt-3 pb-4 relative">
+        <div class="px-4 flex items-center justify-between"><span class="label text-[#9C9CA3]">What it’s watching</span><span class="label text-[#6B6B72]">Live</span></div>
+        <div class="grid place-items-center pt-1" data-radar></div>
+        <div class="px-4 flex justify-center gap-4 label !text-[10px]">
+          <span class="flex items-center gap-1.5 text-white"><span class="w-2 h-2 rounded-full foil"></span>3 setting up</span>
+          <span class="flex items-center gap-1.5 text-[#C9C9CF]"><span class="w-2 h-2 rounded-full bg-white"></span>7 close</span>
+          <span class="flex items-center gap-1.5 text-[#6B6B72]"><span class="w-2 h-2 rounded-full bg-[#3F3F46]"></span>83 quiet</span>
+        </div>
+      </div>
+      <div class="mt-3 rounded-[18px] border border-line p-4">
+        <div class="flex items-center justify-between"><div class="flex items-center gap-2"><span class="font-head text-lg font-black tight">CRV</span><span class="label !text-[9.5px] px-1.5 py-0.5 rounded bg-ink text-white flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full foil"></span>Setting up</span></div><span class="num text-[13px] text-ink2">0.3463</span></div>
+        <div class="mt-2 space-y-2">
+          <div data-check="1|Sitting on strong support|right on it · 1H horizontal"></div>
+          <div data-check="1|Selling has run out (15 min)|money flow at an extreme low"></div>
+          <div data-check="0|The bigger chart agrees (1 hour)|not yet: a bonus, not a must"></div>
+        </div>
+      </div>
+    </div>
+    <div data-tabs="2"></div>
+  </div>
+</div>
+
+<!-- ============ NAMES ============ -->
+<div class="w-[520px]">
+  <div class="mb-4 label text-ink3">04 · The name</div>
+  <div class="rounded-[28px] bg-white p-7 border border-line">
+    <div class="font-head text-[30px] leading-[1.05] font-black tight">Four names, same product</div>
+    <div class="text-[14px] text-ink3 mt-2">The name goes into the contracts and every sealed call, so it’s decided before the mainnet deploy.</div>
+    <div class="mt-6 space-y-3">
+      <div data-name="sigil|Sigil|Latin sigillum: a seal. Every call is sealed, and every agent already has a sigil.|sigil.xyz looks free"></div>
+      <div data-name="vane|Vane|Like a weather vane: which way the market turns. Calm, serious, short.|vane.trade looks free"></div>
+      <div data-name="called|Called|If it called it, it’s on chain. Built for “I called it” posts.|called.xyz looks free"></div>
+      <div data-name="presage|Presage|Keep what you have: a sign of what’s to come.|presage.trade looks free"></div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+let n = 0
+const FOIL = id => `<defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7C3AED"/><stop offset=".45" stop-color="#EC4899"/><stop offset=".8" stop-color="#3B82F6"/><stop offset="1" stop-color="#22D3EE"/></linearGradient></defs>`
+function sigil(kind, size) {
+  const id = 'f' + (n++)
+  let g
+  if (kind === 'oracle') g = `<circle cx="32" cy="32" r="15" fill="none" stroke="url(#${id})" stroke-width="6.5"/><circle cx="32" cy="32" r="5.5" fill="#fff"/>`
+  else g = `<rect x="12" y="43" width="40" height="6" rx="3" fill="url(#${id})"/><circle cx="32" cy="26" r="11" fill="none" stroke="url(#${id})" stroke-width="6"/><rect x="29.5" y="10" width="5" height="32" rx="2.5" fill="#0B0B0C"/><rect x="29.5" y="18" width="5" height="16" rx="2.5" fill="#fff"/>`
+  return `<svg width="${size}" height="${size}" viewBox="0 0 64 64" style="border-radius:${size * 0.28}px">${FOIL(id)}<rect width="64" height="64" rx="18" fill="#0B0B0C"/>${g}</svg>`
+}
+function mark(kind, size) {
+  const id = 'f' + (n++)
+  const glyph = {
+    presage: `<rect x="15" y="12" width="6.5" height="41" rx="3.25" fill="url(#${id})"/><circle cx="34.5" cy="26" r="13" fill="none" stroke="url(#${id})" stroke-width="6.5"/><circle cx="34.5" cy="26" r="4.2" fill="#fff"/>`,
+    sigil: `<circle cx="32" cy="32" r="18" fill="none" stroke="url(#${id})" stroke-width="6"/><circle cx="32" cy="32" r="8" fill="none" stroke="#fff" stroke-width="3.5"/><circle cx="32" cy="32" r="2.6" fill="#fff"/>`,
+    vane: `<path d="M18 46 L44 20" stroke="url(#${id})" stroke-width="6.5" stroke-linecap="round"/><path d="M30 18 H46 V34" fill="none" stroke="url(#${id})" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="18" cy="46" r="4" fill="#fff"/>`,
+    called: `<path d="M16 34 L27 45 L48 20" fill="none" stroke="url(#${id})" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>`,
+  }[kind]
+  return `<svg width="${size}" height="${size}" viewBox="0 0 64 64">${FOIL(id)}<rect width="64" height="64" rx="16" fill="#0B0B0C"/>${glyph}</svg>`
+}
+document.querySelectorAll('[data-sigil]').forEach(e => e.outerHTML = sigil(e.dataset.sigil, +e.dataset.size))
+document.querySelectorAll('[data-mark]').forEach(e => e.outerHTML = mark('presage', +e.dataset.mark))
+document.querySelectorAll('[data-status]').forEach(e => e.outerHTML = `<div class="h-[54px] px-8 flex items-center justify-between text-[15px] font-semibold"><span>9:41</span><span class="flex items-center gap-1.5"><svg width="18" height="11" viewBox="0 0 18 11"><rect x="0" y="7" width="3" height="4" rx="1" fill="#111"/><rect x="5" y="5" width="3" height="6" rx="1" fill="#111"/><rect x="10" y="2.5" width="3" height="8.5" rx="1" fill="#111"/><rect x="15" y="0" width="3" height="11" rx="1" fill="#111"/></svg><svg width="25" height="12" viewBox="0 0 25 12"><rect x=".5" y=".5" width="21" height="11" rx="3.5" fill="none" stroke="#111" opacity=".4"/><rect x="2" y="2" width="16" height="8" rx="2" fill="#111"/></svg></span></div>`)
+const TABS = [
+  ['Today', '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4"/>'],
+  ['Oracle', '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>'],
+  ['ST Quant', '<circle cx="12" cy="12" r="8"/><path d="M22 12h-4M6 12H2M12 6V2M12 22v-4"/>'],
+  ['Agents', '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>'],
+  ['You', '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>'],
+]
+document.querySelectorAll('[data-tabs]').forEach(e => {
+  const a = +e.dataset.tabs
+  e.outerHTML = `<div class="absolute left-0 right-0 bottom-0 h-[84px] bg-white border-t border-line flex justify-around pt-2.5">${TABS.map(([l, p], i) => `<div class="tab relative flex flex-col items-center gap-1 ${i === a ? 'text-ink' : 'text-[#A1A1AA]'}">${i === a ? '<span class="absolute -top-2.5 w-7 h-[2.5px] rounded-full foil-line"></span>' : ''}<svg viewBox="0 0 24 24">${p}</svg><span class="text-[10.5px] ${i === a ? 'font-bold' : 'font-medium'}">${l}</span></div>`).join('')}<div class="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1.5 rounded-full bg-ink"></div></div>`
+})
+// A countdown ring in foil: the gray track is what has already passed.
+document.querySelectorAll('[data-ring]').forEach(e => {
+  const p = +e.dataset.ring, s = +(e.dataset.size || 60)
+  e.outerHTML = `<div class="relative shrink-0" style="width:${s}px;height:${s}px"><div class="absolute inset-0 rounded-full" style="background:#2A2A2E;-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 4.5px))"></div><div class="absolute inset-0 rounded-full foil ring" style="-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 4.5px)), conic-gradient(#000 0 ${p * 360}deg, transparent ${p * 360}deg);-webkit-mask-composite:source-in;mask-composite:intersect"></div><div class="absolute inset-0 grid place-items-center num font-semibold text-white" style="font-size:${s / 4.4}px">${e.dataset.label}</div></div>`
+})
+const VC = { q: null, g: '#10A37F', c: '#D97757', x: '#52525B' }
+document.querySelectorAll('[data-voter]').forEach(e => {
+  const [name, conf, dir, k] = e.dataset.voter.split('|')
+  const av = k === 'q' ? sigil('oracle', 30) : `<div class="w-[30px] h-[30px] rounded-full grid place-items-center text-white font-bold text-[13px]" style="background:${VC[k]}">${name[0]}</div>`
+  e.outerHTML = `<div class="rounded-[14px] border border-line py-2.5 flex flex-col items-center">${av}<div class="text-[11px] font-medium text-ink3 mt-1.5">${name}</div><div class="num text-[14px] font-semibold ${dir === 'up' ? 'text-up' : 'text-down'}">${dir === 'up' ? '↑' : '↓'}${conf}</div></div>`
+})
+document.querySelectorAll('[data-form]').forEach(e => {
+  e.innerHTML = [...e.dataset.form].map(c => `<span class="w-[11px] h-[11px] rounded-[3px] ${c === 'w' ? 'bg-up' : c === 'l' ? 'bg-down' : 'bg-[#D4D4D8]'}"></span>`).join('')
+})
+document.querySelectorAll('[data-check]').forEach(e => {
+  const [ok, label, note] = e.dataset.check.split('|')
+  e.outerHTML = `<div class="flex items-start gap-3"><span class="mt-0.5 w-5 h-5 rounded-full grid place-items-center shrink-0 ${ok === '1' ? 'bg-ink text-white' : 'border border-line text-ink3'}">${ok === '1' ? '<svg class="ic" style="width:11px;height:11px" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>' : '<span class="text-[10px] font-bold">–</span>'}</span><div><div class="text-[14px] font-semibold ${ok === '1' ? 'text-ink' : 'text-ink3'}">${label}</div><div class="text-[12px] text-ink3">${note}</div></div></div>`
+})
+function rnd(seed) { let h = seed; return () => { h = (h * 1664525 + 1013904223) >>> 0; return h / 4294967296 } }
+function radar(size, labels) {
+  const R = size / 2, r = rnd(11), id = 'f' + (n++)
+  let s = ''
+  for (let i = 0; i < 83; i++) { const a = r() * Math.PI * 2, d = R * (0.7 + r() * 0.26); s += `<circle cx="${R + Math.cos(a) * d}" cy="${R + Math.sin(a) * d}" r="${size > 100 ? 2.3 : 1.2}" fill="#3F3F46"/>` }
+  const close = ['OP', 'APT', 'ONDO', 'BLUR', 'FLOW', 'AR', 'BAND']
+  close.forEach((t, i) => { const a = (-75 + i * 51.4) * Math.PI / 180, d = R * 0.52, x = R + Math.cos(a) * d, y = R + Math.sin(a) * d, lx = R + Math.cos(a) * (d + 15), ly = R + Math.sin(a) * (d + 15)
+    s += `<circle cx="${x}" cy="${y}" r="${size > 100 ? 4.2 : 2}" fill="#FFFFFF"/>` + (labels ? `<text x="${lx}" y="${ly + 3.5}" text-anchor="middle" font-family="IBM Plex Mono" font-weight="600" font-size="9.5" fill="#9C9CA3">${t}</text>` : '') })
+  ;[['ARB', -125], ['CRV', -5], ['STBL', 115]].forEach(([t, deg]) => { const a = deg * Math.PI / 180, d = R * 0.17, x = R + Math.cos(a) * d, y = R + Math.sin(a) * d, lx = R + Math.cos(a) * (d + 18), ly = R + Math.sin(a) * (d + 18)
+    s += `<circle cx="${x}" cy="${y}" r="${size > 100 ? 12 : 4}" fill="url(#g${id})" opacity=".35"/><circle cx="${x}" cy="${y}" r="${size > 100 ? 6.5 : 2.8}" fill="url(#${id})"/>` + (labels ? `<text x="${lx}" y="${ly + 4}" text-anchor="middle" font-family="Inter Tight" font-weight="900" font-size="12.5" fill="#FFFFFF">${t}</text>` : '') })
+  const rings = [0.32, 0.6, 0.97].map(k => `<circle cx="${R}" cy="${R}" r="${R * k - 1}" fill="none" stroke="#26262A" stroke-width="1.2"/>`).join('')
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7C3AED"/><stop offset=".45" stop-color="#EC4899"/><stop offset=".8" stop-color="#3B82F6"/><stop offset="1" stop-color="#22D3EE"/></linearGradient><radialGradient id="g${id}"><stop offset="0" stop-color="#EC4899"/><stop offset="1" stop-color="#EC4899" stop-opacity="0"/></radialGradient></defs>${rings}${s}</svg>`
+}
+document.querySelectorAll('[data-radar]').forEach(e => e.innerHTML = radar(300, true))
+document.querySelectorAll('[data-miniradar]').forEach(e => e.outerHTML = radar(42, false))
+document.querySelectorAll('[data-name]').forEach(e => {
+  const [k, name, why, domain] = e.dataset.name.split('|')
+  e.outerHTML = `<div class="flex items-center gap-4 rounded-[18px] border border-line p-4"><div>${mark(k, 56)}</div><div class="flex-1"><div class="font-head text-[30px] leading-none font-black tight">${name}</div><div class="text-[13px] text-ink2 mt-1.5 leading-snug">${why}</div><div class="num text-[11.5px] text-ink3 mt-1.5">${domain}</div></div></div>`
+})
+</script>
+</body>
+</html>

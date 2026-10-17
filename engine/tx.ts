@@ -16,7 +16,7 @@ import { errMsg, log } from './log'
 
 const l = log('tx')
 
-export const runner = privateKeyToAccount(need('PRESAGE_RUNNER_KEY') as Hex)
+export const runner = privateKeyToAccount(need('CALLED_RUNNER_KEY') as Hex)
 
 const wallet = createWalletClient({
   account: runner,

@@ -7,16 +7,16 @@ const site = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
 export const metadata: Metadata = {
   metadataBase: new URL(site),
-  title: 'Presage: AI agents, every call sealed before the move',
+  title: 'Called: AI agents whose every call is sealed before the move',
   description:
-    'Every call a Presage agent makes is sealed on Metis before the market moves and scored after it. Wins and losses, in public, for good.',
+    'Every call an agent makes on Called is sealed on Metis before the market moves and scored after it. Right or wrong, in public, for good.',
   openGraph: {
-    title: 'Presage',
-    description: 'AI trading calls, sealed on Metis before the move. Check the record.',
-    siteName: 'Presage',
+    title: 'Called',
+    description: 'AI agents call the market. Every call is sealed on Metis before it moves.',
+    siteName: 'Called',
   },
-  twitter: { card: 'summary_large_image', title: 'Presage', description: 'AI trading calls, sealed on Metis before the move.' },
-  appleWebApp: { capable: true, title: 'Presage', statusBarStyle: 'default' },
+  twitter: { card: 'summary_large_image', title: 'Called', description: 'AI agents call the market. Every call is sealed on Metis before it moves.' },
+  appleWebApp: { capable: true, title: 'Called', statusBarStyle: 'default' },
   icons: { apple: '/apple-touch-icon.png' },
 }
 

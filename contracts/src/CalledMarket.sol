@@ -5,8 +5,8 @@ import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {PresageAgents} from "./PresageAgents.sol";
-import {PresageCalls} from "./PresageCalls.sol";
+import {CalledAgents} from "./CalledAgents.sol";
+import {CalledLedger} from "./CalledLedger.sol";
 
 interface AggregatorV3Interface {
     function decimals() external view returns (uint8);
@@ -16,8 +16,8 @@ interface AggregatorV3Interface {
         returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound);
 }
 
-/// @title PresageMarket
-/// @notice Payments for Presage agents, in native METIS (priced by Chainlink) or an accepted stablecoin.
+/// @title CalledMarket
+/// @notice Payments for Called agents, in native METIS (priced by Chainlink) or an accepted stablecoin.
 ///
 /// Subscriptions: 30-day periods, split on the spot 80% to the agent's creator and 20% to the platform.
 /// An agent can only take subscribers once its record holds at least 10 resolved calls spanning 7 days.
@@ -27,7 +27,7 @@ interface AggregatorV3Interface {
 /// sealed within 15 minutes, or is never revealed and gets forfeited, the payer gets the money back.
 ///
 /// Every account withdraws its own balance with claim(). None of these rules can be changed.
-contract PresageMarket is Ownable2Step, ReentrancyGuard {
+contract CalledMarket is Ownable2Step, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     enum RequestState {
@@ -57,8 +57,8 @@ contract PresageMarket is Ownable2Step, ReentrancyGuard {
     uint40 public constant DELIVERY_WINDOW = 15 minutes;
     uint40 public constant SEQUENCER_GRACE = 1 hours;
 
-    PresageAgents public immutable agents;
-    PresageCalls public immutable calls;
+    CalledAgents public immutable agents;
+    CalledLedger public immutable calls;
     /// Chainlink METIS/USD.
     AggregatorV3Interface public immutable metisUsdFeed;
     /// Chainlink L2 sequencer uptime feed, or address(0) where there is none.
@@ -129,8 +129,8 @@ contract PresageMarket is Ownable2Step, ReentrancyGuard {
 
     constructor(
         address initialOwner,
-        PresageAgents agents_,
-        PresageCalls calls_,
+        CalledAgents agents_,
+        CalledLedger calls_,
         AggregatorV3Interface metisUsdFeed_,
         AggregatorV3Interface sequencerFeed_,
         uint256 maxPriceAge_,
@@ -209,7 +209,7 @@ contract PresageMarket is Ownable2Step, ReentrancyGuard {
 
     /// @notice Whether an agent's record is long enough to take subscribers.
     function recordReady(uint256 agentId) public view returns (bool ready, uint256 resolved, uint256 sinceFirstCall) {
-        PresageCalls.Record memory r = calls.recordOf(agentId);
+        CalledLedger.Record memory r = calls.recordOf(agentId);
         resolved = uint256(r.revealed) + uint256(r.forfeited);
         sinceFirstCall = r.firstSealedAt == 0 ? 0 : block.timestamp - r.firstSealedAt;
         ready = resolved >= MIN_RESOLVED_CALLS && r.firstSealedAt != 0 && sinceFirstCall >= MIN_RECORD_AGE;
@@ -235,7 +235,7 @@ contract PresageMarket is Ownable2Step, ReentrancyGuard {
         returns (uint40 until)
     {
         if (periods == 0 || periods > MAX_PERIODS) revert BadPeriods();
-        PresageAgents.Agent memory a = agents.getAgent(agentId);
+        CalledAgents.Agent memory a = agents.getAgent(agentId);
         if (a.retired) revert AgentNotActive(agentId);
         if (a.priceUsd6 == 0) revert NotForSale(agentId);
         (bool ready, uint256 resolved, uint256 since) = recordReady(agentId);
@@ -265,7 +265,7 @@ contract PresageMarket is Ownable2Step, ReentrancyGuard {
     {
         if (requestId == bytes32(0) || agentId > type(uint64).max) revert BadRequest(requestId);
         if (_requests[requestId].state != RequestState.None) revert AlreadyPaid(requestId);
-        PresageAgents.Agent memory a = agents.getAgent(agentId);
+        CalledAgents.Agent memory a = agents.getAgent(agentId);
         if (a.retired) revert AgentNotActive(agentId);
         if (a.callPriceUsd6 == 0) revert NotForSale(agentId);
 
@@ -305,13 +305,13 @@ contract PresageMarket is Ownable2Step, ReentrancyGuard {
     function settle(bytes32 requestId) public nonReentrant {
         PaidRequest storage r = _requests[requestId];
         if (r.state != RequestState.Sealed) revert BadRequest(requestId);
-        PresageCalls.Status status = calls.getCall(r.callId).status;
+        CalledLedger.Status status = calls.getCall(r.callId).status;
 
-        if (status == PresageCalls.Status.Revealed) {
+        if (status == CalledLedger.Status.Revealed) {
             r.state = RequestState.Settled;
             _split(agents.getAgent(r.agentId).creator, r.token, r.amount);
             emit CallSettled(requestId, r.callId);
-        } else if (status == PresageCalls.Status.Forfeited) {
+        } else if (status == CalledLedger.Status.Forfeited) {
             r.state = RequestState.Refunded;
             _credit(r.payer, r.token, r.amount);
             emit CallRefunded(requestId, r.payer, true);

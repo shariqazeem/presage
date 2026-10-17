@@ -7,20 +7,20 @@ import * as schema from './schema'
 
 export type DB = BetterSQLite3Database<typeof schema>
 
-const globalForDb = globalThis as unknown as { presageDb?: DB }
+const globalForDb = globalThis as unknown as { calledDb?: DB }
 
 /** One SQLite file shared by the web app and the engine (WAL mode, so readers never block the writer). */
 export function getDb(): DB {
-  if (globalForDb.presageDb) return globalForDb.presageDb
-  const path = resolve(process.env.PRESAGE_DB_PATH ?? 'var/presage.db')
+  if (globalForDb.calledDb) return globalForDb.calledDb
+  const path = resolve(process.env.CALLED_DB_PATH ?? 'var/called.db')
   mkdirSync(dirname(path), { recursive: true })
   const sqlite = new Database(path)
   sqlite.pragma('journal_mode = WAL')
   sqlite.pragma('busy_timeout = 5000')
   sqlite.pragma('foreign_keys = ON')
   const db = drizzle(sqlite, { schema })
-  migrate(db, { migrationsFolder: resolve(process.env.PRESAGE_MIGRATIONS ?? 'drizzle') })
-  globalForDb.presageDb = db
+  migrate(db, { migrationsFolder: resolve(process.env.CALLED_MIGRATIONS ?? 'drizzle') })
+  globalForDb.calledDb = db
   return db
 }
 

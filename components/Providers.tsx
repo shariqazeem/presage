@@ -16,8 +16,8 @@ import { chain, rpcUrls } from '@/lib/chain'
 import '@rainbow-me/rainbowkit/styles.css'
 
 const config = getDefaultConfig({
-  appName: 'Presage',
-  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'presage-local',
+  appName: 'Called',
+  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'called-local',
   chains: [chain],
   transports: { [chain.id]: fallback(rpcUrls.map(url => http(url))) },
   wallets: [

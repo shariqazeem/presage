@@ -1,21 +1,21 @@
-# Presage
+# Called
 
 **AI agents call the market. Every call is sealed on Metis before it moves.**
 
-Every call a Presage agent makes is written to Metis Andromeda before the market moves, then scored by price and opened. Right or wrong, it stays on the record for good. A call that is not opened in time can be forfeited by anyone, and it counts as a loss.
+Every call an agent makes on Called is written to Metis Andromeda before the market moves, then scored by price and opened. Right or wrong, it stays on the record for good. A call that is not opened in time can be forfeited by anyone, and it counts as a loss.
 
-Signal sellers show screenshots. Presage shows the chain.
+Signal sellers show screenshots. Called shows the chain.
 
 ---
 
 ## Using it
 
-Presage opens on **Today**: what of yours opened since you were last here, what opens next with a countdown, what ST Quant is close to, and the live feed of every agent's moves. On a phone it is five tabs (Today, Oracle, ST Quant, Agents, You) and installs to the home screen like an app.
+Called opens on **Today**: what of yours opened since you were last here, what opens next with a countdown, what ST Quant is close to, and the live feed of every agent's moves. On a phone it is five tabs (Today, Oracle, ST Quant, Agents, You) and installs to the home screen like an app.
 
 - **Ask the Oracle.** Pick a coin and a time (1 hour, 4 hours, a day), optionally make your own call first, pay $0.05, and watch four AI voters land their votes one by one. The answer comes back in one plain sentence, sealed on Metis, with a countdown to when it opens. Your own call is sealed with it, so "you vs the Oracle" is on the record too.
 - **Watch ST Quant think.** Its radar shows every market it watches, closest to a setup in the middle; tap one for its checklist in plain words.
 - **Build an agent.** Start from a style (Dip Buyer, Breakout, Trend Rider, Reversal) or your own words, see what it would be close on right now, then deploy it with two signatures.
-- **Pings.** "Ping me when it opens" uses the browser's own notifications (on iPhone, after adding Presage to the home screen) or Telegram.
+- **Pings.** "Ping me when it opens" uses the browser's own notifications (on iPhone, after adding Called to the home screen) or Telegram.
 
 No wallet is needed to watch. The wallet appears when you want something of your own.
 
@@ -27,17 +27,17 @@ The live floor (`/floor`) shows everything at once: the money moving through the
 |---|---|---|
 | **Market Oracle** | Ask which way one of 84 coins goes over 1 hour, 4 hours or 24 hours. A quant model and three AI models vote on facts from public Binance candles. | $0.05 a call over x402, held in escrow until the call is revealed |
 | **ST Quant** | Trade setups with entry, stop and target on BSC and X Layer pools. Unproven: it has never been shown to be profitable, and its record starts on day one. | $3 per 30 days, once its record is long enough |
-| **Your own agent** | Describe a strategy in plain English. Presage turns it into rules you confirm, runs it, and seals every call it makes. | You set the price ($2 minimum) and keep 80% |
+| **Your own agent** | Describe a strategy in plain English. Called turns it into rules you confirm, runs it, and seals every call it makes. | You set the price ($2 minimum) and keep 80% |
 
 No agent, ours included, can take subscribers before it has **10 scored calls over 7 days**. The contract enforces that.
 
 ## How a call works
 
 ```
-1. Seal      keccak256(salt ‖ payload) → PresageCalls.seal(agentId, commitment, revealBy)
+1. Seal      keccak256(salt ‖ payload) → CalledLedger.seal(agentId, commitment, revealBy)
 2. Score     public candles + the rulebook in lib/calls/rules.ts → win, loss, flat or no fill
-3. Reveal    PresageCalls.reveal(callId, salt, payload, outcome, result); the reveal must hash to the seal
-4. Forfeit   after revealBy, anyone can call PresageCalls.forfeit(callId); it counts against the agent
+3. Reveal    CalledLedger.reveal(callId, salt, payload, outcome, result); the reveal must hash to the seal
+4. Forfeit   after revealBy, anyone can call CalledLedger.forfeit(callId); it counts against the agent
 ```
 
 The payload is the full call (asset, price source, entry, stop, target or direction, horizon, the reasons) as JSON. While a call is sealed only its fingerprint is public, so subscribers get it first and nobody can copy it for free. Once revealed, the JSON is in the transaction for anyone to read.
@@ -48,29 +48,29 @@ The payload is the full call (asset, price source, entry, stop, target or direct
 
 Every call has a receipt at `/calls/<id>`. Its **Check it yourself** panel runs in your browser, not on our servers:
 
-1. It recomputes `keccak256(salt ‖ payload)` and compares it with the commitment stored in PresageCalls.
+1. It recomputes `keccak256(salt ‖ payload)` and compares it with the commitment stored in CalledLedger.
 2. It fetches the public candles (Binance, or GeckoTerminal for DEX pools) and reruns the rulebook to get the outcome the reveal claims.
 
 ## Contracts on Metis Andromeda (chain 1088)
 
 | Contract | Address | What it does |
 |---|---|---|
-| PresageCalls | _deploying_ | Seals, reveals and forfeits calls; keeps each agent's record |
-| PresageAgents | _deploying_ | Ties a strategy spec, by hash, to an ERC-8004 identity; a spec can never change |
-| PresageMarket | _deploying_ | x402 escrow for paid calls, subscriptions, the 80/20 split, claims |
-| ERC-8004 Identity | `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` | The canonical registry; every Presage agent is an identity here |
+| CalledLedger | _deploying_ | Seals, reveals and forfeits calls; keeps each agent's record |
+| CalledAgents | _deploying_ | Ties a strategy spec, by hash, to an ERC-8004 identity; a spec can never change |
+| CalledMarket | _deploying_ | x402 escrow for paid calls, subscriptions, the 80/20 split, claims |
+| ERC-8004 Identity | `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` | The canonical registry; every agent on Called is an identity here |
 | Chainlink METIS/USD | `0xD4a5Bb03B5D66d9bf81507379302Ac2C2DFDFa6D` | Prices METIS payments |
 
 Payments are accepted in METIS, m.USDC (`0xEA32…1a21`) and m.USDT (`0xbB06…F4dC`).
 
 ## Paying over x402 (for agents)
 
-Metis has no public x402 facilitator, and m.USDC supports neither EIP-3009 nor permit, so Presage settles payments itself with a scheme called `escrow`: the payer's own wallet pays the contract, and the request is retried with the transaction as proof.
+Metis has no public x402 facilitator, and m.USDC supports neither EIP-3009 nor permit, so Called settles payments itself with a scheme called `escrow`: the payer's own wallet pays the contract, and the request is retried with the transaction as proof.
 
 ```
 POST /api/oracle/call  {"asset":"BTC","horizon":"4h"}
   ← 402  {x402Version, accepts:[{scheme:"escrow", network:"eip155:1088", maxAmountRequired, payTo, asset, extra:{agentId, requestId, method}}], secret}
-PresageMarket.payForCall(agentId, requestId, token, maxAmount)        from your wallet
+CalledMarket.payForCall(agentId, requestId, token, maxAmount)        from your wallet
 POST /api/oracle/call  {"secret"}  X-PAYMENT: base64({x402Version, scheme, network, payload:{requestId, txHash}})
   ← 200  the sealed call, and X-PAYMENT-RESPONSE
 ```
@@ -83,7 +83,7 @@ PAYER_KEY=0x... npx tsx scripts/x402-client.ts BTC 4h METIS
 
 ## ERC-8004
 
-Each agent is an identity in the canonical ERC-8004 registry on Andromeda, owned by its creator. Its registration file (`/api/agents/<slug>/card`) points to its record and to the spec hash sealed in PresageAgents, so the identity and the calls behind it can always be found from each other.
+Each agent is an identity in the canonical ERC-8004 registry on Andromeda, owned by its creator. Its registration file (`/api/agents/<slug>/card`) points to its record and to the spec hash sealed in CalledAgents, so the identity and the calls behind it can always be found from each other.
 
 ## How it is built
 
@@ -111,7 +111,7 @@ npm run engine                        # the engine
 - **ST Quant is unproven.** Its record starts the day it went live, and it may lose.
 - **The chain proves when a call was made and that it was not changed.** The outcome is computed by the engine from public candles and written with the reveal. The contract does not check prices itself; anyone can recompute the outcome, and the receipt page does it for you.
 - **The Oracle is an AI forecast.** It is not advice, and its record shows how often it is wrong.
-- **Presage never holds or trades your money.** Paid calls sit in a contract escrow, and subscriptions are split on payment. Agents only publish signals.
+- **Called never holds or trades your money.** Paid calls sit in a contract escrow, and subscriptions are split on payment. Agents only publish signals.
 - **If the engine stopped past a reveal deadline,** its calls would be forfeited and count as losses, and paid calls would be refunded. That is the point: hiding a call costs as much as losing it.
 
 Not financial advice.

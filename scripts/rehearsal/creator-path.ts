@@ -1,11 +1,11 @@
 // Rehearsal only: drive the deploy-your-own-agent flow through the web API the way the browser does.
 import '../../engine/env'
-if (process.env.PRESAGE_REHEARSAL !== '1') throw new Error('Rehearsal script: set PRESAGE_REHEARSAL=1 against a local fork')
+if (process.env.CALLED_REHEARSAL !== '1') throw new Error('Rehearsal script: set CALLED_REHEARSAL=1 against a local fork')
 const { createWalletClient, http, parseEventLogs } = await import('viem')
 const { generatePrivateKey, privateKeyToAccount } = await import('viem/accounts')
 const { metis } = await import('viem/chains')
 const { identityRegistryAbi } = await import('../../lib/abi/erc8004')
-const { presageAgentsAbi } = await import('../../lib/abi/PresageAgents')
+const { calledAgentsAbi } = await import('../../lib/abi/CalledAgents')
 const { publicClient, deployment, erc8004 } = await import('../../lib/chain')
 const { TEMPLATES } = await import('../../lib/spec/templates')
 const { runCreatorAgents } = await import('../../engine/creators')
@@ -35,14 +35,14 @@ const draft = await (await fetch(`${site}/api/build/draft`, { method: 'POST', he
 console.log(`3. draft ${draft.slug}, spec ${draft.specHash.slice(0, 12)}…, card ${draft.agentURI}`)
 const mint = await publicClient.waitForTransactionReceipt({ hash: await wallet.writeContract({ address: erc8004.identity, abi: identityRegistryAbi, functionName: 'register', args: [draft.agentURI], type: 'legacy' }) })
 const id = parseEventLogs({ abi: identityRegistryAbi, eventName: 'Registered', logs: mint.logs })[0].args.agentId
-const sealHash = await wallet.writeContract({ address: deployment!.agents, abi: presageAgentsAbi, functionName: 'register', args: [id, 2, draft.specHash, draft.specURI, 3_000_000n, 0n], type: 'legacy' })
+const sealHash = await wallet.writeContract({ address: deployment!.agents, abi: calledAgentsAbi, functionName: 'register', args: [id, 2, draft.specHash, draft.specURI, 3_000_000n, 0n], type: 'legacy' })
 await publicClient.waitForTransactionReceipt({ hash: sealHash })
 const fin = await (await fetch(`${site}/api/build/finalize`, { method: 'POST', headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify({ draftId: draft.draftId, txHash: sealHash }) })).json()
 console.log(`4. ERC-8004 #${id} minted and sealed; listed as ${JSON.stringify(fin)}`)
 
 // 4. The agent card and the public listing.
 const card = await (await fetch(`${site}/api/agents/${draft.slug}/card`)).json()
-console.log(`5. card: ${card.name}, registrations ${JSON.stringify(card.registrations)}, specHash ${card.presage.specHash.slice(0, 12)}…`)
+console.log(`5. card: ${card.name}, registrations ${JSON.stringify(card.registrations)}, specHash ${card.called.specHash.slice(0, 12)}…`)
 const listed = (await (await fetch(`${site}/api/agents`)).json()).agents.find((a: { slug: string }) => a.slug === draft.slug)
 console.log(`6. listed: ${listed.name} by ${listed.creator.slice(0, 8)}…, ready to sell: ${listed.recordReady}`)
 

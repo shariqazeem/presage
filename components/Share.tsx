@@ -48,16 +48,16 @@ export function Share({ text, path, className = '', size = 'md', compact = false
     }
     return (
       <div ref={ref} className={cx('relative', className)}>
-        <button onClick={open} aria-label="Share" className="h-12 w-12 rounded-2xl border-2 border-gray-200 bg-white grid place-items-center hover:border-black transition-colors">
+        <button onClick={open} aria-label="Share" className="h-12 w-12 rounded-[14px] border border-line bg-white grid place-items-center hover:border-ink transition-colors">
           <IconShare size={18} />
         </button>
         <AnimatePresence>
           {menu && (
-            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }} className="absolute right-0 bottom-14 z-30 w-44 bg-white rounded-2xl border-2 border-gray-100 shadow-xl p-1.5">
-              <button onClick={x} className="w-full text-left px-3 py-2 rounded-xl text-sm font-bold hover:bg-gray-50">
+            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }} className="absolute right-0 bottom-14 z-30 w-44 bg-white rounded-[14px] border border-line shadow-[0_24px_48px_-20px_rgba(11,11,12,0.25)] p-1.5">
+              <button onClick={x} className="w-full text-left px-3 py-2 rounded-[10px] text-sm font-semibold hover:bg-paper-2">
                 Post on X
               </button>
-              <button onClick={copy} className="w-full text-left px-3 py-2 rounded-xl text-sm font-bold hover:bg-gray-50">
+              <button onClick={copy} className="w-full text-left px-3 py-2 rounded-[10px] text-sm font-semibold hover:bg-paper-2">
                 {copied ? 'Copied ✓' : 'Copy link'}
               </button>
             </motion.div>
@@ -66,7 +66,7 @@ export function Share({ text, path, className = '', size = 'md', compact = false
       </div>
     )
   }
-  const btn = cx('rounded-xl font-bold border-2 border-gray-200 bg-white hover:border-black transition-colors', size === 'sm' ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm')
+  const btn = cx('rounded-[12px] font-semibold border border-line bg-white hover:border-ink transition-colors whitespace-nowrap', size === 'sm' ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm')
   return (
     <div className={cx('flex items-center gap-2', className)}>
       <button onClick={x} className={btn}>

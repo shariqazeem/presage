@@ -1,7 +1,7 @@
 import { and, asc, eq, isNotNull, isNull } from 'drizzle-orm'
 import type { Hex } from 'viem'
-import { presageCallsAbi } from '../lib/abi/PresageCalls'
-import { presageMarketAbi } from '../lib/abi/PresageMarket'
+import { calledLedgerAbi } from '../lib/abi/CalledLedger'
+import { calledMarketAbi } from '../lib/abi/CalledMarket'
 import { parsePayload } from '../lib/calls/payload'
 import { earliestResolution, resolveDirection, resolveSetup } from '../lib/calls/rules'
 import { binanceCloseAt } from '../lib/market/binance'
@@ -39,7 +39,7 @@ export async function resolveDue(): Promise<void> {
         l.error(`call #${row.id} missed its reveal deadline; forfeiting`)
         await write({
           address: contracts().calls,
-          abi: presageCallsAbi,
+          abi: calledLedgerAbi,
           functionName: 'forfeit',
           args: [BigInt(row.chainCallId!)],
           label: `forfeit call #${row.id}`,
@@ -49,7 +49,7 @@ export async function resolveDue(): Promise<void> {
         continue
       }
 
-      if (p.rules === 'presage/setup-v1') {
+      if (p.rules === 'called/setup-v1') {
         const candle = Math.floor(now / 900)
         if (lastSetupCheck.get(row.id) === candle) continue
         lastSetupCheck.set(row.id, candle)
@@ -102,14 +102,14 @@ export async function refundUndelivered(): Promise<void> {
       // Only a request still in Paid can be refunded; one that was delivered after all is left to the indexer.
       const onchain = await publicClient.readContract({
         address: contracts().market,
-        abi: presageMarketAbi,
+        abi: calledMarketAbi,
         functionName: 'getRequest',
         args: [r.requestId as Hex],
       })
       if (onchain.state !== 1) continue
       await write({
         address: contracts().market,
-        abi: presageMarketAbi,
+        abi: calledMarketAbi,
         functionName: 'refundUndelivered',
         args: [r.requestId as Hex],
         label: `refund undelivered request ${r.requestId.slice(0, 10)}`,

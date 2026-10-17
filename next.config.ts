@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['better-sqlite3', '@resvg/resvg-js'],
   eslint: { ignoreDuringBuilds: true },
   // WalletConnect pulls optional server-only packages that the browser build never needs.
-  // The Base Account connector also imports Coinbase's optional x402 SDKs, which Presage does not use.
+  // The Base Account connector also imports Coinbase's optional x402 SDKs, which Called does not use.
   webpack: config => {
     config.externals.push('pino-pretty', 'lokijs', 'encoding')
     config.resolve.alias = {

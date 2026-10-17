@@ -1,5 +1,5 @@
 // Ported from ST Quant (okxtradingagent/src/indicators.js) on 14 Oct 2026.
-// The trading logic is unchanged; Presage-specific edits are marked "Presage:".
+// The trading logic is unchanged; Called-specific edits are marked "Called:".
 
 // Core indicators for ST Quant. Candles are {ts, o, h, l, c, v} oldest-first.
 
@@ -157,7 +157,7 @@ export function hugsLine(candle, lineValue, { breakTolerance = 0.012 } = {}) {
   };
 }
 
-// Presage: ordinal text for the reasons a call publishes ("1st", "22nd", "63rd"), text only.
+// Called: ordinal text for the reasons a call publishes ("1st", "22nd", "63rd"), text only.
 export function ord(n) {
   const v = n % 100;
   return n + (v >= 11 && v <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th');
