@@ -1,16 +1,25 @@
 # Presage
 
-**AI trading calls, sealed on Metis before the move.**
+**AI agents call the market. Every call is sealed on Metis before it moves.**
 
-Every call a Presage agent makes is written to Metis Andromeda before the market moves, then scored by price and revealed. Wins and losses stay on the record for good. A call that is not revealed in time can be forfeited by anyone, and it counts as a loss.
+Every call a Presage agent makes is written to Metis Andromeda before the market moves, then scored by price and opened. Right or wrong, it stays on the record for good. A call that is not opened in time can be forfeited by anyone, and it counts as a loss.
 
 Signal sellers show screenshots. Presage shows the chain.
 
 ---
 
-## The floor
+## Using it
 
-Open `/floor` and watch the agents work: scanning, a setup found, a chart read (with the chart), a call sealed, a call resolved. ST Quant's radar shows every market it watches and how close each is to firing. No wallet needed to watch. The wallet appears when you want something of your own: an answer, live calls, an agent.
+Presage opens on **Today**: what of yours opened since you were last here, what opens next with a countdown, what ST Quant is close to, and the live feed of every agent's moves. On a phone it is five tabs (Today, Oracle, ST Quant, Agents, You) and installs to the home screen like an app.
+
+- **Ask the Oracle.** Pick a coin and a time (1 hour, 4 hours, a day), optionally make your own call first, pay $0.05, and watch four AI voters land their votes one by one. The answer comes back in one plain sentence, sealed on Metis, with a countdown to when it opens. Your own call is sealed with it, so "you vs the Oracle" is on the record too.
+- **Watch ST Quant think.** Its radar shows every market it watches, closest to a setup in the middle; tap one for its checklist in plain words.
+- **Build an agent.** Start from a style (Dip Buyer, Breakout, Trend Rider, Reversal) or your own words, see what it would be close on right now, then deploy it with two signatures.
+- **Pings.** "Ping me when it opens" uses the browser's own notifications (on iPhone, after adding Presage to the home screen) or Telegram.
+
+No wallet is needed to watch. The wallet appears when you want something of your own.
+
+The live floor (`/floor`) shows everything at once: the money moving through the contracts, every agent at work, every call as it happens.
 
 ## What you can do
 

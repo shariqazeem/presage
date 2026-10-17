@@ -45,3 +45,18 @@ Every turn of the loop is a transaction from a user's own wallet on Metis: askin
 ## What this means for Metis Rise
 
 The floor brings people back daily. Each return has a paid action within reach: ask ($0.05, one transaction), back an agent ($3, one transaction), build one (four transactions), claim earnings. Linking Telegram for alerts gives every user a legitimacy signal. The loop is the growth plan.
+
+
+## Re-engineered (17 Oct 2026)
+
+The founder kept the idea (Oracle, ST Quant, deploy your own, every call sealed) and asked for execution that makes people want to come back daily. The rule for every screen became: **open on something live and yours, one obvious action, plain words, proof one tap away.**
+
+- **Today** replaced Home and Floor as the first screen: your calls that opened, the next one opening (a countdown ring), ST Quant at a glance, your agent, the live feed.
+- **The Oracle** puts the ask first; "your call first" is sealed with the Oracle's answer, so every reveal is personal; voters land one by one; the answer is one plain sentence.
+- **ST Quant's radar** is a picture, not a 93-row table; each market has a checklist anyone can read.
+- **Build** starts from a style and shows a live preview before deploying.
+- **You** keeps your calls (with "you vs the Oracle"), your agents and their earnings, and pings.
+- **Pings** go out through Web Push (and Telegram), which is what turns a call that opens in four hours into a reason to come back.
+- The language is plain everywhere; indicator names live in "the details".
+
+Mockup: `docs/mockups/reengineered-first-screens.png`.
