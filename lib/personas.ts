@@ -17,7 +17,7 @@ export const HOUSE_PERSONAS: Record<string, Persona> = {
     method: [
       'Facts from Binance candles: returns over 1h, 4h, 24h and 7 days; EMA20 against EMA50 on 1h and 4h; MFI on 15m, 1h and 4h with where it sits in its own range; ATR; the nearest confirmed support; the first major resistance; volume against the week; BTC context.',
       'called-quant-v1 always votes: momentum against stretch, with the 4h trend, extreme MFI and divergence as nudges. It is deterministic, so every call has at least one reproducible opinion behind it.',
-      'Three language models vote on the same facts, each with its own calibrated confidence. A voter slower than 25 seconds is skipped.',
+      'Three language models vote on the same facts, each with its own calibrated confidence. A voter slower than 35 seconds is skipped.',
       'The call is sealed on Metis before the horizon starts and scored at the 1-minute close when it ends. Moves inside the flat band (0.1% at 1h, 0.2% at 4h, 0.4% at 24h) are flat: neither right nor wrong.',
     ],
     honest: 'An AI forecast with a public record, nothing more. Around half of all 1-hour calls are coin flips, and the record will say so.',

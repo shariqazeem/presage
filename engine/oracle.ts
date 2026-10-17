@@ -113,7 +113,7 @@ async function llmVote(model: string, x: Features, horizon: Horizon): Promise<Vo
     temperature: 0.2,
     maxTokens: 400,
     // A voter slower than this is skipped, so one slow model can't hold up a paid answer.
-    timeoutMs: 25_000,
+    timeoutMs: 35_000,
     messages: [
       { role: 'system', content: SYSTEM },
       { role: 'user', content: `Horizon: ${horizon}.\nFacts:\n${JSON.stringify(x, null, 1)}` },

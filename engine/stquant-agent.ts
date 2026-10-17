@@ -240,6 +240,7 @@ async function chartRead(c: Candidate, png: Buffer): Promise<ChartRead> {
         temperature: 0.1,
         maxTokens: 600,
         timeoutMs: 90_000,
+        background: true,
         messages: [
           {
             role: 'user',
