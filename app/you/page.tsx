@@ -89,7 +89,7 @@ export default function YouPage() {
       <div className="grid grid-cols-1 md:grid-cols-12 gap-x-8 gap-y-4 mt-6 md:mt-8">
         <div className="md:col-span-7 space-y-4">
           <div className="grid grid-cols-3 gap-3">
-            <Big label="calls asked" value={String(items.length)} />
+            <Big label={items.length === 1 ? 'call asked' : 'calls asked'} value={String(items.length)} />
             <Big label="came out right" value={opened.length ? `${right}/${opened.length}` : '—'} />
             <Big label="you vs the Oracle" value={score.played ? `${score.you}–${score.oracle}` : '—'} hint={score.played ? (score.you > score.oracle ? 'you’re ahead' : score.you < score.oracle ? 'it’s ahead' : 'level') : 'call it first next time'} />
           </div>
