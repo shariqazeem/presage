@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { listAgents, platformStats } from '@/lib/server/records'
-import { agentStatus, economy, radarFor, recentEvents } from '@/lib/server/floor'
+import { FEED_KINDS, agentStatus, economy, radarFor, recentEvents } from '@/lib/server/floor'
 import { viewer } from '@/lib/server/session'
 import { HOUSE_PERSONAS } from '@/lib/personas'
 import { getDb, schema } from '@/lib/db'
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     deployed: Boolean(deployment),
     engineUp,
     agents,
-    events: recentEvents({ limit: 80, viewer: wallet, since }),
+    events: recentEvents({ limit: 50, viewer: wallet, since, kinds: FEED_KINDS }),
     radar: stq ? radarFor(stq.id, wallet) : [],
     economy: economy(),
     stats: platformStats(),

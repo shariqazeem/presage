@@ -1,18 +1,24 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { motion } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
-import { UnifiedNavbar } from '@/components/UnifiedNavbar'
-import { CallRow } from '@/components/agents'
-import { Button, Container, Stat, cx } from '@/components/ui'
+import { CallLine, Eyebrow, Panel } from '@/components/kit'
+import { cx } from '@/components/ui'
 import { useAgents, useStats } from '@/lib/client/hooks'
 import type { CallView } from '@/lib/server/records'
 import { deployment, addressUrl } from '@/lib/chain'
 import { SETUP_RULES, DIRECTION_RULES } from '@/lib/calls/rules'
 import { pct } from '@/lib/client/format'
 
-const FILTERS = ['all', 'sealed', 'win', 'loss', 'flat', 'nofill', 'forfeited'] as const
+const FILTERS = [
+  ['all', 'All'],
+  ['sealed', 'Still sealed'],
+  ['win', 'Right / won'],
+  ['loss', 'Wrong / lost'],
+  ['flat', 'Flat'],
+  ['nofill', 'No fill'],
+  ['forfeited', 'Forfeited'],
+] as const
 
 export default function RecordPage() {
   const { data: stats } = useStats()
@@ -23,7 +29,8 @@ export default function RecordPage() {
     refetchInterval: 30_000,
   })
   const [agent, setAgent] = useState<number | 'all'>('all')
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]>('all')
+  const [filter, setFilter] = useState<(typeof FILTERS)[number][0]>('all')
+  const [shown, setShown] = useState(60)
 
   const calls = useMemo(
     () =>
@@ -34,90 +41,102 @@ export default function RecordPage() {
       ),
     [data, agent, filter],
   )
-  const hit = stats && stats.wins + stats.losses + stats.forfeited > 0 ? stats.wins / (stats.wins + stats.losses + stats.forfeited) : null
+  const decided = stats ? stats.wins + stats.losses + stats.forfeited : 0
 
   return (
-    <div className="min-h-screen bg-white">
-      <UnifiedNavbar currentPage="record" />
-      <Container className="py-8">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <h1 className="text-5xl font-black text-black mb-2 tracking-tight">The record</h1>
-          <p className="text-xl text-gray-600">Every call every Presage agent has made, losses included. Nothing here is ever edited or deleted.</p>
-        </motion.div>
+    <div className="max-w-[1180px] mx-auto px-5 md:px-8 pt-4 md:pt-10">
+      <h1 className="font-heading text-[30px] md:text-[48px] leading-none font-black tracking-tight text-black">Every call</h1>
+      <p className="text-[14px] md:text-lg text-gray-600 mt-2 max-w-2xl">Every call every agent has made, losses included. Sealed on Metis before the move; nothing here is ever edited or deleted.</p>
 
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
-          <Stat size="sm" icon="🔒" value={stats?.callsSealed ?? '—'} label="Calls sealed" />
-          <Stat size="sm" icon="📏" value={stats?.resolved ?? '—'} label="Scored" delay={0.05} />
-          <Stat size="sm" icon="⏳" value={stats?.open ?? '—'} label="Open" delay={0.1} />
-          <Stat size="sm" icon="🎯" value={pct(hit)} label="Hit rate" delay={0.15} />
-          <Stat size="sm" icon="🚫" value={stats?.forfeited ?? '—'} label="Forfeited" tone={stats?.forfeited ? 'red' : 'default'} delay={0.2} />
-        </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
+        {[
+          [String(stats?.callsSealed ?? '—'), 'sealed on Metis'],
+          [String(stats?.open ?? '—'), 'still open'],
+          [decided ? pct(stats!.wins / decided, 0) : '—', `right or won, of ${decided} decided`],
+          [String(stats?.forfeited ?? '—'), 'forfeited, counted as losses'],
+        ].map(([v, l]) => (
+          <Panel key={l} className="p-4">
+            <div className="font-heading text-2xl md:text-3xl font-black tabular-nums text-black">{v}</div>
+            <div className="text-[12px] font-semibold text-gray-500 mt-1">{l}</div>
+          </Panel>
+        ))}
+      </div>
 
-        <div className="flex flex-col md:flex-row gap-3 mb-6">
-          <select value={String(agent)} onChange={e => setAgent(e.target.value === 'all' ? 'all' : Number(e.target.value))} className="px-4 py-3 border-2 border-gray-300 rounded-xl font-semibold bg-white">
-            <option value="all">All agents</option>
-            {agents?.agents.map(a => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
-          <div className="flex flex-wrap gap-2">
-            {FILTERS.map(f => (
-              <button key={f} onClick={() => setFilter(f)} className={cx('px-4 py-2 rounded-xl font-bold text-sm capitalize', filter === f ? 'bg-black text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200')}>
-                {f === 'nofill' ? 'no fill' : f}
-              </button>
-            ))}
-          </div>
-          <div className="md:ml-auto">
-            <Button href="/api/record" external variant="secondary" size="sm">
-              Download JSON
-            </Button>
-          </div>
-        </div>
-
-        <div className="space-y-3 mb-12">
-          {calls.length === 0 && <div className="bg-gray-50 rounded-2xl p-8 text-center text-gray-600 border-2 border-gray-200">No calls match.</div>}
-          {calls.slice(0, 300).map((c, i) => (
-            <CallRow key={c.id} c={c} index={i} />
+      <div className="mt-6 flex flex-col md:flex-row md:items-center gap-3">
+        <select value={String(agent)} onChange={e => setAgent(e.target.value === 'all' ? 'all' : Number(e.target.value))} className="h-11 px-4 rounded-xl bg-gray-100 font-bold text-sm outline-none focus:ring-2 focus:ring-black">
+          <option value="all">All agents</option>
+          {agents?.agents.map(a => (
+            <option key={a.id} value={a.id}>
+              {a.name}
+            </option>
+          ))}
+        </select>
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-5 px-5 md:mx-0 md:px-0">
+          {FILTERS.map(([k, label]) => (
+            <button key={k} onClick={() => setFilter(k)} className={cx('h-9 px-3.5 rounded-full text-[13px] font-bold whitespace-nowrap transition-colors', filter === k ? 'bg-black text-white' : 'bg-gray-100 text-gray-600 hover:text-black')}>
+              {label}
+            </button>
           ))}
         </div>
+        <a href="/api/record" target="_blank" rel="noreferrer" className="md:ml-auto text-[13px] font-bold text-gray-500 hover:text-black">
+          Download all as JSON
+        </a>
+      </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="bg-gray-50 rounded-2xl p-6 border-2 border-gray-200">
-            <h2 className="text-xl font-black mb-3">How setups are scored</h2>
-            <ol className="list-decimal pl-5 space-y-1 text-sm text-gray-700">
-              {SETUP_RULES.map(r => (
-                <li key={r}>{r}</li>
-              ))}
-            </ol>
-          </div>
-          <div className="bg-gray-50 rounded-2xl p-6 border-2 border-gray-200">
-            <h2 className="text-xl font-black mb-3">How Oracle calls are scored</h2>
-            <ol className="list-decimal pl-5 space-y-1 text-sm text-gray-700">
-              {DIRECTION_RULES.map(r => (
-                <li key={r}>{r}</li>
-              ))}
-            </ol>
-            {deployment && (
-              <div className="text-sm text-gray-600 mt-4">
-                Contracts:{' '}
-                <a className="underline" href={addressUrl(deployment.calls)} target="_blank" rel="noreferrer">
-                  PresageCalls
-                </a>
-                ,{' '}
-                <a className="underline" href={addressUrl(deployment.agents)} target="_blank" rel="noreferrer">
-                  PresageAgents
-                </a>
-                ,{' '}
-                <a className="underline" href={addressUrl(deployment.market)} target="_blank" rel="noreferrer">
-                  PresageMarket
-                </a>
+      <Panel className="mt-4 px-4 md:px-6 py-1">
+        {calls.length === 0 ? (
+          <div className="py-10 text-center text-sm text-gray-500">No calls match.</div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {calls.slice(0, shown).map(c => (
+              <div key={c.id}>
+                <div className="pt-3 -mb-2 text-[11px] font-bold text-gray-400">{c.agentName}</div>
+                <CallLine c={c} />
               </div>
-            )}
+            ))}
           </div>
-        </div>
-      </Container>
+        )}
+        {calls.length > shown && (
+          <button onClick={() => setShown(s => s + 100)} className="w-full py-3 text-sm font-bold text-gray-600 hover:text-black border-t border-gray-100">
+            Show more ({calls.length - shown} left)
+          </button>
+        )}
+      </Panel>
+
+      <div className="grid md:grid-cols-2 gap-4 mt-6">
+        <Panel tone="soft" className="p-5 md:p-6">
+          <Eyebrow>How setups are scored</Eyebrow>
+          <ol className="list-decimal pl-5 mt-3 space-y-1.5 text-[13px] text-gray-700">
+            {SETUP_RULES.map(r => (
+              <li key={r}>{r}</li>
+            ))}
+          </ol>
+        </Panel>
+        <Panel tone="soft" className="p-5 md:p-6">
+          <Eyebrow>How up-or-down calls are scored</Eyebrow>
+          <ol className="list-decimal pl-5 mt-3 space-y-1.5 text-[13px] text-gray-700">
+            {DIRECTION_RULES.map(r => (
+              <li key={r}>{r}</li>
+            ))}
+          </ol>
+          {deployment && (
+            <div className="text-[13px] text-gray-600 mt-4">
+              Contracts:{' '}
+              <a className="underline" href={addressUrl(deployment.calls)} target="_blank" rel="noreferrer">
+                PresageCalls
+              </a>
+              ,{' '}
+              <a className="underline" href={addressUrl(deployment.agents)} target="_blank" rel="noreferrer">
+                PresageAgents
+              </a>
+              ,{' '}
+              <a className="underline" href={addressUrl(deployment.market)} target="_blank" rel="noreferrer">
+                PresageMarket
+              </a>
+            </div>
+          )}
+        </Panel>
+      </div>
     </div>
   )
 }

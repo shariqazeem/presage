@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR || '.next',
   // A stray lockfile in the home folder otherwise makes Next guess the wrong workspace root.
   outputFileTracingRoot: process.cwd(),
+  devIndicators: false,
   // Native modules stay on the server and out of the bundle.
   serverExternalPackages: ['better-sqlite3', '@resvg/resvg-js'],
   eslint: { ignoreDuringBuilds: true },

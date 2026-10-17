@@ -105,6 +105,8 @@ export const oracleRequests = sqliteTable(
     error: text('error'),
     /** JSON while answering: the stage and the votes as they land, so the page can show them live. */
     progress: text('progress'),
+    /** The asker's own call, made before the Oracle's and sealed inside the same payload. */
+    askerCall: text('asker_call', { enum: ['up', 'down'] }),
     createdAt: integer('created_at').notNull(),
     paidAt: integer('paid_at'),
     sealedAt: integer('sealed_at'),
@@ -171,4 +173,41 @@ export const agentEvents = sqliteTable(
     data: text('data').notNull(),
   },
   t => [index('agent_events_at').on(t.at), index('agent_events_agent').on(t.agentId, t.at)],
+)
+
+/** Agents a wallet follows for free: their calls show on that wallet's Today and come as pings. */
+export const follows = sqliteTable(
+  'follows',
+  {
+    wallet: text('wallet').notNull(),
+    agentId: integer('agent_id').notNull(),
+    createdAt: integer('created_at').notNull(),
+  },
+  t => [primaryKey({ columns: [t.wallet, t.agentId] }), index('follows_agent').on(t.agentId)],
+)
+
+/** Browsers that asked for pings (Web Push). The endpoint is the browser's own address for them. */
+export const pushSubs = sqliteTable('push_subs', {
+  endpoint: text('endpoint').primaryKey(),
+  p256dh: text('p256dh').notNull(),
+  auth: text('auth').notNull(),
+  wallet: text('wallet'),
+  createdAt: integer('created_at').notNull(),
+  failedAt: integer('failed_at'),
+})
+
+/** "Ping me when …": one browser or Telegram chat waiting on one call or one agent. */
+export const watches = sqliteTable(
+  'watches',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    channel: text('channel', { enum: ['push', 'telegram'] }).notNull(),
+    /** The push endpoint, or the wallet whose Telegram link gets the message. */
+    address: text('address').notNull(),
+    target: text('target', { enum: ['call', 'agent'] }).notNull(),
+    targetId: integer('target_id').notNull(),
+    createdAt: integer('created_at').notNull(),
+    doneAt: integer('done_at'),
+  },
+  t => [index('watches_target').on(t.target, t.targetId)],
 )

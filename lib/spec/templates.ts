@@ -1,6 +1,107 @@
 import type { StrategySpec } from './schema'
 
 /** Starting points that need no model. The first is ST Quant's core idea, in Presage's vocabulary. */
+export type Style = 'dip' | 'breakout' | 'trend' | 'reversal'
+
+/** Starting points, each a style a person can recognise. No model is needed to use one. */
+export const STYLES: { id: string; style: Style; name: string; blurb: string; prompt: string; spec: Omit<StrategySpec, 'markets'> }[] = [
+  {
+    id: 'dip-buyer',
+    style: 'dip',
+    name: 'The Dip Buyer',
+    blurb: 'Buys when price falls to strong support and selling runs out.',
+    prompt: 'Buy when 15-minute MFI is in its lowest 12% at 1-hour support. Stop 2% below the support, target the nearest resistance.',
+    spec: {
+      v: 1,
+      kind: 'setup',
+      side: 'long',
+      when: [
+        { kind: 'mfiPercentile', tf: '15m', op: '<=', value: 0.12 },
+        { kind: 'nearLevel', level: { kind: 'support', tf: '1h', type: 'any' }, withinPct: 2 },
+      ],
+      entry: { type: 'market' },
+      stop: { type: 'belowLevel', level: { kind: 'support', tf: '1h', type: 'any' }, pct: 2 },
+      target: { type: 'level', level: { kind: 'nearestResistance' } },
+      minRR: 1.5,
+      fillWindowHours: 12,
+      maxHoldHours: 48,
+      cooldownHours: 6,
+    },
+  },
+  {
+    id: 'breakout',
+    style: 'breakout',
+    name: 'The Breakout',
+    blurb: 'Buys when price pushes higher with real volume behind it.',
+    prompt: 'In a 4-hour uptrend, buy when price rises at least 2% over three 1-hour candles on a 2× volume spike, above the 1-hour 20 average. Stop 1.5× ATR, target 2R.',
+    spec: {
+      v: 1,
+      kind: 'setup',
+      side: 'long',
+      when: [
+        { kind: 'trend', tf: '4h', dir: 'up' },
+        { kind: 'change', tf: '1h', bars: 3, op: '>=', pct: 2 },
+        { kind: 'volumeSpike', tf: '1h', mult: 2 },
+        { kind: 'priceVsEma', tf: '1h', period: 20, op: 'above' },
+      ],
+      entry: { type: 'market' },
+      stop: { type: 'atr', tf: '1h', mult: 1.5 },
+      target: { type: 'r', multiple: 2 },
+      minRR: 1.5,
+      fillWindowHours: 6,
+      maxHoldHours: 24,
+      cooldownHours: 8,
+    },
+  },
+  {
+    id: 'trend-rider',
+    style: 'trend',
+    name: 'The Trend Rider',
+    blurb: 'Buys the pullbacks while the bigger trend keeps rising.',
+    prompt: 'In a 4-hour uptrend, buy when 1-hour MFI drops below 25 near 1-hour support. Stop 1.5× ATR, target 2R.',
+    spec: {
+      v: 1,
+      kind: 'setup',
+      side: 'long',
+      when: [
+        { kind: 'trend', tf: '4h', dir: 'up' },
+        { kind: 'mfi', tf: '1h', op: '<=', value: 25 },
+        { kind: 'nearLevel', level: { kind: 'support', tf: '1h', type: 'any' }, withinPct: 1.5 },
+      ],
+      entry: { type: 'market' },
+      stop: { type: 'atr', tf: '1h', mult: 1.5 },
+      target: { type: 'r', multiple: 2 },
+      minRR: 1.5,
+      fillWindowHours: 12,
+      maxHoldHours: 36,
+      cooldownHours: 8,
+    },
+  },
+  {
+    id: 'reversal',
+    style: 'reversal',
+    name: 'The Reversal',
+    blurb: 'Buys the turn after a hard fall, when sellers start to fade.',
+    prompt: 'Buy a 1-hour bullish MFI divergence at the confirmed pattern support. Stop 3% under it, target the nearest resistance.',
+    spec: {
+      v: 1,
+      kind: 'setup',
+      side: 'long',
+      when: [
+        { kind: 'bullishDivergence', tf: '1h' },
+        { kind: 'nearLevel', level: { kind: 'patternSupport' }, withinPct: 2.5 },
+      ],
+      entry: { type: 'market' },
+      stop: { type: 'belowLevel', level: { kind: 'patternSupport' }, pct: 3 },
+      target: { type: 'level', level: { kind: 'nearestResistance' } },
+      minRR: 1.5,
+      fillWindowHours: 24,
+      maxHoldHours: 72,
+      cooldownHours: 12,
+    },
+  },
+]
+
 export const TEMPLATES: { id: string; name: string; prompt: string; spec: Omit<StrategySpec, 'markets'> }[] = [
   {
     id: 'mfi-trendline',

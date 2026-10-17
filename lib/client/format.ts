@@ -48,3 +48,7 @@ export const OUTCOME_STYLE: Record<string, { label: string; cls: string; emoji: 
   forfeited: { label: 'FORFEITED', cls: 'bg-red-600 text-white', emoji: '🚫' },
   sealed: { label: 'SEALED', cls: 'bg-purple-100 text-purple-700', emoji: '🔒' },
 }
+
+/** Day, month and time, without the timezone: for tight spaces. */
+export const whenShort = (sec: number | null | undefined) =>
+  sec ? new Date(sec * 1000).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'

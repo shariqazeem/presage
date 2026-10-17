@@ -90,6 +90,11 @@ export type CallView = {
   asset: string | null
   side: string | null
   hidden: boolean
+  /** Direction calls: how far ahead it calls, and when it opens. Public even while sealed. */
+  horizonSec: number | null
+  opensAt: number | null
+  /** Bought by someone over x402, rather than made on the agent's own schedule. */
+  paid: boolean
 }
 
 export function isSubscriber(agentId: number, wallet: string | null): boolean {
@@ -116,6 +121,10 @@ export function toView(
     opts.requestSecretOk === true ||
     (viewer != null && (agent?.creator?.toLowerCase() === viewer || isSubscriber(c.agentId, viewer)))
   const payload = canSee ? parsePayload(c.payload) : null
+  // The coin of a call the agent made on its own schedule is no secret (the Oracle calls BTC, ETH and
+  // METIS every four hours); its direction is. A paid question's coin belongs to whoever asked it.
+  const assetPublic = canSee || (c.kind === 'direction' && !c.requestId)
+  const horizonSec = c.kind === 'direction' ? c.horizonSec : null
   return {
     id: c.id,
     chainCallId: c.chainCallId,
@@ -138,9 +147,12 @@ export function toView(
     payload,
     payloadJson: revealed ? c.payload : null,
     salt: revealed ? c.salt : null,
-    asset: canSee ? c.asset : null,
+    asset: assetPublic ? c.asset : null,
     side: canSee ? c.side : null,
     hidden: !canSee,
+    horizonSec,
+    opensAt: horizonSec ? c.issuedAt + horizonSec : null,
+    paid: Boolean(c.requestId),
   }
 }
 

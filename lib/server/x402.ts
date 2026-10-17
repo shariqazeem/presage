@@ -6,6 +6,7 @@ import { caip2, deployment, payTokens, publicClient, txUrl } from '../chain'
 import { getDb, schema } from '../db'
 import { HORIZONS, isHorizon, ORACLE_SYMBOLS, type Horizon } from '../oracle'
 import { parsePayload } from '../calls/payload'
+import { llmConfigured, models } from '../llm'
 
 /**
  * x402 for the Oracle. Metis has no public x402 facilitator, and m.USDC and m.USDT support neither
@@ -45,7 +46,7 @@ export type PaymentRequirements = {
   }
 }
 
-export async function quoteOracleCall(input: { asset: string; horizon: string; wallet?: string | null; resource: string }) {
+export async function quoteOracleCall(input: { asset: string; horizon: string; wallet?: string | null; myCall?: string | null; resource: string }) {
   if (!deployment) throw new HttpError(503, 'Presage is not deployed on this network yet')
   const agentId = oracleAgentId()
   if (agentId == null) throw new HttpError(503, 'The Oracle agent is not registered yet')
@@ -53,6 +54,7 @@ export async function quoteOracleCall(input: { asset: string; horizon: string; w
   if (!ORACLE_SYMBOLS.has(asset)) throw new HttpError(400, `The Oracle does not cover ${asset}`)
   if (!isHorizon(input.horizon)) throw new HttpError(400, 'horizon must be 1h, 4h or 24h')
   const horizon: Horizon = input.horizon
+  const myCall = input.myCall === 'up' || input.myCall === 'down' ? input.myCall : null
 
   const requestId = toHex(randomBytes(32))
   const secret = randomBytes(24).toString('base64url')
@@ -107,12 +109,15 @@ export async function quoteOracleCall(input: { asset: string; horizon: string; w
       wallet: input.wallet?.toLowerCase() ?? null,
       asset,
       horizon,
+      askerCall: myCall,
       status: 'quoted',
       createdAt: Math.floor(Date.now() / 1000),
     })
     .run()
 
-  return { x402Version: X402_VERSION, error: 'X-PAYMENT header is required', accepts, requestId, secret }
+  // Who will vote, so the asker sees the panel fill in rather than appear.
+  const voters = ['presage-quant-v1', ...(llmConfigured() ? models.oracle() : [])]
+  return { x402Version: X402_VERSION, error: 'X-PAYMENT header is required', accepts, requestId, secret, voters }
 }
 
 export class HttpError extends Error {
@@ -183,6 +188,9 @@ export function oracleAnswer(requestId: Hex, secret: string) {
     payTx: req.payTx,
     error: req.error,
     progress: req.status === 'answering' && req.progress ? (JSON.parse(req.progress) as unknown) : null,
+    myCall: req.askerCall ?? null,
+    createdAt: req.createdAt,
+    paidAt: req.paidAt,
   }
   if (req.status !== 'sealed' || req.callId == null) return { ...base, call: null }
   const call = db.select().from(schema.calls).where(eq(schema.calls.id, req.callId)).get()
@@ -210,7 +218,10 @@ export function oracleAnswer(requestId: Hex, secret: string) {
       issuedAt: p.issuedAt,
       flatBandBps: p.flatBandBps,
       why: p.why,
+      detail: p.detail ?? null,
       models: p.models,
+      exitPrice: call.resolution ? ((JSON.parse(call.resolution) as { exitPrice?: number }).exitPrice ?? null) : null,
+      revealedAt: call.revealedAt,
       receipt: `/calls/${call.id}`,
     },
   }

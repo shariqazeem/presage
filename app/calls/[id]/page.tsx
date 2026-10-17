@@ -5,11 +5,13 @@ import Link from 'next/link'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
 import { useReadContract } from 'wagmi'
-import { UnifiedNavbar } from '@/components/UnifiedNavbar'
-import { OutcomeBadge } from '@/components/agents'
 import { Sigil } from '@/components/Sigil'
 import { Share } from '@/components/Share'
-import { Button, Container, cx } from '@/components/ui'
+import { cx } from '@/components/ui'
+import { PingButton } from '@/components/Ping'
+import { IconCheck, IconLock, IconX } from '@/components/icons'
+import { CountdownRing, Eyebrow, Panel, ResultPill, outcomeWord } from '@/components/kit'
+import { VoteBoard } from '@/components/oracle'
 import { presageCallsAbi } from '@/lib/abi/PresageCalls'
 import { commitmentOf, type CallPayload } from '@/lib/calls/payload'
 import { DIRECTION_RULES, SETUP_RULES, resolveDirection, resolveSetup } from '@/lib/calls/rules'
@@ -17,7 +19,7 @@ import { deployment, addressUrl, txUrl } from '@/lib/chain'
 import { binanceCloseAt, binanceKlines } from '@/lib/market/binance'
 import type { Candle } from '@/lib/market/types'
 import type { CallView } from '@/lib/server/records'
-import { result, price, short, until, when } from '@/lib/client/format'
+import { result, price, short, until, when, whenShort } from '@/lib/client/format'
 
 const OUTCOME_CODES = ['', 'win', 'loss', 'flat', 'nofill']
 
@@ -33,82 +35,107 @@ export default function CallPage({ params }: { params: Promise<{ id: string }> }
     refetchInterval: 30_000,
   })
   const c = data?.call
-
   return (
-    <div className="min-h-screen bg-white">
-      <UnifiedNavbar currentPage="record" />
-      <Container className="py-8 max-w-6xl">
-        {isLoading && <div className="py-24 text-center text-gray-500">Loading the receipt…</div>}
-        {!isLoading && !c && (
-          <div className="py-24 text-center">
-            <div className="text-6xl mb-4">🧾</div>
-            <div className="text-2xl font-black">No call #{id}</div>
-          </div>
-        )}
-        {c && <Receipt c={c} />}
-      </Container>
+    <div className="max-w-[1180px] mx-auto px-5 md:px-8 pt-4 md:pt-10">
+      {isLoading && <div className="py-24 text-center text-gray-500">Opening the receipt…</div>}
+      {!isLoading && !c && (
+        <div className="py-24 text-center">
+          <div className="font-heading text-3xl font-black">No call #{id}</div>
+          <Link href="/record" className="inline-block mt-4 font-bold underline">
+            Every call
+          </Link>
+        </div>
+      )}
+      {c && <Receipt c={c} />}
     </div>
   )
+}
+
+const pctFrom = (a: number, b: number) => ((b - a) / a) * 100
+
+/** One line that says what happened, the way you would tell someone. */
+function story(c: CallView, p: CallPayload | null): string {
+  if (!p) return c.status === 'forfeited' ? 'It was never opened in time, so it counts as a loss.' : 'Sealed on Metis. What it says stays private until it opens.'
+  const res = c.resolution as { exitPrice?: number; fillPrice?: number } | null
+  if (p.rules === 'presage/direction-v1') {
+    const said = `Said ${p.direction} at $${price(p.priceAtIssue)}`
+    if (c.status !== 'revealed' || res?.exitPrice == null) return `${said}, ${p.confidence}% sure. Opens when the ${p.horizonSec / 3600} hours are up.`
+    const word = c.outcome === 'win' ? 'right' : c.outcome === 'loss' ? 'wrong' : `flat (it moved under ${p.flatBandBps / 100}%)`
+    return `${said} → closed at $${price(res.exitPrice)} → ${word}.`
+  }
+  const buy = `Buy at $${price(p.entry.price)}, stop $${price(p.stop)}, target $${price(p.target)}`
+  if (c.status !== 'revealed') return `${buy}.`
+  if (c.outcome === 'nofill') return `${buy} → the price never came back to the entry → no trade.`
+  return `${buy} → closed at $${price(res?.exitPrice ?? p.entry.price)} → ${c.outcome === 'win' ? 'won' : c.outcome === 'loss' ? 'stopped out' : 'closed flat'} (${result(c.kind, c.result ?? 0)}).`
 }
 
 function Receipt({ c }: { c: CallView }) {
   const p = c.payload
   const steps = [
-    { done: Boolean(c.sealTx), icon: '🔒', title: 'Sealed on Metis', when: c.sealedAt, tx: c.sealTx },
-    { done: c.status === 'revealed' || c.status === 'forfeited', icon: c.status === 'forfeited' ? '🚫' : '📏', title: c.status === 'forfeited' ? 'Forfeited' : 'Scored by price', when: c.revealedAt, tx: null },
-    { done: c.status === 'revealed', icon: '📖', title: 'Revealed on Metis', when: c.revealedAt, tx: c.revealTx },
+    { done: Boolean(c.sealTx), title: 'Sealed on Metis', when: c.sealedAt, tx: c.sealTx, bad: false },
+    { done: c.status === 'revealed' || c.status === 'forfeited', title: c.status === 'forfeited' ? 'Forfeited' : 'Scored by price', when: c.revealedAt ?? (c.status === 'forfeited' ? c.revealBy : null), tx: null, bad: c.status === 'forfeited' },
+    { done: c.status === 'revealed', title: 'Opened on Metis', when: c.revealedAt, tx: c.revealTx, bad: false },
   ]
+  const headline = p ? (p.rules === 'presage/setup-v1' ? `${p.asset.symbol} long` : `${p.asset.symbol} ${p.direction}`) : c.asset ? `${c.asset} · sealed` : 'A sealed call'
+  const tone = c.outcome === 'win' ? 'text-green-600' : c.outcome === 'loss' || c.status === 'forfeited' ? 'text-red-600' : 'text-gray-500'
   return (
     <>
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-        <Link href={`/agents/${c.agentSlug}`} className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-black mb-3">
-          <Sigil id={c.agentId} slug={c.agentSlug === 'oracle' || c.agentSlug === 'st-quant' ? c.agentSlug : undefined} size={24} className="rounded-md" />
-          <span className="font-bold">{c.agentName}</span> · call #{c.chainCallId}
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}>
+        <Link href={`/agents/${c.agentSlug}`} className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-black">
+          <Sigil id={c.agentId} slug={c.agentSlug === 'oracle' || c.agentSlug === 'st-quant' ? c.agentSlug : undefined} size={26} className="rounded-lg" />
+          <span className="font-bold text-black">{c.agentName}</span>
+          <span className="text-gray-400">· call #{c.chainCallId}</span>
         </Link>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <h1 className="text-4xl sm:text-5xl font-black text-black tracking-tight">{p ? (p.rules === 'presage/setup-v1' ? `${p.asset.symbol} long` : `${p.asset.symbol} ${p.direction}`) : 'A sealed call'}</h1>
-          <div className="flex items-center gap-3">
-            {c.result != null && <span className={cx('text-3xl font-black tabular-nums', c.result > 0 ? 'text-green-600' : c.result < 0 ? 'text-red-600' : 'text-black')}>{result(c.kind, c.result)}</span>}
-            <OutcomeBadge c={c} />
+        <div className="flex items-start justify-between gap-4 mt-3">
+          <h1 className="font-heading text-[36px] md:text-[56px] leading-none font-black tracking-tight text-black">{headline}</h1>
+          <div className="text-right shrink-0">
+            <ResultPill kind={c.kind} status={c.status} outcome={c.outcome} className="text-[12px] px-3 py-1.5" />
+            {c.result != null && c.outcome !== 'nofill' && <div className={cx('font-heading text-2xl md:text-3xl font-black tabular-nums mt-1.5', tone)}>{result(c.kind, c.result)}</div>}
           </div>
         </div>
-        <Share
-          className="mt-4"
-          path={`/calls/${c.id}`}
-          text={
-            p
-              ? `${c.agentName} called ${p.rules === 'presage/setup-v1' ? `${p.asset.symbol} long` : `${p.asset.symbol} ${p.direction}`} on Metis before it moved. ${c.status === 'revealed' ? `${(c.outcome ?? '').toUpperCase()} ${c.result != null ? result(c.kind, c.result) : ''}.` : ''} Sealed first, scored by price, nothing edited.`
-              : `${c.agentName} sealed a call on Metis. It resolves in public, win or lose.`
-          }
-        />
+        <p className="text-[15px] md:text-lg text-gray-700 mt-3 max-w-3xl">{story(c, p)}</p>
+        <div className="mt-4 flex items-center gap-2">
+          <Share
+            path={`/calls/${c.id}`}
+            text={
+              p
+                ? `${c.agentName} called ${headline} on Metis before it moved. ${c.status === 'revealed' ? `It came out ${outcomeWord(c.kind, c.status, c.outcome).label.toLowerCase()}.` : ''} Sealed first, scored by price, nothing edited.`
+                : `${c.agentName} sealed a call on Metis. It opens in public, right or wrong.`
+            }
+          />
+          {c.status === 'sealed' && <PingButton target="call" id={c.id} className="h-[38px] text-sm" />}
+        </div>
       </motion.div>
 
-      <div className="grid md:grid-cols-3 gap-4 mb-8">
-        {steps.map((s, i) => (
-          <motion.div key={s.title} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }} className={cx('rounded-2xl p-5 border-2', s.done ? (s.icon === '🚫' ? 'bg-red-50 border-red-300' : 'bg-green-50 border-green-300') : 'bg-gray-50 border-gray-200')}>
-            <div className="text-3xl mb-2">{s.done ? s.icon : '⏳'}</div>
-            <div className="font-black text-black">
-              {i + 1}. {s.title}
-            </div>
-            <div className="text-sm text-gray-600">{s.done ? when(s.when) : i === 0 ? '…' : `due by ${when(c.revealBy)}`}</div>
-            {s.tx && (
-              <a href={txUrl(s.tx)} target="_blank" rel="noreferrer" className="text-xs font-mono text-blue-700 underline">
-                {short(s.tx, 8)}
+      <div className="grid grid-cols-3 gap-2 md:gap-4 mt-6">
+        {steps.map((st, i) => (
+          <div key={st.title} className={cx('rounded-2xl md:rounded-3xl p-3 md:p-5 border-2', st.done ? (st.bad ? 'border-red-200 bg-red-50' : 'border-green-100 bg-green-50/60') : 'border-gray-100 bg-white')}>
+            <span className={cx('w-6 h-6 md:w-7 md:h-7 rounded-full grid place-items-center', st.done ? (st.bad ? 'bg-red-600 text-white' : 'bg-green-600 text-white') : 'border-2 border-gray-200 text-gray-300')}>
+              {st.done ? st.bad ? <IconX size={12} weight={3} /> : <IconCheck size={12} weight={3.2} /> : <span className="text-[10px] font-black">{i + 1}</span>}
+            </span>
+            <div className="font-bold text-[13px] md:text-[15px] text-black mt-2 leading-tight">{st.title}</div>
+            <div className="text-[11px] md:text-[13px] text-gray-500 mt-0.5">{st.done ? whenShort(st.when) : i === 0 ? '…' : `by ${whenShort(c.revealBy)}`}</div>
+            {st.tx && (
+              <a href={txUrl(st.tx)} target="_blank" rel="noreferrer" className="text-[11px] font-mono text-gray-600 underline">
+                <span className="md:hidden">tx ↗</span>
+                <span className="hidden md:inline">{short(st.tx, 6)}</span>
               </a>
             )}
-          </motion.div>
+          </div>
         ))}
       </div>
 
-      {!p ? (
-        <SealedCard c={c} />
-      ) : c.status === 'revealed' ? (
-        <Reveal sealed={<SealedCard c={c} resolved />}>
+      <div className="mt-6">
+        {!p ? (
+          <SealedCard c={c} />
+        ) : c.status === 'revealed' ? (
+          <Reveal sealed={<SealedCard c={c} resolved />}>
+            <CallBody c={c} p={p} />
+          </Reveal>
+        ) : (
           <CallBody c={c} p={p} />
-        </Reveal>
-      ) : (
-        <CallBody c={c} p={p} />
-      )}
+        )}
+      </div>
 
       {c.status === 'revealed' && p && c.payloadJson && c.salt && <Verify c={c} p={p} />}
 
@@ -144,84 +171,98 @@ function Reveal({ sealed, children }: { sealed: React.ReactNode; children: React
 }
 
 function SealedCard({ c, resolved = false }: { c: CallView; resolved?: boolean }) {
+  const opensAt = c.opensAt
   return (
-    <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-8 border-2 border-purple-200 mb-8 h-full">
-      <motion.div animate={{ rotate: resolved ? [0, -8, 8, 0] : 0 }} transition={{ duration: 0.6 }} className="text-5xl mb-3 inline-block">
-        🔒
-      </motion.div>
-      <h2 className="text-2xl font-black text-black mb-2">{resolved ? 'This call was sealed' : 'This call is sealed'}</h2>
-      <p className="text-gray-700 mb-4">
-        {resolved
-          ? `Its fingerprint was written to Metis at ${when(c.sealedAt)}, before the outcome. The reveal had to hash to exactly this.`
-          : `Its contents stay secret until it is scored, so backers get it first and nobody can copy it for free. What everyone can see is its fingerprint, written to Metis at ${when(c.sealedAt)}. When the call is revealed, the reveal has to hash to exactly this, so it cannot be changed. It must be revealed within ${until(c.revealBy)}; after that anyone can forfeit it and it counts as a loss.`}
-      </p>
-      <div className="bg-white rounded-xl p-4 border border-purple-200 font-mono text-xs break-all">{c.commitment}</div>
-    </div>
+    <Panel tone="grad" className="p-6 md:p-8 h-full" as="div">
+      <div className="flex items-start gap-5">
+        <div className="flex-1 min-w-0">
+          <motion.span animate={{ rotate: resolved ? [0, -10, 10, 0] : 0 }} transition={{ duration: 0.6 }} className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-700 grid place-items-center">
+            <IconLock size={22} />
+          </motion.span>
+          <h2 className="font-heading text-2xl md:text-3xl font-black text-black mt-4">{resolved ? 'This call was sealed' : 'This call is sealed'}</h2>
+          <p className="text-gray-700 mt-2 max-w-2xl">
+            {resolved
+              ? `Its fingerprint went on Metis at ${when(c.sealedAt)}, before the outcome. Opening it had to match exactly this.`
+              : `What it says stays private until it opens${c.paid ? ', so the person who asked sees it first' : ', so the agent’s backers see it first'} and nobody can copy it for free. Its fingerprint went on Metis at ${when(c.sealedAt)}, so it can’t be changed. If it isn’t opened by ${when(c.revealBy)}, anyone can forfeit it and it counts as a loss.`}
+          </p>
+        </div>
+        {!resolved && opensAt && (
+          <div className="text-center shrink-0 hidden sm:block">
+            <CountdownRing from={c.sealedAt ?? c.issuedAt} to={opensAt} size={84} />
+            <div className="text-[12px] font-bold text-gray-500 mt-1.5">opens {when(opensAt)}</div>
+          </div>
+        )}
+      </div>
+      <div className="mt-5 rounded-2xl bg-gray-50 px-4 py-3 font-mono text-[11.5px] text-gray-600 break-all">{c.commitment}</div>
+    </Panel>
   )
 }
 
 function CallBody({ c, p }: { c: CallView; p: CallPayload }) {
   const res = c.resolution as { reason?: string; fillPrice?: number; exitPrice?: number; filledAt?: number; exitAt?: number } | null
+  const [more, setMore] = useState(false)
   return (
-    <div className="grid md:grid-cols-2 gap-6 mb-8">
-      <div className="bg-white rounded-2xl p-6 border-2 border-gray-200 shadow-lg">
-        <h2 className="text-xl font-black text-black mb-4">The call</h2>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+      <Panel className="p-5 md:p-6">
+        <Eyebrow>The call</Eyebrow>
         {p.rules === 'presage/setup-v1' ? (
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            <Box label={p.entry.type === 'market' ? 'Entry (market)' : 'Entry (limit)'} value={price(p.entry.price)} />
-            <Box label="Stop" value={price(p.stop)} cls="text-red-600" />
-            <Box label="Target" value={price(p.target)} cls="text-green-600" />
+          <div className="grid grid-cols-3 gap-2 mt-3">
+            <Box label={p.entry.type === 'market' ? 'Buy at' : 'Buy at (limit)'} value={`$${price(p.entry.price)}`} />
+            <Box label={`Stop · −${Math.abs(pctFrom(p.entry.price, p.stop)).toFixed(1)}%`} value={`$${price(p.stop)}`} cls="text-red-600" />
+            <Box label={`Target · +${pctFrom(p.entry.price, p.target).toFixed(1)}%`} value={`$${price(p.target)}`} cls="text-green-600" />
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            <Box label="Direction" value={p.direction === 'up' ? '📈 Up' : '📉 Down'} />
-            <Box label="Confidence" value={`${p.confidence}%`} />
-            <Box label="Horizon" value={`${p.horizonSec / 3600}h`} />
+          <div className="grid grid-cols-3 gap-2 mt-3">
+            <Box label="Direction" value={p.direction === 'up' ? '↑ Up' : '↓ Down'} cls={p.direction === 'up' ? 'text-green-600' : 'text-red-600'} />
+            <Box label="How sure" value={`${p.confidence}%`} />
+            <Box label="Over" value={`${p.horizonSec / 3600} hours`} />
           </div>
         )}
-        <div className="text-sm text-gray-600 mb-2">
-          {p.asset.source === 'binance' ? `Binance ${p.asset.market}` : `${p.asset.network} pool ${short(p.asset.pool)}`} · price at issue {price(p.priceAtIssue)}
+        <div className="text-[12.5px] text-gray-500 mt-3">
+          {p.asset.source === 'binance' ? `Binance ${p.asset.market}` : `${p.asset.network} pool ${short(p.asset.pool)}`} · ${price(p.priceAtIssue)} when it was made
           {p.rules === 'presage/setup-v1' && p.conviction ? ` · conviction ${p.conviction}/5` : ''}
         </div>
-        <div className="bg-gray-50 rounded-xl p-4">
-          <div className="text-sm font-semibold text-gray-600 mb-2">Why</div>
+        <div className="mt-4 rounded-2xl bg-gray-50 p-4">
+          <div className="text-[13px] font-bold text-black">Why</div>
           {p.rules === 'presage/setup-v1' ? (
-            <ul className="text-sm text-gray-700 space-y-1">
-              {p.why.map(w => (
-                <li key={w}>• {w}</li>
+            <ul className="text-[13px] text-gray-700 space-y-1 mt-1.5">
+              {(more ? p.why : p.why.slice(0, 3)).map(w => (
+                <li key={w}>· {w}</li>
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-gray-700">{p.why}</p>
+            <>
+              <p className="text-[14px] text-gray-700 mt-1">{p.why}</p>
+              {p.detail && more && <p className="text-[12.5px] text-gray-500 mt-2">{p.detail}</p>}
+            </>
+          )}
+          {((p.rules === 'presage/setup-v1' && p.why.length > 3) || (p.rules === 'presage/direction-v1' && p.detail)) && (
+            <button onClick={() => setMore(m => !m)} className="text-[12px] font-bold text-gray-500 hover:text-black mt-2">
+              {more ? 'less' : 'the details'}
+            </button>
           )}
         </div>
         {p.rules === 'presage/direction-v1' && (
-          <div className="mt-4 space-y-2">
-            {p.models.map(m => (
-              <div key={m.model} className="flex items-center justify-between bg-gray-50 rounded-xl p-3 text-sm">
-                <span className="font-bold">{m.model.split('/').pop()}</span>
-                <span className={cx('px-2 py-0.5 rounded-full text-xs font-bold', m.direction === 'up' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
-                  {m.direction.toUpperCase()} {m.confidence}%
-                </span>
-              </div>
-            ))}
+          <div className="mt-4">
+            <VoteBoard voters={p.models.map(m => m.model)} votes={p.models} final />
+            {p.asker && <div className="mt-3 text-[13px] text-gray-600">The person who asked called <b className={p.asker.direction === 'up' ? 'text-green-600' : 'text-red-600'}>{p.asker.direction}</b> first, sealed in the same fingerprint.</div>}
           </div>
         )}
         {p.rules === 'presage/setup-v1' && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={`/api/charts/${c.id}`} alt="" className="mt-4 rounded-xl border border-gray-200 w-full" onError={e => ((e.target as HTMLImageElement).style.display = 'none')} />
+          <img src={`/api/charts/${c.id}`} alt="" className="mt-4 rounded-2xl border border-gray-100 w-full" onError={e => ((e.target as HTMLImageElement).style.display = 'none')} />
         )}
-      </div>
+      </Panel>
 
-      <div className="space-y-6">
+      <div className="space-y-4 md:space-y-6">
         <PriceChart p={p} c={c} />
         {res?.reason && (
-          <div className={cx('rounded-2xl p-5 border-2', c.outcome === 'win' ? 'bg-green-50 border-green-300' : c.outcome === 'loss' ? 'bg-red-50 border-red-300' : 'bg-gray-50 border-gray-300')}>
-            <div className="font-black text-black mb-1">How it resolved</div>
-            <div className="text-sm text-gray-700">{res.reason}</div>
+          <div className={cx('rounded-3xl p-5 border-2', c.outcome === 'win' ? 'bg-green-50 border-green-100' : c.outcome === 'loss' ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100')}>
+            <div className="font-heading font-black text-black">How it came out</div>
+            <div className="text-sm text-gray-700 mt-1">{res.reason}</div>
             <div className="text-xs text-gray-500 mt-2">
-              {res.filledAt ? `Filled ${when(res.filledAt)} at ${price(res.fillPrice!)}. ` : ''}
-              {res.exitAt ? `Closed ${when(res.exitAt)} at ${price(res.exitPrice!)}.` : ''}
+              {res.filledAt ? `Filled ${when(res.filledAt)} at $${price(res.fillPrice!)}. ` : ''}
+              {res.exitAt ? `Closed ${when(res.exitAt)} at $${price(res.exitPrice!)}.` : ''}
             </div>
           </div>
         )}
@@ -232,9 +273,9 @@ function CallBody({ c, p }: { c: CallView; p: CallPayload }) {
 
 function Box({ label, value, cls = 'text-black' }: { label: string; value: string; cls?: string }) {
   return (
-    <div className="bg-gray-50 rounded-xl p-3 text-center">
-      <div className="text-xs text-gray-500">{label}</div>
-      <div className={cx('text-lg font-black', cls)}>{value}</div>
+    <div className="bg-gray-50 rounded-2xl px-2 py-3 text-center">
+      <div className="text-[11px] font-semibold text-gray-500">{label}</div>
+      <div className={cx('font-heading text-lg md:text-xl font-black tabular-nums mt-0.5', cls)}>{value}</div>
     </div>
   )
 }
@@ -341,15 +382,15 @@ function Verify({ c, p }: { c: CallView; p: CallPayload }) {
 
   const rules = p.rules === 'presage/setup-v1' ? SETUP_RULES : DIRECTION_RULES
   return (
-    <div className="bg-black text-white rounded-2xl p-8 shadow-2xl">
+    <div className="bg-gray-950 text-white rounded-3xl p-6 md:p-8 mt-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-3xl font-black mb-1">Check it yourself</h2>
+          <h2 className="font-heading text-2xl md:text-3xl font-black mb-1">Check it yourself</h2>
           <p className="text-gray-400">Your browser reads the chain and the public price feed. Presage’s servers are not involved.</p>
         </div>
-        <Button variant="secondary" size="lg" onClick={run}>
+        <button onClick={run} className="h-12 px-6 rounded-2xl bg-white text-black font-bold hover:bg-gray-200 transition-colors shrink-0">
           Run the checks
-        </Button>
+        </button>
       </div>
       <div className="grid md:grid-cols-2 gap-4 mb-6">
         <CheckCard title="1. The call was not changed" check={hashCheck} />

@@ -1,149 +1,136 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import toast from 'react-hot-toast'
+import { useQuery } from '@tanstack/react-query'
 import { erc20Abi, formatUnits, type Address, type Hex } from 'viem'
 import { useAccount, useBalance, usePublicClient, useWriteContract } from 'wagmi'
-import { UnifiedNavbar } from '@/components/UnifiedNavbar'
-import { CoinSelector } from '@/components/CoinSelector'
-import { WalletButton } from '@/components/WalletButton'
-import { Welcome } from '@/components/Welcome'
+import { useConnectModal } from '@rainbow-me/rainbowkit'
 import { Sigil } from '@/components/Sigil'
-import { StatusChip } from '@/components/floor'
-import { Button, Container, FormDots, Pill, Stat, Streak, cx } from '@/components/ui'
-import { FEATURED_COINS, TOTAL_SUPPORTED_COINS } from '@/lib/crypto-database'
+import { PingButton } from '@/components/Ping'
+import { MyCalls } from '@/components/MyCalls'
+import { Share } from '@/components/Share'
+import { IconBack, IconChevron, IconLock, IconRefund, IconShare } from '@/components/icons'
+import { ActionButton, At, CountdownRing, Eyebrow, Panel, PanelHead, Sheet, StatusLine } from '@/components/kit'
+import { Change, CoinPicker, MyCall, Segmented, Sparkline, VoteBoard, stageLine, type Coin } from '@/components/oracle'
+import { FormDots, cx } from '@/components/ui'
 import { presageMarketAbi } from '@/lib/abi/PresageMarket'
-import { deployment, payTokens, txUrl } from '@/lib/chain'
+import { deployment, payTokens } from '@/lib/chain'
 import { HORIZONS, type Horizon } from '@/lib/oracle'
-import { useAgent, useTelegramLink } from '@/lib/client/hooks'
-import { ago, bps, OUTCOME_STYLE, pct, price, until, when } from '@/lib/client/format'
+import { useAgent } from '@/lib/client/hooks'
+import { saveQuestion, useMyQuestions, type OracleAnswer, type Progress } from '@/lib/client/mine'
+import { pct, price as fmtPrice } from '@/lib/client/format'
 
 type Accept = { scheme: string; network: string; maxAmountRequired: string; payTo: Address; asset: Address; extra: { agentId: number; requestId: Hex; symbol: string; decimals: number; native: boolean } }
-type Vote = { model: string; direction: 'up' | 'down'; confidence: number; why: string }
-type Progress = { stage: 'reading' | 'voting' | 'sealing'; votes: Vote[]; voters: string[] }
-type Answer = {
-  requestId: Hex
-  status: string
-  asset: string
-  horizon: string
-  payTx: string | null
-  error: string | null
-  progress?: Progress | null
-  call: null | {
-    id: number
-    chainCallId: number | null
-    status: string
-    sealTx: string | null
-    sealTxUrl: string | null
-    sealedAt: number | null
-    revealBy: number
-    outcome: string | null
-    result: number | null
-    asset: string
-    market: string | null
-    direction: 'up' | 'down'
-    confidence: number
-    horizonSec: number
-    priceAtIssue: number
-    issuedAt: number
-    flatBandBps: number
-    why: string
-    models: { model: string; direction: 'up' | 'down'; confidence: number }[]
-    receipt: string
-  }
-}
-type Stage = 'idle' | 'quoting' | 'approving' | 'paying' | 'sealing' | 'done'
-type Saved = { requestId: Hex; secret: string; asset: string; horizon: string; at: number }
+type Phase = 'ask' | 'quote' | 'approve' | 'sign' | 'confirm' | 'vote' | 'done'
 
-const STAGES: { key: Stage; icon: string; label: string }[] = [
-  { key: 'quoting', icon: '🧾', label: 'Getting the x402 quote' },
-  { key: 'paying', icon: '💸', label: 'Paying into escrow' },
-  { key: 'sealing', icon: '🗳️', label: 'The vote' },
-  { key: 'done', icon: '🔒', label: 'Sealed on Metis' },
+const PHASE_LINE: Record<Phase, string> = {
+  ask: '',
+  quote: 'Getting the price',
+  approve: 'Approve the token once',
+  sign: 'Confirm in your wallet',
+  confirm: 'Paying into escrow',
+  vote: '',
+  done: '',
+}
+
+const HORIZON_OPTIONS: { value: Horizon; label: string }[] = [
+  { value: '1h', label: '1 hour' },
+  { value: '4h', label: '4 hours' },
+  { value: '24h', label: '1 day' },
 ]
 
-const historyKey = (a?: string) => `presage_oracle_history_${a?.toLowerCase() ?? 'anon'}`
-const modelName = (m: string) => (m === 'presage-quant-v1' ? 'presage-quant-v1 (deterministic)' : m.split('/').pop() ?? m)
+const tokenLabel = (s: string) => s.replace(/^m\./, '')
 
 export default function OraclePage() {
   const { address, isConnected } = useAccount()
+  const { openConnectModal } = useConnectModal()
   const publicClient = usePublicClient()
   const { writeContractAsync } = useWriteContract()
   const { data: oracle } = useAgent('oracle')
-  const openTelegram = useTelegramLink()
-  const [selectedCoin, setSelectedCoin] = useState('BTC')
-  const [horizon, setHorizon] = useState<Horizon>('4h')
-  const [token, setToken] = useState(payTokens[0].symbol)
-  const [stage, setStage] = useState<Stage>('idle')
-  const [live, setLive] = useState<Progress | null>(null)
-  const [answer, setAnswer] = useState<Answer | null>(null)
-  const [history, setHistory] = useState<(Saved & { answer?: Answer })[]>([])
-  const [showScoring, setShowScoring] = useState(false)
-  const [quote, setQuote] = useState<string | null>(null)
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const { data: market } = useQuery({ queryKey: ['tickers'], queryFn: async () => (await (await fetch('/api/market/tickers')).json()) as { coins: Coin[] }, refetchInterval: 30_000 })
+  const coins = market?.coins ?? []
 
-  const payToken = payTokens.find(t => t.symbol === token) ?? payTokens[0]
-  const { data: balance } = useBalance({ address, token: payToken.native ? undefined : payToken.address, query: { enabled: Boolean(address) } })
-  const busy = stage !== 'idle' && stage !== 'done'
-  const record = oracle?.agent.record
+  const [coin, setCoin] = useState('BTC')
+  const [horizon, setHorizon] = useState<Horizon>('4h')
+  const [myCall, setMyCall] = useState<'up' | 'down' | null>(null)
+  const [token, setToken] = useState(payTokens[0].symbol)
+  const [phase, setPhase] = useState<Phase>('ask')
+  const [voters, setVoters] = useState<string[]>([])
+  const [live, setLive] = useState<Progress | null>(null)
+  const [answer, setAnswer] = useState<OracleAnswer | null>(null)
+  const [howOpen, setHowOpen] = useState(false)
+  const poll = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
-    let saved: Saved[] = []
     try {
-      saved = JSON.parse(localStorage.getItem(historyKey(address)) ?? '[]')
+      const c = localStorage.getItem('presage_oracle_coin')
+      if (c) setCoin(c)
     } catch {}
-    setHistory(saved)
-    Promise.all(
-      saved.slice(0, 12).map(async s => {
-        try {
-          const r = await fetch(`/api/oracle/call/${s.requestId}?secret=${encodeURIComponent(s.secret)}`)
-          return { ...s, answer: r.ok ? ((await r.json()) as Answer) : undefined }
-        } catch {
-          return s
-        }
-      }),
-    ).then(setHistory)
-  }, [address, answer])
-
-  useEffect(() => () => stopPolling(), [])
-  const stopPolling = () => {
-    if (pollRef.current) clearInterval(pollRef.current)
-    pollRef.current = null
+    return () => stop()
+  }, [])
+  const pick = (s: string) => {
+    setCoin(s)
+    try {
+      localStorage.setItem('presage_oracle_coin', s)
+    } catch {}
   }
 
-  const save = (s: Saved) => {
-    try {
-      const prev: Saved[] = JSON.parse(localStorage.getItem(historyKey(address)) ?? '[]')
-      localStorage.setItem(historyKey(address), JSON.stringify([s, ...prev].slice(0, 50)))
-    } catch {}
+  const { data: spark } = useQuery({ queryKey: ['spark', coin], queryFn: async () => (await (await fetch(`/api/market/spark/${coin}`)).json()) as { closes: number[] }, refetchInterval: 60_000 })
+  const { data: prices } = useQuery({
+    queryKey: ['oracle-price'],
+    queryFn: async () => (await (await fetch('/api/oracle/price')).json()) as { prices: { symbol: string; amount: string | null; decimals: number; native: boolean }[] },
+    refetchInterval: 60_000,
+  })
+  const priceOf = (symbol: string) => prices?.prices.find(p => p.symbol === symbol)
+  const payable = (symbol: string) => !prices || prices.prices.length === 0 || priceOf(symbol)?.amount != null
+  // If the chosen token can't be priced right now, move to one that can before anyone presses Ask.
+  useEffect(() => {
+    if (prices?.prices.length && !payable(token)) {
+      const ok = payTokens.find(t => payable(t.symbol))
+      if (ok) setToken(ok.symbol)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prices, token])
+  const selected = coins.find(c => c.symbol === coin)
+  const payToken = payTokens.find(t => t.symbol === token) ?? payTokens[0]
+  const { data: balance } = useBalance({ address, token: payToken.native ? undefined : payToken.address, query: { enabled: Boolean(address) } })
+  const { items } = useMyQuestions(address)
+  const record = oracle?.agent.record
+  const busy = phase !== 'ask' && phase !== 'done'
+
+  const stop = () => {
+    if (poll.current) clearInterval(poll.current)
+    poll.current = null
   }
 
   const ask = async () => {
-    if (!isConnected || !address || !publicClient) return toast.error('Connect a Metis wallet to pay for a call')
+    if (!isConnected || !address) return openConnectModal?.()
+    if (!publicClient) return
     setAnswer(null)
     setLive(null)
+    setVoters([])
+    const asking = { coin, horizon, myCall }
     try {
-      setStage('quoting')
-      const r = await fetch('/api/oracle/call', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ asset: selectedCoin, horizon, wallet: address }) })
+      setPhase('quote')
+      const r = await fetch('/api/oracle/call', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ asset: asking.coin, horizon: asking.horizon, wallet: address, myCall: asking.myCall }) })
       const q = await r.json()
-      if (r.status !== 402) throw new Error(q.error ?? 'The Oracle did not return a quote')
+      if (r.status !== 402) throw new Error(q.error ?? 'The Oracle did not return a price')
+      setVoters(q.voters ?? [])
       const req: Accept | undefined = q.accepts.find((a: Accept) => a.extra.symbol === payToken.symbol)
-      if (!req) throw new Error(`${payToken.symbol} is not accepted right now; try another token`)
+      if (!req) throw new Error(`${tokenLabel(payToken.symbol)} isn’t accepted right now. Try another token.`)
       const amount = BigInt(req.maxAmountRequired)
-      setQuote(`${formatUnits(amount, req.extra.decimals)} ${req.extra.symbol}`)
-
       if (!req.extra.native) {
         const allowance = await publicClient.readContract({ address: req.asset, abi: erc20Abi, functionName: 'allowance', args: [address, req.payTo] })
         if (allowance < amount) {
-          setStage('approving')
-          toast('Approve once for 20 calls, so the next ones need a single signature', { icon: '🔓' })
+          setPhase('approve')
           const h = await writeContractAsync({ address: req.asset, abi: erc20Abi, functionName: 'approve', args: [req.payTo, amount * 20n] })
           await publicClient.waitForTransactionReceipt({ hash: h })
         }
       }
-      setStage('paying')
+      setPhase('sign')
       const maxAmount = req.extra.native ? (amount * 101n) / 100n : amount
       const txHash = await writeContractAsync({
         address: req.payTo,
@@ -152,476 +139,379 @@ export default function OraclePage() {
         args: [BigInt(req.extra.agentId), req.extra.requestId, req.asset, maxAmount],
         value: req.extra.native ? maxAmount : 0n,
       })
+      setPhase('confirm')
       await publicClient.waitForTransactionReceipt({ hash: txHash })
-      save({ requestId: req.extra.requestId, secret: q.secret, asset: selectedCoin, horizon, at: Date.now() })
+      saveQuestion(address, { requestId: req.extra.requestId, secret: q.secret, asset: asking.coin, horizon: asking.horizon, at: Date.now(), myCall: asking.myCall })
 
-      // Watch the vote land while the paid request is answered.
-      setStage('sealing')
-      setLive({ stage: 'reading', votes: [], voters: [] })
+      setPhase('vote')
+      setLive({ stage: 'reading', votes: [], voters: q.voters ?? [] })
       const url = `/api/oracle/call/${req.extra.requestId}?secret=${encodeURIComponent(q.secret)}`
-      pollRef.current = setInterval(async () => {
+      poll.current = setInterval(async () => {
         try {
-          const a = (await (await fetch(url)).json()) as Answer
+          const a = (await (await fetch(url)).json()) as OracleAnswer
           if (a.progress) setLive(a.progress)
         } catch {}
-      }, 1000)
+      }, 900)
 
       const header = btoa(JSON.stringify({ x402Version: 1, scheme: req.scheme, network: req.network, payload: { requestId: req.extra.requestId, txHash } }))
       let res = await fetch('/api/oracle/call', { method: 'POST', headers: { 'content-type': 'application/json', 'X-PAYMENT': header }, body: JSON.stringify({ secret: q.secret }) })
-      let ans = (await res.json()) as Answer
-      for (let i = 0; i < 30 && res.status === 202; i++) {
+      let ans = (await res.json()) as OracleAnswer
+      for (let i = 0; i < 40 && res.status === 202; i++) {
         await new Promise(r => setTimeout(r, 2000))
         res = await fetch(url)
         ans = await res.json()
         if (ans.call || ans.status === 'failed') break
       }
-      stopPolling()
-      if (!ans.call) throw new Error(ans.error ?? 'The call was not sealed. If it is not sealed within 15 minutes, your payment comes back from escrow.')
+      stop()
+      if (!ans.call) throw new Error(ans.error ? `The Oracle could not answer: ${ans.error}. Your $0.05 comes back from escrow.` : 'It wasn’t sealed in time. Your $0.05 comes back from escrow after 15 minutes.')
       setAnswer(ans)
-      setStage('done')
-      toast.success(`${selectedCoin} call sealed on Metis`)
+      setPhase('done')
+      setMyCall(null)
     } catch (e) {
-      stopPolling()
-      setStage('idle')
+      stop()
+      setPhase('ask')
       const msg = e instanceof Error ? e.message.split('\n')[0] : 'Something went wrong'
-      toast.error(msg.includes('User rejected') ? 'Payment cancelled' : msg)
+      toast.error(/User rejected|User denied/i.test(msg) ? 'Cancelled. Nothing was paid.' : msg)
     }
   }
 
-  // Undelivered after 15 minutes, or forfeited: the payer takes the money back from escrow themselves.
-  const refund = async (requestId: Hex) => {
-    if (!publicClient || !deployment) return
-    try {
-      const r = await publicClient.readContract({ address: deployment.market, abi: presageMarketAbi, functionName: 'getRequest', args: [requestId] })
-      if (r.state === 1) {
-        const h = await writeContractAsync({ address: deployment.market, abi: presageMarketAbi, functionName: 'refundUndelivered', args: [requestId] })
-        await publicClient.waitForTransactionReceipt({ hash: h })
-      } else if (r.state === 2) {
-        const h = await writeContractAsync({ address: deployment.market, abi: presageMarketAbi, functionName: 'settle', args: [requestId] })
-        await publicClient.waitForTransactionReceipt({ hash: h })
-      }
-      const h2 = await writeContractAsync({ address: deployment.market, abi: presageMarketAbi, functionName: 'claim', args: [r.token] })
-      await publicClient.waitForTransactionReceipt({ hash: h2 })
-      toast.success('Refunded to your wallet')
-      setAnswer(a => (a ? { ...a } : a))
-    } catch (e) {
-      const msg = e instanceof Error ? e.message.split('\n')[0] : 'Refund failed'
-      toast.error(msg.includes('DeliveryWindowOpen') ? 'Wait 15 minutes after paying before refunding' : msg.includes('User rejected') ? 'Cancelled' : msg)
-    }
-  }
+  const mine = useMemo(() => items.filter(i => i.saved.requestId !== answer?.requestId), [items, answer])
+  const opensAt = Math.floor(Date.now() / 1000) + HORIZONS[horizon].seconds
+  const showVote = phase !== 'ask'
 
-  const c = answer?.call
-  const ups = c?.models.filter(m => m.direction === 'up').length ?? 0
-  const agreement = c ? Math.round(((c.direction === 'up' ? ups : c.models.length - ups) / c.models.length) * 100) : 0
-  const stageIndex = STAGES.findIndex(s => s.key === stage || (stage === 'approving' && s.key === 'paying'))
+  const header = (
+    <div className="flex items-center gap-3">
+      <Sigil id={oracle?.agent.id ?? 0} slug="oracle" size={44} className="rounded-2xl shadow-lg shadow-pink-500/10 shrink-0" />
+      <div className="flex-1 min-w-0">
+        <div className="font-heading text-lg md:text-xl font-black leading-tight text-black">Market Oracle</div>
+        <div className="text-[12px] md:text-[13px] text-gray-500 truncate">
+          {record?.resolved ? (
+            <>
+              {record.resolved} scored · right {pct(record.hitRate, 0)}
+              {record.streak >= 2 && <span className="text-green-600 font-bold"> · {record.streak} in a row</span>}
+            </>
+          ) : (
+            'Four AIs vote · sealed on Metis'
+          )}
+        </div>
+      </div>
+      <button onClick={() => setHowOpen(true)} className="text-[12px] font-bold text-gray-600 border-2 border-gray-100 rounded-full px-3 py-1.5 hover:border-gray-300 shrink-0">
+        How it works
+      </button>
+    </div>
+  )
+
+  const askPanel = (
+    <div>
+      <h1 className="font-heading text-[30px] md:text-[40px] leading-[1.05] font-black tracking-tight text-black mt-5 md:mt-6">Where’s it heading?</h1>
+      <div className="mt-4">
+        <CoinPicker coins={coins} selected={coin} onSelect={pick} />
+      </div>
+      <div className="mt-4 rounded-3xl bg-gray-50 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[12px] text-gray-500 font-semibold truncate">{selected?.name ?? coin} · now</div>
+            <div className="flex items-baseline gap-2">
+              <div className="font-heading text-[32px] leading-none font-black tabular-nums text-black mt-1">{selected ? `$${fmtPrice(selected.price)}` : '—'}</div>
+              <Change v={selected?.changePct} className="text-sm" />
+            </div>
+          </div>
+          <Sparkline closes={spark?.closes ?? []} />
+        </div>
+        <div className="mt-4">
+          <Segmented value={horizon} options={HORIZON_OPTIONS} onChange={setHorizon} />
+          <div className="text-[12px] text-gray-500 mt-2 px-1">
+            Opens at <At sec={opensAt} />
+            {horizon === '24h' ? ' tomorrow' : ''} · moves under {HORIZONS[horizon].flatBandBps / 100}% count as flat
+          </div>
+        </div>
+        <div className="mt-4">
+          <MyCall value={myCall} onChange={setMyCall} />
+        </div>
+      </div>
+      <div className="mt-4 space-y-2 text-[13px] text-gray-600 font-medium px-1">
+        <div className="flex items-center gap-2">
+          <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-700 grid place-items-center text-[11px] font-black">{Math.max(voters.length, 4)}</span>
+          AIs vote live, in front of you
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-700 grid place-items-center">
+            <IconLock size={11} weight={2.6} />
+          </span>
+          Sealed on Metis before the move
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-700 grid place-items-center">
+            <IconRefund size={11} weight={2.6} />
+          </span>
+          Your $0.05 comes back if it fails
+        </div>
+      </div>
+      {isConnected && (
+        <div className="mt-5 flex items-center justify-between gap-3">
+          <div className="text-[12px] text-gray-500 min-w-0">
+            {(() => {
+              const p = priceOf(token)
+              const cost = p?.amount ? Number(formatUnits(BigInt(p.amount), p.decimals)) : null
+              return (
+                <>
+                  {cost != null ? (
+                    <b className="text-gray-800">
+                      {cost.toLocaleString('en-US', { maximumFractionDigits: p!.native ? 4 : 2, minimumFractionDigits: p!.native ? 0 : 2 })} {tokenLabel(token)}
+                    </b>
+                  ) : (
+                    'Pay with'
+                  )}
+                  {balance ? <> · you have {Number(formatUnits(balance.value, balance.decimals)).toLocaleString('en-US', { maximumFractionDigits: payToken.native ? 3 : 2 })}</> : null}
+                </>
+              )
+            })()}
+          </div>
+          <div className="flex gap-1 p-1 rounded-xl bg-gray-100 shrink-0">
+            {payTokens.map(t => {
+              const ok = payable(t.symbol)
+              return (
+                <button
+                  key={t.symbol}
+                  onClick={() => ok && setToken(t.symbol)}
+                  disabled={!ok}
+                  title={ok ? undefined : `${tokenLabel(t.symbol)} can’t be priced right now`}
+                  className={cx('px-2.5 py-1 rounded-lg text-[12px] font-black transition-all', token === t.symbol ? 'bg-white text-black shadow-sm' : ok ? 'text-gray-500' : 'text-gray-300 line-through')}
+                >
+                  {tokenLabel(t.symbol)}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+      <div className="hidden md:block mt-4">
+        <ActionButton tone="grad" onClick={ask} disabled={busy || !deployment}>
+          {!deployment ? 'Opens when Presage is live on Metis' : !isConnected ? 'Connect a wallet to ask' : `Ask about ${coin} · $0.05`}
+        </ActionButton>
+      </div>
+    </div>
+  )
+
+  const votePanel = (
+    <VotePanel
+      phase={phase}
+      coin={answer?.call?.asset ?? coin}
+      horizon={answer?.horizon ?? horizon}
+      voters={voters.length ? voters : live?.voters ?? []}
+      live={live}
+      answer={answer}
+      onAgain={() => {
+        setPhase('ask')
+        setAnswer(null)
+        setLive(null)
+      }}
+    />
+  )
 
   return (
-    <div className="min-h-screen bg-white">
-      <UnifiedNavbar currentPage="oracle" />
-      <Container className="py-8">
-        <Welcome />
-
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-4">
-              {oracle && <Sigil id={oracle.agent.id} slug="oracle" size={72} className="rounded-2xl shadow-xl" />}
-              <div>
-                <div className="flex items-center gap-3 mb-1">
-                  <h1 className="text-4xl sm:text-5xl font-black text-black tracking-tight">Market Oracle</h1>
-                  {record && <Streak streak={record.streak} />}
-                </div>
-                <p className="text-lg text-gray-600">
-                  <strong>{TOTAL_SUPPORTED_COINS} coins</strong> · sealed on Metis · $0.05 a call over x402
-                </p>
-                {oracle && (
-                  <div className="mt-2 inline-flex bg-gray-50 rounded-xl px-3 py-1.5 border border-gray-200">
-                    <StatusChip status={oracle.status} />
-                  </div>
-                )}
-              </div>
-            </div>
-            {record && (
-              <Link href="/agents/oracle" className="bg-white rounded-2xl border-2 border-gray-200 px-5 py-3 hover:border-gray-400 transition-colors">
-                <div className="text-xs font-bold text-gray-500 uppercase">Record</div>
-                <div className="text-lg font-black text-black">
-                  {record.resolved} scored · {pct(record.hitRate, 0)} hit
-                </div>
-                <FormDots form={record.form} size="sm" />
-              </Link>
-            )}
-          </div>
-
-          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 rounded-2xl p-6 text-white shadow-xl mb-6">
-            <div className="flex items-center gap-4">
-              <div className="text-5xl">🔮</div>
-              <div className="flex-1">
-                <h3 className="text-2xl font-black mb-1">Up or down, sealed before it happens</h3>
-                <p className="text-purple-100">
-                  Ask which way a coin goes over the next hour, four hours or day. A quant model and three AI models vote on facts from public Binance candles, and you watch the vote land. <strong className="text-white">The answer is sealed on Metis before the horizon starts</strong> and scored against the price when it ends. Your payment sits in escrow until then, and comes back if the call is never revealed.
-                </p>
-              </div>
-            </div>
-          </motion.div>
-
-          <div className="grid md:grid-cols-2 gap-6 mb-6">
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">Coin ({TOTAL_SUPPORTED_COINS} covered)</label>
-              <CoinSelector selectedCoin={selectedCoin} onSelectCoin={setSelectedCoin} />
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">Horizon</label>
-              <div className="flex gap-2">
-                {(Object.keys(HORIZONS) as Horizon[]).map(h => (
-                  <button key={h} onClick={() => setHorizon(h)} className={cx('flex-1 px-4 py-3 rounded-xl font-bold transition-all', horizon === h ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg' : 'bg-gray-100 text-gray-700 hover:bg-gray-200')}>
-                    {h}
-                  </button>
-                ))}
-              </div>
-              <div className="text-xs text-gray-500 mt-2">Flat band ±{(HORIZONS[horizon].flatBandBps / 100).toFixed(1)}%: smaller moves are neither right nor wrong.</div>
-            </div>
-          </div>
-
-          <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200">
-            <div className="text-sm font-bold text-gray-700 mb-2">Quick access</div>
-            <div className="flex flex-wrap gap-2">
-              {FEATURED_COINS.map(coin => (
-                <button key={coin} onClick={() => setSelectedCoin(coin)} className={cx('px-4 py-2 rounded-xl font-bold transition-all', selectedCoin === coin ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white' : 'bg-white border border-gray-300 text-gray-700 hover:border-purple-400')}>
-                  {coin}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className={cx('mt-6 rounded-2xl p-6 border-2 shadow-sm', isConnected ? 'bg-green-50 border-green-300' : 'bg-blue-50 border-blue-300')}>
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-black text-black mb-1">{isConnected ? `Pay $0.05 in ${payToken.symbol}${quote && quote.endsWith(payToken.symbol) ? ` (${quote})` : ''}` : 'Connect a Metis wallet when you want to ask'}</h3>
-                <p className="text-sm text-gray-700">
-                  {isConnected
-                    ? `Your wallet pays PresageMarket on Metis directly. Balance: ${balance ? `${Number(formatUnits(balance.value, balance.decimals)).toFixed(4)} ${payToken.symbol}` : '…'}`
-                    : 'Watching is free. Asking is x402: one transaction from your own wallet, held in escrow until the call is revealed.'}
-                </p>
-              </div>
-              {isConnected ? (
-                <div className="flex gap-2">
-                  {payTokens.map(t => (
-                    <button key={t.symbol} onClick={() => setToken(t.symbol)} className={cx('px-4 py-2 rounded-xl font-bold text-sm transition-all', token === t.symbol ? 'bg-black text-white' : 'bg-white border border-gray-300 text-gray-700 hover:border-black')}>
-                      {t.symbol}
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <WalletButton />
-              )}
-            </div>
-          </motion.div>
-        </motion.div>
-
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
-          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={ask} disabled={busy || !isConnected} className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all disabled:opacity-50 disabled:cursor-not-allowed text-left">
-            <div className="text-4xl mb-3">{busy ? '⏳' : '🎯'}</div>
-            <div className="text-xl font-black mb-1">{busy ? `Asking about ${selectedCoin}…` : `Ask about ${selectedCoin}`}</div>
-            <div className="text-sm text-blue-100">{!isConnected ? 'Connect a wallet first' : `${HORIZONS[horizon].label} · $0.05 in ${payToken.symbol}`}</div>
-          </motion.button>
-          <Link href="/agents/oracle" className="block">
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="h-full bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all">
-              <div className="text-4xl mb-3">📜</div>
-              <div className="text-xl font-black mb-1">See every call</div>
-              <div className="text-sm text-green-100">Wins, losses and flats, each linked to its seal on Metis</div>
-            </motion.div>
-          </Link>
-          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setShowScoring(!showScoring)} className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all text-left">
-            <div className="text-4xl mb-3">⚖️</div>
-            <div className="text-xl font-black mb-1">How it is scored</div>
-            <div className="text-sm text-purple-100">The rules, and why nobody can edit a call</div>
-          </motion.button>
+    <div className="max-w-[1320px] mx-auto px-5 md:px-8 pt-4 md:pt-8">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-x-10 gap-y-6">
+        <div className={cx('md:col-span-6 lg:col-span-5', showVote && 'hidden md:block')}>
+          {header}
+          {askPanel}
         </div>
 
-        <AnimatePresence>
-          {showScoring && (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="mb-8 bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 border-2 border-purple-300 shadow-2xl">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-3xl font-black text-black">⚖️ How a call is scored</h2>
-                <button onClick={() => setShowScoring(false)} className="text-gray-500 hover:text-black text-2xl">
-                  ×
-                </button>
-              </div>
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="bg-white rounded-2xl p-6 border-2 border-gray-200">
-                  <div className="text-2xl mb-3">🔒</div>
-                  <h3 className="text-xl font-black text-black mb-2">Sealed first</h3>
-                  <ul className="text-sm text-gray-700 space-y-2">
-                    <li>✓ The answer is hashed and written to Metis before the horizon starts.</li>
-                    <li>✓ Nobody can read it early or change it later: the reveal must match the hash.</li>
-                    <li>✓ If it is not revealed in time, anyone can forfeit it, it counts as a loss, and you are refunded.</li>
-                  </ul>
-                </div>
-                <div className="bg-gradient-to-br from-green-100 to-emerald-100 rounded-2xl p-6 border-2 border-green-300">
-                  <div className="text-2xl mb-3">📏</div>
-                  <h3 className="text-xl font-black text-black mb-2">Scored by price</h3>
-                  <ul className="text-sm text-gray-700 space-y-2">
-                    <li>✓ Measured from the price at issue to the Binance 1-minute close when the horizon ends.</li>
-                    <li>✓ A move inside the flat band ({HORIZONS[horizon].flatBandBps / 100}% for {horizon}) is flat: neither right nor wrong.</li>
-                    <li>✓ Hit rate is wins over wins, losses and forfeits. Anyone can recompute it from the reveals.</li>
-                  </ul>
-                </div>
-              </div>
-              <div className="mt-6 text-center text-sm text-gray-600">Not financial advice. The Oracle is an AI forecast with a public record, losses included.</div>
-            </motion.div>
+        <div className={cx('md:col-span-6 lg:col-span-7 space-y-4', !showVote && 'hidden md:block')}>
+          {votePanel}
+          {!busy && (mine.length > 0 || phase === 'ask') && (
+            <Panel className="px-4 md:px-5 pt-4 pb-1">
+              <PanelHead title="Your calls" sub={mine.length ? 'Saved on this device. Each opens when its time is up.' : undefined} />
+              {mine.length === 0 ? (
+                <div className="py-5 text-sm text-gray-500">Nothing yet. Your questions and how they came out live here.</div>
+              ) : (
+                <MyCalls items={mine} max={8} />
+              )}
+            </Panel>
           )}
-        </AnimatePresence>
-
-        {/* Progress and the live vote */}
-        <AnimatePresence>
-          {stage !== 'idle' && stage !== 'done' && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mb-8 bg-white rounded-2xl p-6 border-2 border-blue-200 shadow-lg">
-              <div className="grid md:grid-cols-4 gap-4 mb-4">
-                {STAGES.map((s, i) => (
-                  <div key={s.key} className={cx('rounded-xl p-4 border-2', i < stageIndex ? 'bg-green-50 border-green-300' : i === stageIndex ? 'bg-blue-50 border-blue-400' : 'bg-gray-50 border-gray-200')}>
-                    <div className="text-2xl mb-1">
-                      {i < stageIndex ? '✅' : i === stageIndex ? <motion.span animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1, repeat: Infinity }}>{s.icon}</motion.span> : s.icon}
-                    </div>
-                    <div className="text-sm font-bold text-black">{stage === 'approving' && s.key === 'paying' ? 'Approving the token once' : s.label}</div>
-                  </div>
-                ))}
-              </div>
-              {stage === 'sealing' && <LiveVote live={live} />}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {record && (
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-            <Stat icon="🔒" value={record.calls} label="Calls sealed" />
-            <Stat icon="🎯" value={pct(record.hitRate)} label="Hit rate" delay={0.05} />
-            <Stat icon="📏" value={record.avgResult == null ? '—' : bps(Math.round(record.avgResult))} label="Avg move called" tone={(record.avgResult ?? 0) < 0 ? 'red' : (record.avgResult ?? 0) > 0 ? 'green' : 'default'} delay={0.1} />
-            <Stat icon="⏳" value={record.open} label="Open now" tone="purple" delay={0.15} />
-            <Stat icon="🚫" value={record.forfeited} label="Forfeited" tone={record.forfeited ? 'red' : 'default'} delay={0.2} />
-          </div>
-        )}
-
-        <AnimatePresence mode="wait">
-          {c && (
-            <motion.div key={c.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="mb-8">
-              <h2 className="text-2xl font-black text-black mb-4">Your call</h2>
-              <div className="bg-white rounded-2xl p-8 border-2 border-gray-200 shadow-xl">
-                <div className="grid md:grid-cols-2 gap-8">
-                  <div>
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="text-6xl">{c.direction === 'up' ? '📈' : '📉'}</div>
-                      <div>
-                        <div className="text-sm text-gray-500 font-semibold">{when(c.issuedAt)}</div>
-                        <div className="text-4xl font-black text-black">
-                          {c.asset} {c.direction.toUpperCase()}
-                        </div>
-                        <div className="text-xl text-gray-600">
-                          ${price(c.priceAtIssue)} · next {c.horizonSec / 3600}h
-                        </div>
-                      </div>
-                    </div>
-                    <div className="space-y-4">
-                      <div className="bg-gray-50 rounded-xl p-4">
-                        <div className="text-sm text-gray-600 font-semibold mb-1">Models agreeing</div>
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1 bg-gray-200 rounded-full h-3 overflow-hidden">
-                            <motion.div initial={{ width: 0 }} animate={{ width: `${agreement}%` }} className="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full" />
-                          </div>
-                          <div className="text-2xl font-black text-black">{agreement}%</div>
-                        </div>
-                      </div>
-                      <div className="bg-gray-50 rounded-xl p-4">
-                        <div className="text-sm text-gray-600 font-semibold mb-1">Confidence</div>
-                        <div className="text-2xl font-black text-black">{c.confidence}%</div>
-                      </div>
-                      <div className="bg-gray-50 rounded-xl p-4">
-                        <div className="text-sm text-gray-600 font-semibold mb-2">Why</div>
-                        <div className="text-sm text-gray-700 leading-relaxed">{c.why}</div>
-                      </div>
-                      {c.outcome && (
-                        <div className={cx('rounded-xl p-4 border-2', c.outcome === 'win' ? 'bg-green-50 border-green-400' : c.outcome === 'loss' ? 'bg-red-50 border-red-400' : 'bg-gray-50 border-gray-300')}>
-                          <div className="flex items-center gap-3">
-                            <div className="text-3xl">{OUTCOME_STYLE[c.outcome]?.emoji}</div>
-                            <div>
-                              <div className="text-sm font-semibold text-gray-700">Outcome</div>
-                              <div className="text-xl font-black text-black">
-                                {OUTCOME_STYLE[c.outcome]?.label} · {bps(c.result)}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-black text-black mb-4">🗳️ The vote ({c.models.length} voters)</h3>
-                    <div className="space-y-3">
-                      {c.models.map((m, idx) => (
-                        <motion.div key={m.model} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.1 }} className="bg-gray-50 rounded-xl p-4 border-2 border-gray-200">
-                          <div className="flex items-center justify-between">
-                            <div className="font-bold text-black text-sm">{modelName(m.model)}</div>
-                            <div className="flex items-center gap-2">
-                              <Pill tone={m.direction === 'up' ? 'green' : 'red'}>{m.direction.toUpperCase()}</Pill>
-                              <span className="text-xs text-gray-500">{m.confidence}%</span>
-                            </div>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                    <div className="mt-6 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-4 border-2 border-blue-200">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="text-2xl">🔒</div>
-                        <div className="text-sm text-blue-700 font-semibold">Sealed on Metis · call #{c.chainCallId}</div>
-                      </div>
-                      <div className="text-sm text-gray-700 space-y-1">
-                        <div>
-                          Seal:{' '}
-                          {c.sealTxUrl ? (
-                            <a href={c.sealTxUrl} target="_blank" rel="noreferrer" className="font-mono text-blue-700 underline">
-                              {c.sealTx?.slice(0, 10)}…
-                            </a>
-                          ) : (
-                            '…'
-                          )}
-                        </div>
-                        <div>
-                          Scored in {until(c.issuedAt + c.horizonSec)} · must be revealed by {when(c.revealBy)}
-                        </div>
-                        {answer?.payTx && (
-                          <div>
-                            Payment in escrow:{' '}
-                            <a href={txUrl(answer.payTx)} target="_blank" rel="noreferrer" className="font-mono text-blue-700 underline">
-                              {answer.payTx.slice(0, 10)}…
-                            </a>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <Button full href={c.receipt} className="mt-4">
-                      Open the receipt →
-                    </Button>
-                    <Button full variant="secondary" className="mt-2" onClick={() => openTelegram().catch(e => toast.error(e instanceof Error ? e.message : 'Could not link Telegram'))}>
-                      ✈️ Tell me the outcome on Telegram
-                    </Button>
+          {phase === 'ask' && oracle && (
+            <Panel tone="soft" className="p-4 md:p-5 hidden md:block">
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <Eyebrow>The Oracle’s own record</Eyebrow>
+                  <div className="text-sm text-gray-600 mt-1.5">
+                    <StatusLine status={oracle.status} />
                   </div>
                 </div>
+                <FormDots form={oracle.agent.record.form} />
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {history.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-2xl font-black text-black mb-4">Your questions</h2>
-            <div className="space-y-3">
-              {history.slice(0, 12).map((h, idx) => {
-                const hc = h.answer?.call
-                const style = hc ? (hc.outcome ? OUTCOME_STYLE[hc.outcome] : OUTCOME_STYLE.sealed) : null
-                return (
-                  <motion.div key={h.requestId} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }} className="bg-white rounded-2xl p-4 border-2 border-gray-200 shadow-sm hover:shadow-lg transition-all">
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-4">
-                        <div className="text-3xl">{hc ? (hc.direction === 'up' ? '📈' : '📉') : '⏳'}</div>
-                        <div>
-                          <div className="font-bold text-black">
-                            {h.asset} {hc ? hc.direction.toUpperCase() : ''} · {h.horizon} {hc ? `· $${price(hc.priceAtIssue)}` : ''}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            {ago(Math.floor(h.at / 1000))} {hc ? `· ${hc.confidence}% confidence` : `· ${h.answer?.status ?? 'loading'}`}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {style && <span className={cx('px-3 py-1 rounded-full text-xs font-bold', style.cls)}>{style.label}</span>}
-                        {hc?.result != null && <span className="text-sm font-bold text-black">{bps(hc.result)}</span>}
-                        {hc && (
-                          <Link href={hc.receipt} className="text-xs font-bold text-blue-700 hover:underline">
-                            receipt →
-                          </Link>
-                        )}
-                        {(h.answer?.status === 'failed' || (h.answer?.status === 'paid' && Date.now() - h.at > 16 * 60_000) || hc?.status === 'forfeited') && (
-                          <Button size="sm" onClick={() => refund(h.requestId)}>
-                            Get my refund
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {!c && history.length === 0 && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12">
-            <div className="text-8xl mb-6">🔮</div>
-            <h3 className="text-3xl font-black text-black mb-3">Which way is {selectedCoin} going?</h3>
-            <p className="text-xl text-gray-600 mb-2">Ask once for $0.05 and watch four voters decide. The answer is sealed on Metis before the market moves, and scored when it has.</p>
-            <p className="text-sm text-gray-500">
-              Not ready to pay? The Oracle calls BTC, ETH and METIS on its own every four hours.{' '}
-              <Link href="/agents/oracle" className="underline font-semibold">
-                See its record
+              <Link href="/agents/oracle" className="mt-3 inline-flex items-center gap-1 text-sm font-bold text-black hover:underline">
+                Every call it has made <IconChevron size={14} />
               </Link>
-              .
-            </p>
-          </motion.div>
-        )}
+            </Panel>
+          )}
+        </div>
+      </div>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mt-12 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-8 rounded-2xl border-2 border-purple-200 shadow-lg">
-          <div className="text-center mb-6">
-            <div className="text-5xl mb-3">🧠</div>
-            <h3 className="text-2xl font-black text-black mb-2">Have your own read on the market?</h3>
-            <p className="text-gray-600 max-w-2xl mx-auto">Describe your strategy in plain English. Presage turns it into rules you confirm, runs it on the floor, and seals every call it makes. Once it has a record, people can back it and you earn 80%.</p>
+      {/* The one action, always in reach on a phone. */}
+      {!showVote && (
+        <>
+          <div className="md:hidden h-20" />
+          <div className="md:hidden fixed left-5 right-5 above-tabs z-40">
+            <ActionButton tone="grad" onClick={ask} disabled={!deployment}>
+              {!deployment ? 'Opens when Presage is live' : !isConnected ? 'Connect a wallet to ask' : `Ask about ${coin} · $0.05`}
+            </ActionButton>
           </div>
-          <div className="flex justify-center gap-4">
-            <Button href="/build" size="lg">
-              🚀 Build an agent
-            </Button>
-            <Button href="/floor" size="lg" variant="secondary">
-              Watch the floor
-            </Button>
-          </div>
-        </motion.div>
-      </Container>
+        </>
+      )}
+
+      <Sheet open={howOpen} onClose={() => setHowOpen(false)} title="How the Oracle works">
+        <HowItWorks horizon={horizon} />
+      </Sheet>
     </div>
   )
 }
 
-/** The vote as it lands: each voter is a row that fills in the moment its answer arrives. */
-function LiveVote({ live }: { live: Progress | null }) {
-  const voters = live?.voters.length ? live.voters : ['presage-quant-v1', '…', '…', '…']
-  const stageLine = !live || live.stage === 'reading' ? 'Reading the market: candles, trend, money flow, structure' : live.stage === 'voting' ? 'Voting' : 'Sealing on Metis'
+function VotePanel({ phase, coin, horizon, voters, live, answer, onAgain }: { phase: Phase; coin: string; horizon: string; voters: string[]; live: Progress | null; answer: OracleAnswer | null; onAgain: () => void }) {
+  const c = answer?.call
+  const paying = phase === 'quote' || phase === 'approve' || phase === 'sign' || phase === 'confirm'
+  const label = HORIZONS[horizon as Horizon]?.label ?? horizon
+  if (phase === 'ask') {
+    return (
+      <Panel className="p-5 md:p-6">
+        <Eyebrow>The vote</Eyebrow>
+        <div className="font-heading text-2xl font-black mt-1.5 text-black">Four AIs, one answer, sealed before the move.</div>
+        <p className="text-sm text-gray-600 mt-2 max-w-lg">
+          A quant model and three AI models each read the same facts from Binance and vote up or down. You watch every vote land. The majority is sealed on Metis, and when time is up, price decides who was right.
+        </p>
+        <div className="mt-5 opacity-80 pointer-events-none">
+          <VoteBoard voters={['presage-quant-v1', 'openai/gpt', 'anthropic/claude', 'x-ai/grok']} votes={[]} final={false} />
+        </div>
+      </Panel>
+    )
+  }
   return (
-    <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200">
-      <div className="flex items-center justify-between mb-3">
-        <div className="font-bold text-black">🗳️ {stageLine}</div>
-        <span className="text-xs text-gray-500">
-          {live?.votes.length ?? 0}/{voters.length} in
+    <div>
+      <div className="flex items-center justify-between h-10 md:h-auto">
+        <button onClick={phase === 'done' ? onAgain : undefined} className={cx('flex items-center gap-1.5 font-bold text-[15px] text-black', phase !== 'done' && 'cursor-default')}>
+          {phase === 'done' && <IconBack size={18} className="text-gray-400 md:hidden" />}
+          {coin} · next {label}
+        </button>
+        <span className={cx('px-2.5 py-1 rounded-full text-xs font-black flex items-center gap-1', phase === 'done' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600')}>
+          {phase === 'done' ? (
+            <>
+              <IconLock size={12} weight={2.6} /> Sealed
+            </>
+          ) : paying ? (
+            PHASE_LINE[phase]
+          ) : (
+            stageLine(live)
+          )}
+          {phase !== 'done' && <span className="soft-pulse">…</span>}
         </span>
       </div>
-      <div className="grid sm:grid-cols-2 gap-2">
-        {voters.map((v, i) => {
-          const vote = live?.votes.find(x => x.model === v)
-          return (
-            <motion.div key={`${v}-${i}`} layout className={cx('rounded-xl p-3 border-2 bg-white', vote ? (vote.direction === 'up' ? 'border-green-300' : 'border-red-300') : 'border-gray-200')}>
-              <div className="flex items-center justify-between gap-2">
-                <div className="text-sm font-bold text-black truncate">{modelName(v)}</div>
-                {vote ? (
-                  <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex items-center gap-2">
-                    <Pill tone={vote.direction === 'up' ? 'green' : 'red'}>{vote.direction.toUpperCase()}</Pill>
-                    <span className="text-xs text-gray-500">{vote.confidence}%</span>
-                  </motion.div>
-                ) : (
-                  <motion.span animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.2, repeat: Infinity }} className="text-xs text-gray-500">
-                    thinking…
-                  </motion.span>
-                )}
+
+      <Panel className="p-4 md:p-5 mt-3">
+        {paying && (
+          <div className="mb-4 rounded-2xl bg-gray-50 px-4 py-3 text-sm text-gray-700 flex items-center gap-3">
+            <span className="w-2 h-2 rounded-full bg-pink-500 soft-pulse" />
+            {phase === 'sign' ? 'Confirm the $0.05 payment in your wallet. It sits in escrow until the call opens.' : phase === 'approve' ? 'One approval lets the next 20 calls go through with a single signature.' : phase === 'confirm' ? 'Paying into escrow on Metis…' : 'Getting the price from the contract…'}
+          </div>
+        )}
+        <VoteBoard
+          voters={voters}
+          votes={(c ? c.models.map(m => ({ ...m, why: live?.votes.find(v => v.model === m.model)?.why })) : live?.votes) ?? []}
+          final={phase === 'done'}
+        />
+      </Panel>
+
+      <AnimatePresence>
+        {c && answer && (
+          <motion.div initial={{ opacity: 0, y: 16, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 24 }} className="mt-4">
+            <AnswerCard a={answer} />
+            <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
+              <PingButton target="call" id={c.id} />
+              <Share path={c.receipt} text={`I asked Presage’s Oracle about ${c.asset}: ${c.direction.toUpperCase()} over ${c.horizonSec / 3600}h, sealed on Metis before the move.`} compact />
+            </div>
+            <div className="mt-3 flex items-center justify-between text-[13px] px-1">
+              <button onClick={onAgain} className="font-bold text-black hover:underline">
+                Ask about another coin
+              </button>
+              <Link href={c.receipt} className="font-bold text-gray-500 hover:text-black flex items-center gap-0.5">
+                Receipt <IconChevron size={14} />
+              </Link>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+function AnswerCard({ a }: { a: OracleAnswer }) {
+  const c = a.call!
+  const up = c.direction === 'up'
+  const opensAt = c.issuedAt + c.horizonSec
+  const opened = c.status === 'revealed' && c.outcome
+  const agree = a.myCall ? a.myCall === c.direction : null
+  return (
+    <div className="rounded-[28px] grad p-[2px] shadow-xl shadow-pink-500/10">
+      <div className="rounded-[26px] bg-white p-5 md:p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <Eyebrow>The Oracle says</Eyebrow>
+            <div className={cx('font-heading text-[60px] md:text-[72px] leading-none font-black tracking-tight mt-1.5', up ? 'text-green-600' : 'text-red-600')}>{up ? '↑ UP' : '↓ DOWN'}</div>
+            <div className="text-sm font-bold text-gray-700 mt-2">
+              {c.confidence}% sure · from <span className="tabular-nums">${fmtPrice(c.priceAtIssue)}</span>
+            </div>
+          </div>
+          {!opened && (
+            <div className="text-center">
+              <CountdownRing from={c.issuedAt} to={opensAt} size={70} />
+              <div className="text-[11px] text-gray-500 font-bold mt-1">
+                opens <At sec={opensAt} />
               </div>
-              {vote?.why && <div className="text-xs text-gray-600 mt-1 line-clamp-2">{vote.why}</div>}
-            </motion.div>
-          )
-        })}
+            </div>
+          )}
+        </div>
+        <div className="mt-4 text-[15px] leading-snug text-gray-700">
+          <b className="text-black">Why:</b> {c.why}
+        </div>
+        {opened ? (
+          <div className={cx('mt-4 rounded-2xl px-4 py-3 font-bold text-[14px]', c.outcome === 'win' ? 'bg-green-50 text-green-800' : c.outcome === 'loss' ? 'bg-red-50 text-red-800' : 'bg-gray-50 text-gray-700')}>
+            {c.outcome === 'win' ? 'It was right.' : c.outcome === 'loss' ? 'It was wrong.' : 'Flat: it barely moved.'} ${fmtPrice(c.priceAtIssue)} → ${c.exitPrice != null ? fmtPrice(c.exitPrice) : '…'}
+          </div>
+        ) : agree != null ? (
+          <div className={cx('mt-4 rounded-2xl px-4 py-2.5 text-[13.5px] font-semibold', agree ? 'bg-green-50 text-green-800' : 'bg-amber-50 text-amber-900')}>
+            {agree ? `You said ${a.myCall} too. Let’s see who’s right.` : `You said ${a.myCall}. The Oracle disagrees. One of you is about to be right.`}
+          </div>
+        ) : null}
+        <div className="mt-3 text-[12px] text-gray-500">Under {c.flatBandBps / 100}% either way counts as flat. Not financial advice.</div>
       </div>
+    </div>
+  )
+}
+
+function HowItWorks({ horizon }: { horizon: Horizon }) {
+  const rows = [
+    ['You pay $0.05', 'In METIS, USDC or USDT, from your own wallet. It sits in escrow on Metis, not with us.'],
+    ['Four voters read the market', 'A quant model that always votes the same way on the same facts, and three AI models. Each sees the same facts from public Binance candles and votes up or down.'],
+    ['The answer is sealed', 'Its fingerprint goes on Metis before the time starts. Nobody, us included, can change it or pretend it said something else.'],
+    ['Price decides', `When time is up it opens and is scored against Binance’s price. Moves under ${HORIZONS[horizon].flatBandBps / 100}% (for ${HORIZONS[horizon].label}) count as flat.`],
+    ['If anything fails, you get it back', 'Not sealed within 15 minutes, or not opened in time: your $0.05 comes back from escrow, and a missed opening counts as a loss on the Oracle’s record.'],
+  ]
+  return (
+    <div>
+      <div className="space-y-4">
+        {rows.map(([t, d], i) => (
+          <div key={t} className="flex gap-3">
+            <span className="w-7 h-7 rounded-full grad text-white grid place-items-center text-[13px] font-black shrink-0">{i + 1}</span>
+            <div>
+              <div className="font-bold text-black">{t}</div>
+              <div className="text-sm text-gray-600 mt-0.5">{d}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-5 rounded-2xl bg-amber-50 px-4 py-3 text-[13px] text-amber-900">An AI forecast with a public record, nothing more. Short-term calls are close to coin flips, and the record will say so. Not financial advice.</div>
+      <Link href="/agents/oracle" className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-black hover:underline">
+        <IconShare size={14} /> See every call the Oracle has made
+      </Link>
     </div>
   )
 }

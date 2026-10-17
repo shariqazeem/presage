@@ -1,0 +1,332 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<script>
+tailwind.config = { theme: { extend: { fontFamily: { head: ['Inter Tight', 'sans-serif'], sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] } } } }
+</script>
+<style>
+  body { background: #F4F4F6; }
+  .phone { width: 390px; height: 844px; border-radius: 48px; background: #fff; overflow: hidden; position: relative; box-shadow: 0 30px 60px -20px rgba(17,24,39,.25), 0 0 0 10px #0A0A0A, 0 0 0 11px #2a2a2a; }
+  .grad { background-image: linear-gradient(120deg, #9333EA, #EC4899 55%, #2563EB); }
+  .grad-text { background-image: linear-gradient(90deg, #9333EA, #EC4899 55%, #2563EB); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .grad-border { border: 2px solid transparent; background: linear-gradient(#fff,#fff) padding-box, linear-gradient(120deg,#9333EA,#EC4899 55%,#2563EB) border-box; }
+  .glow { filter: drop-shadow(0 0 6px rgba(236,72,153,.75)); }
+  .tab svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .ic { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .num { font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body class="font-sans text-gray-900">
+<div class="px-16 pt-14 pb-6">
+  <div class="flex items-end justify-between">
+    <div>
+      <div class="text-sm font-bold tracking-widest text-gray-500 uppercase">Presage · re-engineered · first screens</div>
+      <div class="font-head text-5xl font-black tracking-tight mt-2">Open it, see something happening, <span class="grad-text">do one thing.</span></div>
+    </div>
+    <div class="text-right text-sm text-gray-500 leading-relaxed">Mockup with real data from the rehearsal on a fork of Andromeda.<br>Same colours and type. Phone first.</div>
+  </div>
+</div>
+
+<div class="flex gap-14 px-16 pb-16 pt-6">
+
+<!-- ============ 1 TODAY ============ -->
+<div>
+  <div class="mb-5"><div class="font-head text-xl font-black">1 · Today</div><div class="text-sm text-gray-500">Your calls, your agents, what moved. The new home.</div></div>
+  <div class="phone">
+    <div data-status></div>
+    <div class="px-5 flex items-center justify-between h-12">
+      <div class="flex items-center gap-2.5"><span data-logo="28"></span><span class="font-head text-2xl font-black tracking-tight">Today</span></div>
+      <div class="flex items-center gap-2">
+        <div class="w-9 h-9 rounded-full bg-gray-100 grid place-items-center relative"><svg class="ic" viewBox="0 0 24 24"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="absolute top-1.5 right-2 w-2 h-2 rounded-full bg-pink-500"></span></div>
+        <div class="h-9 px-3 rounded-full bg-black text-white text-xs font-bold grid place-items-center">0x7a…3f</div>
+      </div>
+    </div>
+    <div class="px-5 pt-3">
+      <div class="flex items-center gap-2 text-sm text-gray-500 font-medium">Good morning <span class="px-2 py-0.5 rounded-full grad text-white text-[11px] font-bold">day 4 in a row</span></div>
+      <div class="font-head text-[24px] leading-[1.1] font-black tracking-tight mt-1">2 calls opened while you were away</div>
+
+      <div class="mt-4 rounded-3xl border-2 border-gray-100 overflow-hidden">
+        <div class="px-4 py-3 flex items-center gap-3">
+          <span data-sigil="oracle" data-size="40"></span>
+          <div class="flex-1 min-w-0">
+            <div class="font-bold flex items-center gap-1.5">METIS <span class="text-green-600">↑ up</span> <span class="text-gray-400 font-medium text-sm">· 4h</span></div>
+            <div class="text-[13px] text-gray-500 num">$3.88 → $3.92 · you said up</div>
+          </div>
+          <div class="text-right"><div class="px-2.5 py-1 rounded-full bg-green-100 text-green-700 text-xs font-black">RIGHT</div><div class="text-sm font-black text-green-600 mt-1 num">+1.03%</div></div>
+        </div>
+        <div class="h-px bg-gray-100 mx-4"></div>
+        <div class="px-4 py-3 flex items-center gap-3">
+          <span data-sigil="oracle" data-size="40"></span>
+          <div class="flex-1 min-w-0">
+            <div class="font-bold flex items-center gap-1.5">ETH <span class="text-red-600">↓ down</span> <span class="text-gray-400 font-medium text-sm">· 24h</span></div>
+            <div class="text-[13px] text-gray-500 num">$2,461 → $2,476</div>
+          </div>
+          <div class="text-right"><div class="px-2.5 py-1 rounded-full bg-red-100 text-red-700 text-xs font-black">WRONG</div><div class="text-sm font-black text-red-600 mt-1 num">+0.62%</div></div>
+        </div>
+      </div>
+
+      <div class="mt-3 rounded-3xl grad-border px-4 py-3 flex items-center gap-4">
+        <div data-ring="0.7" data-label="1:12"></div>
+        <div class="flex-1">
+          <div class="text-[11px] font-black tracking-widest text-purple-600 uppercase">Opening at 16:00</div>
+          <div class="font-head text-xl font-black mt-0.5">BTC <span class="text-green-600">↑</span> 68% <span class="text-gray-400 text-base font-bold">· 4h</span></div>
+          <div class="text-[13px] text-gray-500">Sealed on Metis. You'll get a ping.</div>
+        </div>
+      </div>
+
+      <div class="mt-3 grid grid-cols-2 gap-3">
+        <div class="rounded-3xl bg-gray-950 text-white px-4 py-3">
+          <div class="flex items-center justify-between"><span data-sigil="st-quant" data-size="32"></span><div data-miniradar></div></div>
+          <div class="font-head font-black text-[17px] leading-tight mt-2">3 setups forming</div>
+          <div class="text-[12px] text-gray-400 mt-0.5">ST Quant · 1 sealed</div>
+        </div>
+        <div class="rounded-3xl border-2 border-gray-100 px-4 py-3">
+          <span data-sigil="creator" data-size="32"></span>
+          <div class="font-head font-black text-[17px] leading-tight mt-2">SOL is close</div>
+          <div class="text-[12px] text-gray-500 mt-0.5">Your agent · 2 of 3 rules</div>
+        </div>
+      </div>
+    </div>
+    <div class="absolute left-5 right-5 bottom-[96px]"><div class="h-14 rounded-2xl bg-black text-white font-bold grid place-items-center shadow-xl">Ask about a coin · $0.05</div></div>
+    <div data-tabs="0"></div>
+  </div>
+</div>
+
+<!-- ============ 2 ORACLE ASK ============ -->
+<div>
+  <div class="mb-5"><div class="font-head text-xl font-black">2 · Ask the Oracle</div><div class="text-sm text-gray-500">The ask is the first thing you see. One tap, one price.</div></div>
+  <div class="phone">
+    <div data-status></div>
+    <div class="px-5 flex items-center gap-3 h-14">
+      <span data-sigil="oracle" data-size="40"></span>
+      <div class="flex-1"><div class="font-head text-lg font-black leading-none">Market Oracle</div><div class="text-[12px] text-gray-500 mt-1">15 scored · right 55% · <span class="text-green-600 font-bold">2 in a row</span></div></div>
+      <div class="text-[11px] font-bold text-gray-500 border-2 border-gray-100 rounded-full px-2.5 py-1">How it works</div>
+    </div>
+    <div class="px-5 pt-3">
+      <div class="font-head text-[30px] leading-[1.05] font-black tracking-tight">Where's it heading?</div>
+      <div class="mt-3 h-12 rounded-2xl bg-gray-100 flex items-center gap-2 px-4 text-gray-400"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span class="font-medium">Search 84 coins</span></div>
+      <div class="mt-3 grid grid-cols-3 gap-2">
+        <div class="rounded-2xl border-2 border-gray-100 px-3 py-2"><div class="font-black text-sm">BTC</div><div class="text-[11px] text-green-600 font-bold num">+1.2%</div></div>
+        <div class="rounded-2xl border-2 border-gray-100 px-3 py-2"><div class="font-black text-sm">ETH</div><div class="text-[11px] text-red-600 font-bold num">−0.3%</div></div>
+        <div class="rounded-2xl border-2 border-gray-100 px-3 py-2"><div class="font-black text-sm">SOL</div><div class="text-[11px] text-green-600 font-bold num">+2.4%</div></div>
+        <div class="rounded-2xl grad text-white px-3 py-2 shadow-lg"><div class="font-black text-sm">METIS</div><div class="text-[11px] font-bold num opacity-90">−0.4%</div></div>
+        <div class="rounded-2xl border-2 border-gray-100 px-3 py-2"><div class="font-black text-sm">DOGE</div><div class="text-[11px] text-green-600 font-bold num">+3.1%</div></div>
+        <div class="rounded-2xl border-2 border-gray-100 px-3 py-2"><div class="font-black text-sm">BNB</div><div class="text-[11px] text-green-600 font-bold num">+0.2%</div></div>
+      </div>
+      <div class="mt-4 rounded-3xl bg-gray-50 p-4">
+        <div class="flex items-center justify-between">
+          <div><div class="text-[12px] text-gray-500 font-semibold">Metis · now</div><div class="font-head text-3xl font-black num">$3.88</div></div>
+          <svg width="130" height="44" viewBox="0 0 130 44"><defs><linearGradient id="sp" x1="0" x2="1"><stop offset="0" stop-color="#9333EA"/><stop offset=".55" stop-color="#EC4899"/><stop offset="1" stop-color="#2563EB"/></linearGradient></defs><polyline fill="none" stroke="url(#sp)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" points="2,30 14,26 24,28 36,18 46,22 58,12 68,16 80,10 90,20 102,24 112,19 128,22"/></svg>
+        </div>
+        <div class="mt-3 grid grid-cols-3 gap-1 p-1 bg-white rounded-2xl border-2 border-gray-100 text-sm font-bold text-center">
+          <div class="py-2 text-gray-500">1 hour</div><div class="py-2 rounded-xl bg-black text-white">4 hours</div><div class="py-2 text-gray-500">1 day</div>
+        </div>
+        <div class="mt-3 flex items-center justify-between">
+          <div class="text-[13px] font-semibold text-gray-700">Your call first? <span class="text-gray-400 font-medium">optional</span></div>
+          <div class="flex gap-2"><div class="px-3 py-1.5 rounded-xl border-2 border-gray-200 text-sm font-black text-green-600 bg-white">↑ Up</div><div class="px-3 py-1.5 rounded-xl border-2 border-gray-200 text-sm font-black text-red-600 bg-white">↓ Down</div></div>
+        </div>
+      </div>
+      <div class="mt-4 space-y-2 text-[13px] text-gray-600 font-medium">
+        <div class="flex items-center gap-2"><span class="w-5 h-5 rounded-full bg-purple-100 text-purple-700 grid place-items-center text-[11px] font-black">4</span> AIs vote live, in front of you</div>
+        <div class="flex items-center gap-2"><span class="w-5 h-5 rounded-full bg-purple-100 text-purple-700 grid place-items-center"><svg class="ic" style="width:12px;height:12px" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span> Sealed on Metis before the move</div>
+        <div class="flex items-center gap-2"><span class="w-5 h-5 rounded-full bg-purple-100 text-purple-700 grid place-items-center text-[11px] font-black">↺</span> Your $0.05 comes back if it fails</div>
+      </div>
+    </div>
+    <div class="absolute left-5 right-5 bottom-[96px]"><div class="h-14 rounded-2xl grad text-white font-bold grid place-items-center shadow-xl text-[17px]">Ask about METIS · $0.05</div></div>
+    <div data-tabs="1"></div>
+  </div>
+</div>
+
+<!-- ============ 3 THE VOTE / ANSWER ============ -->
+<div>
+  <div class="mb-5"><div class="font-head text-xl font-black">3 · The vote, then the answer</div><div class="text-sm text-gray-500">Each AI lands its vote. Then a plain answer you can keep.</div></div>
+  <div class="phone">
+    <div data-status></div>
+    <div class="px-5 flex items-center justify-between h-12">
+      <div class="flex items-center gap-2 font-bold"><span class="text-gray-400 text-xl leading-none">‹</span> METIS · next 4 hours</div>
+      <div class="px-2.5 py-1 rounded-full bg-purple-100 text-purple-700 text-xs font-black flex items-center gap-1"><svg class="ic" style="width:12px;height:12px" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Sealed</div>
+    </div>
+    <div class="px-5 pt-2">
+      <div class="grid grid-cols-4 gap-2">
+        <div data-voter="Quant|↑ 54|up|q"></div>
+        <div data-voter="GPT|↑ 58|up|g"></div>
+        <div data-voter="Claude|↑ 56|up|c"></div>
+        <div data-voter="Grok|↓ 51|down|x"></div>
+      </div>
+      <div class="mt-3">
+        <div class="flex justify-between text-[12px] font-bold"><span class="text-green-600">3 say up</span><span class="text-red-500">1 says down</span></div>
+        <div class="mt-1.5 h-2.5 rounded-full bg-red-100 overflow-hidden"><div class="h-full grad rounded-full" style="width:75%"></div></div>
+      </div>
+
+      <div class="mt-4 rounded-[28px] grad p-[2px] shadow-xl">
+        <div class="rounded-[26px] bg-white p-5">
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="text-[11px] font-black tracking-widest text-gray-400 uppercase">The Oracle says</div>
+              <div class="font-head text-[64px] leading-none font-black tracking-tight text-green-600 mt-1">↑ UP</div>
+              <div class="text-sm font-bold text-gray-700 mt-1">56% sure · from <span class="num">$3.88</span></div>
+            </div>
+            <div class="text-center"><div data-ring="0.02" data-label="3:59" data-size="68"></div><div class="text-[11px] text-gray-500 font-bold mt-1">opens 16:00</div></div>
+          </div>
+          <div class="mt-4 text-[14px] leading-snug text-gray-700"><span class="font-bold text-black">Why:</span> the trend on the 1-hour and 4-hour charts is still rising, and today's dip is shallow.</div>
+          <div class="mt-3 flex items-center gap-2 rounded-2xl bg-green-50 px-3 py-2 text-[13px] font-semibold text-green-800">You said up too. Let's see who's right.</div>
+        </div>
+      </div>
+
+      <div class="mt-3 text-[12px] text-gray-500 flex items-center justify-between px-1">
+        <span>Under 0.2% either way counts as flat</span>
+        <span class="font-bold text-gray-700">Receipt ›</span>
+      </div>
+      <div class="mt-3 grid grid-cols-[1fr_auto] gap-2">
+        <div class="h-12 rounded-2xl bg-black text-white font-bold grid place-items-center text-[15px]">Ping me on Telegram when it opens</div>
+        <div class="h-12 w-12 rounded-2xl border-2 border-gray-200 grid place-items-center"><svg class="ic" viewBox="0 0 24 24"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="m16 6-4-4-4 4"/><path d="M12 2v13"/></svg></div>
+      </div>
+    </div>
+    <div data-tabs="1"></div>
+  </div>
+</div>
+
+<!-- ============ 4 ST QUANT ============ -->
+<div>
+  <div class="mb-5"><div class="font-head text-xl font-black">4 · ST Quant</div><div class="text-sm text-gray-500">See it think: every market it watches, closest in the middle.</div></div>
+  <div class="phone">
+    <div data-status></div>
+    <div class="px-5 pt-1 flex items-center gap-3">
+      <span data-sigil="st-quant" data-size="52"></span>
+      <div class="flex-1">
+        <div class="flex items-center gap-2"><span class="font-head text-2xl font-black">ST Quant</span><span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-black uppercase tracking-wide">unproven</span></div>
+        <div class="text-[13px] text-gray-500 italic">“I buy exhausted dips at strong support. I never chase.”</div>
+      </div>
+    </div>
+    <div class="px-5 mt-3 flex items-center gap-2 text-[12px] font-semibold text-gray-600"><span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>Scanning 93 markets · next scan in 4 min</div>
+    <div class="mt-2 grid place-items-center" data-radar></div>
+    <div class="px-5 flex justify-center gap-2 text-[11px] font-bold">
+      <span class="px-2.5 py-1 rounded-full grad text-white">3 setting up</span>
+      <span class="px-2.5 py-1 rounded-full bg-purple-100 text-purple-700">7 close</span>
+      <span class="px-2.5 py-1 rounded-full bg-gray-100 text-gray-500">83 quiet</span>
+    </div>
+    <div class="px-5 mt-3">
+      <div class="rounded-3xl border-2 border-gray-100 p-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-purple-100 text-purple-700 grid place-items-center"><svg class="ic" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
+          <div class="flex-1"><div class="font-bold">1 setup sealed 2h ago</div><div class="text-[12px] text-gray-500">Entry, stop and target open to everyone when it resolves.</div></div>
+        </div>
+        <div class="mt-3 h-11 rounded-2xl bg-black text-white text-sm font-bold grid place-items-center">See setups the moment they fire · $3/30 days</div>
+        <div class="mt-2 flex items-center gap-2 text-[11px] text-gray-500 font-semibold"><div class="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden"><div class="h-full grad" style="width:30%"></div></div>opens after 10 scored calls · 3/10</div>
+      </div>
+    </div>
+    <div data-tabs="2"></div>
+  </div>
+</div>
+
+<!-- ============ 5 BUILD ============ -->
+<div>
+  <div class="mb-5"><div class="font-head text-xl font-black">5 · Build your agent</div><div class="text-sm text-gray-500">Start from a style, not a blank box. See it work before you deploy.</div></div>
+  <div class="phone">
+    <div data-status></div>
+    <div class="px-5 pt-1">
+      <div class="font-head text-[30px] leading-[1.05] font-black tracking-tight">Build an agent that <span class="grad-text">trades your way</span></div>
+      <div class="text-[13px] text-gray-500 mt-1.5">Pick a style, then say it your way. Every call it makes is sealed on Metis.</div>
+      <div class="mt-4 grid grid-cols-2 gap-2.5">
+        <div class="rounded-3xl grad-border p-3.5 shadow-lg">
+          <div data-style="dip"></div>
+          <div class="font-black text-[15px] mt-2">The Dip Buyer</div>
+          <div class="text-[11.5px] text-gray-500 leading-snug">Buys when price falls to strong support and selling runs out.</div>
+        </div>
+        <div class="rounded-3xl border-2 border-gray-100 p-3.5">
+          <div data-style="breakout"></div>
+          <div class="font-black text-[15px] mt-2">The Breakout</div>
+          <div class="text-[11.5px] text-gray-500 leading-snug">Buys when price breaks a ceiling and volume backs it.</div>
+        </div>
+        <div class="rounded-3xl border-2 border-gray-100 p-3.5">
+          <div data-style="trend"></div>
+          <div class="font-black text-[15px] mt-2">The Trend Rider</div>
+          <div class="text-[11.5px] text-gray-500 leading-snug">Buys the pullbacks while the trend keeps rising.</div>
+        </div>
+        <div class="rounded-3xl border-2 border-dashed border-gray-200 p-3.5">
+          <div class="h-12 grid place-items-center text-gray-400"><svg class="ic" style="width:26px;height:26px" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></div>
+          <div class="font-black text-[15px] mt-2">Your own words</div>
+          <div class="text-[11.5px] text-gray-500 leading-snug">Describe it like you'd tell a friend.</div>
+        </div>
+      </div>
+      <div class="mt-3 rounded-3xl bg-gray-950 text-white p-4">
+        <div class="flex items-center justify-between"><div class="text-[11px] font-black tracking-widest text-gray-400 uppercase">Live preview</div><div class="text-[11px] text-gray-400">not a call</div></div>
+        <div class="font-head text-lg font-black mt-1">Right now it would be close on <span class="grad-text">SOL</span> and <span class="grad-text">ARB</span></div>
+        <div class="mt-2 flex gap-1.5 text-[11px] font-semibold">
+          <span class="px-2 py-1 rounded-full bg-white/10">✓ at strong support</span><span class="px-2 py-1 rounded-full bg-white/10">✓ selling dried up</span><span class="px-2 py-1 rounded-full bg-white/10 text-gray-400">… waiting on the 15m</span>
+        </div>
+      </div>
+    </div>
+    <div class="absolute left-5 right-5 bottom-[96px]"><div class="h-14 rounded-2xl grad text-white font-bold grid place-items-center shadow-xl text-[16px]">Name it and deploy on Metis</div></div>
+    <div data-tabs="3"></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const GRAD = (id) => `<defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9333EA"/><stop offset="0.55" stop-color="#EC4899"/><stop offset="1" stop-color="#2563EB"/></linearGradient></defs>`
+let n = 0
+function sigil(kind, size) {
+  const id = 'g' + (n++)
+  let glyph
+  if (kind === 'oracle') glyph = `<circle cx="32" cy="32" r="15" fill="none" stroke="url(#${id})" stroke-width="6.5"/><circle cx="32" cy="32" r="5.5" fill="#fff"/>`
+  else if (kind === 'st-quant') glyph = `<rect x="12" y="43" width="40" height="6" rx="3" fill="url(#${id})"/><circle cx="32" cy="26" r="11" fill="none" stroke="url(#${id})" stroke-width="6"/><rect x="29.5" y="10" width="5" height="32" rx="2.5" fill="#0A0A0A"/><rect x="29.5" y="18" width="5" height="16" rx="2.5" fill="#fff"/>`
+  else glyph = `<rect x="22" y="22" width="6.5" height="32" rx="3.25" fill="url(#${id})"/><circle cx="38" cy="29" r="11.5" fill="none" stroke="url(#${id})" stroke-width="6"/><circle cx="38" cy="29" r="3.5" fill="#fff"/>`
+  return `<svg width="${size}" height="${size}" viewBox="0 0 64 64">${GRAD(id)}<rect width="64" height="64" rx="16" fill="#0A0A0A"/>${glyph}</svg>`
+}
+document.querySelectorAll('[data-sigil]').forEach(e => e.outerHTML = sigil(e.dataset.sigil, +e.dataset.size))
+document.querySelectorAll('[data-logo]').forEach(e => { const s = +e.dataset.logo, id = 'g' + (n++); e.outerHTML = `<svg width="${s}" height="${s}" viewBox="0 0 64 64">${GRAD(id)}<rect width="64" height="64" rx="16" fill="#0A0A0A"/><rect x="15" y="12" width="6.5" height="41" rx="3.25" fill="url(#${id})"/><circle cx="34.5" cy="26" r="13" fill="none" stroke="url(#${id})" stroke-width="6.5"/><circle cx="34.5" cy="26" r="4.2" fill="#fff"/></svg>` })
+document.querySelectorAll('[data-status]').forEach(e => e.outerHTML = `<div class="h-[54px] px-8 flex items-center justify-between text-[15px] font-semibold"><span>9:41</span><span class="flex items-center gap-1.5"><svg width="18" height="11" viewBox="0 0 18 11"><rect x="0" y="7" width="3" height="4" rx="1" fill="#111"/><rect x="5" y="5" width="3" height="6" rx="1" fill="#111"/><rect x="10" y="2.5" width="3" height="8.5" rx="1" fill="#111"/><rect x="15" y="0" width="3" height="11" rx="1" fill="#111"/></svg><svg width="25" height="12" viewBox="0 0 25 12"><rect x=".5" y=".5" width="21" height="11" rx="3.5" fill="none" stroke="#111" opacity=".4"/><rect x="2" y="2" width="16" height="8" rx="2" fill="#111"/><rect x="23" y="4" width="1.5" height="4" rx=".75" fill="#111" opacity=".4"/></svg></span></div>`)
+const TABS = [
+  ['Today', '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4"/>'],
+  ['Oracle', '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>'],
+  ['ST Quant', '<circle cx="12" cy="12" r="8"/><path d="M22 12h-4M6 12H2M12 6V2M12 22v-4"/>'],
+  ['Agents', '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>'],
+  ['You', '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>'],
+]
+document.querySelectorAll('[data-tabs]').forEach(e => {
+  const a = +e.dataset.tabs
+  e.outerHTML = `<div class="absolute left-0 right-0 bottom-0 h-[84px] bg-white/95 border-t border-gray-100 flex justify-around pt-2.5">${TABS.map(([l, p], i) => `<div class="tab flex flex-col items-center gap-1 ${i === a ? 'text-black' : 'text-gray-400'}"><svg viewBox="0 0 24 24">${p}</svg><span class="text-[10.5px] font-bold">${l}</span></div>`).join('')}<div class="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1.5 rounded-full bg-black"></div></div>`
+})
+document.querySelectorAll('[data-ring]').forEach(e => {
+  const p = +e.dataset.ring, s = +(e.dataset.size || 60), r = s / 2 - 5, c = 2 * Math.PI * r, id = 'g' + (n++)
+  e.outerHTML = `<svg width="${s}" height="${s}" viewBox="0 0 ${s} ${s}">${GRAD(id)}<circle cx="${s/2}" cy="${s/2}" r="${r}" fill="none" stroke="#F3F4F6" stroke-width="6"/><circle cx="${s/2}" cy="${s/2}" r="${r}" fill="none" stroke="url(#${id})" stroke-width="6" stroke-linecap="round" stroke-dasharray="${c * Math.max(p, .02)} ${c}" transform="rotate(-90 ${s/2} ${s/2})"/><text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle" font-family="JetBrains Mono" font-weight="700" font-size="${s/4.6}" fill="#111">${e.dataset.label}</text></svg>`
+})
+const VC = { q: '#0A0A0A', g: '#10A37F', c: '#D97757', x: '#374151' }
+document.querySelectorAll('[data-voter]').forEach(e => {
+  const [name, vote, dir, k] = e.dataset.voter.split('|')
+  const ch = name === 'Quant' ? sigil('oracle', 34) : `<div class="w-[34px] h-[34px] rounded-full grid place-items-center text-white font-black text-sm" style="background:${VC[k]}">${name[0]}</div>`
+  e.outerHTML = `<div class="rounded-2xl border-2 ${dir === 'up' ? 'border-green-100 bg-green-50/60' : 'border-red-100 bg-red-50/60'} py-2.5 flex flex-col items-center">${ch}<div class="text-[11px] font-bold text-gray-600 mt-1.5">${name}</div><div class="text-sm font-black num ${dir === 'up' ? 'text-green-600' : 'text-red-600'}">${vote}%</div></div>`
+})
+function rnd(seed) { let h = seed; return () => { h = (h * 1664525 + 1013904223) >>> 0; return h / 4294967296 } }
+function radar(size, labels) {
+  const R = size / 2, id = 'g' + (n++), r = rnd(7)
+  let dots = ''
+  for (let i = 0; i < 83; i++) { const a = r() * Math.PI * 2, d = R * (0.68 + r() * 0.28); dots += `<circle cx="${R + Math.cos(a) * d}" cy="${R + Math.sin(a) * d}" r="${size > 100 ? 2.6 : 1.4}" fill="#D1D5DB"/>` }
+  const deg = d => d * Math.PI / 180
+  const at = (a, d) => [R + Math.cos(deg(a)) * d, R + Math.sin(deg(a)) * d]
+  const close = ['OP', 'APT', 'ONDO', 'BLUR', 'FLOW', 'AR', 'BAND']
+  close.forEach((s, i) => { const a = -75 + i * 51.4, [x, y] = at(a, R * 0.52), [lx, ly] = at(a, R * 0.52 + 15)
+    dots += `<circle cx="${x}" cy="${y}" r="${size > 100 ? 5 : 2.4}" fill="#C084FC"/>` + (labels ? `<text x="${lx}" y="${ly + 4}" text-anchor="middle" font-family="Inter" font-weight="700" font-size="10.5" fill="#7E22CE">${s}</text>` : '') })
+  const fire = [['ARB', -125], ['CRV', -5], ['STBL', 115]]
+  fire.forEach(([s, a]) => { const [x, y] = at(a, R * 0.17), [lx, ly] = at(a, R * 0.17 + 19)
+    dots += `<circle class="glow" cx="${x}" cy="${y}" r="${size > 100 ? 8 : 3.4}" fill="url(#${id})"/>` + (labels ? `<text x="${lx}" y="${ly + 4.5}" text-anchor="middle" font-family="Inter Tight" font-weight="900" font-size="13" fill="#111">${s}</text>` : '') })
+  const rings = [0.32, 0.6, 0.97].map(k => `<circle cx="${R}" cy="${R}" r="${R * k - 1}" fill="none" stroke="${size > 100 ? '#EEF0F3' : '#333'}" stroke-width="${size > 100 ? 1.5 : 1}"/>`).join('')
+  const sweep = size > 100 ? `<path d="M${R} ${R} L${R} 1 A${R - 1} ${R - 1} 0 0 1 ${R + (R - 1) * Math.sin(0.9)} ${R - (R - 1) * Math.cos(0.9)} Z" fill="url(#${id})" opacity=".09"/>` : ''
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${GRAD(id)}${rings}${sweep}${dots}</svg>`
+}
+document.querySelectorAll('[data-radar]').forEach(e => e.innerHTML = radar(292, true))
+document.querySelectorAll('[data-miniradar]').forEach(e => e.outerHTML = radar(44, false))
+const STY = {
+  dip: '<polyline points="4,10 18,16 30,30 40,38 52,33 62,22 74,12" fill="none" stroke="url(#ID)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="4" y1="40" x2="76" y2="40" stroke="#111" stroke-width="2.5" stroke-dasharray="4 4"/><circle cx="40" cy="38" r="4.5" fill="#111"/>',
+  breakout: '<line x1="4" y1="18" x2="76" y2="18" stroke="#111" stroke-width="2.5" stroke-dasharray="4 4"/><polyline points="4,38 16,24 26,32 38,22 48,28 58,14 74,4" fill="none" stroke="url(#ID)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="58" cy="14" r="4.5" fill="#111"/>',
+  trend: '<polyline points="4,40 18,28 26,33 40,20 48,25 62,11 74,6" fill="none" stroke="url(#ID)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="4" y1="44" x2="76" y2="12" stroke="#111" stroke-width="2.5" stroke-dasharray="4 4"/><circle cx="48" cy="25" r="4.5" fill="#111"/>',
+}
+document.querySelectorAll('[data-style]').forEach(e => { const id = 'g' + (n++); e.outerHTML = `<svg width="80" height="48" viewBox="0 0 80 48">${GRAD(id)}${STY[e.dataset.style].replaceAll('ID', id)}</svg>` })
+</script>
+</body>
+</html>

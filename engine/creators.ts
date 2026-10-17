@@ -9,6 +9,7 @@ import { ORACLE_ASSETS } from '../lib/oracle-assets'
 import { StrategySpec } from '../lib/spec/schema'
 import { contracts, publishCall } from './calls'
 import { emit, setRadar } from './events'
+import { plainCondition } from '../lib/spec/describe'
 import type { RadarRow } from '../lib/floor-types'
 import { errMsg, log } from './log'
 import { evaluate } from './spec-eval'
@@ -85,6 +86,7 @@ export async function runCreatorAgents(): Promise<void> {
           score: checks.filter(c => c.ok).length,
           state: signal ? 'firing' : checks.every(c => c.ok) ? 'close' : checks.some(c => c.ok) ? 'watching' : 'quiet',
           blocker: signal ? null : (blocked ?? checks.find(c => !c.ok)?.saw ?? null),
+          checks: spec.when.map((c, i) => ({ label: plainCondition(c), ok: checks[i].ok, saw: checks[i].saw })),
           at: Math.floor(Date.now() / 1000),
         })
         if (!signal) continue

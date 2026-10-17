@@ -74,3 +74,12 @@ export async function binanceUsdtMarkets(): Promise<Set<string>> {
   }
   return new Set(info.symbols.filter(s => s.status === 'TRADING' && s.quoteAsset === 'USDT').map(s => s.symbol))
 }
+
+export type Ticker = { market: string; price: number; changePct: number; quoteVolume: number }
+
+/** 24-hour tickers for many markets in one request. */
+export async function binanceTickers(markets: string[]): Promise<Ticker[]> {
+  if (!markets.length) return []
+  const rows = (await getJson(`/api/v3/ticker/24hr?symbols=${encodeURIComponent(JSON.stringify(markets))}`)) as Record<string, string>[]
+  return rows.map(t => ({ market: t.symbol, price: Number(t.lastPrice), changePct: Number(t.priceChangePercent), quoteVolume: Number(t.quoteVolume) }))
+}

@@ -1,78 +1,48 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { StartupScreen } from './StartupScreen'
+import { useEffect, useState } from 'react'
+import { AnimatePresence } from 'framer-motion'
 import { Toaster } from 'react-hot-toast'
+import { StartupScreen } from './StartupScreen'
+import { TopNav } from './shell/TopNav'
+import { TabBar } from './shell/TabBar'
+import { Footer } from './shell/Footer'
 
+/**
+ * The frame every page sits in. The intro plays once, on someone's very first visit, over a page
+ * that is already there underneath; after that Presage opens straight onto what is happening.
+ */
 export function ClientLayout({ children }: { children: React.ReactNode }) {
-  const [showStartup, setShowStartup] = useState(true)
-  const [mounted, setMounted] = useState(false)
-
+  const [intro, setIntro] = useState(false)
   useEffect(() => {
-    setMounted(true)
-
-    // Check if user has seen startup screen this session
-    const hasSeenStartup = sessionStorage.getItem('presage_startup_seen')
-
-    if (hasSeenStartup) {
-      setShowStartup(false)
-    }
+    try {
+      if (!localStorage.getItem('presage_intro_seen')) setIntro(true)
+    } catch {}
   }, [])
-
-  const handleStartupComplete = () => {
-    sessionStorage.setItem('presage_startup_seen', 'true')
-    setShowStartup(false)
+  const done = () => {
+    try {
+      localStorage.setItem('presage_intro_seen', '1')
+    } catch {}
+    setIntro(false)
   }
-
-  if (!mounted) {
-    return null // Avoid hydration mismatch
-  }
-
   return (
     <>
-      {showStartup ? (
-        // Show ONLY startup screen, no children
-        <StartupScreen onComplete={handleStartupComplete} />
-      ) : (
-        // Show ONLY children after startup completes
-        <>
-          {children}
-
-          {/* Toast Notifications Container */}
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              duration: 4000,
-              style: {
-                background: '#fff',
-                color: '#000',
-                fontWeight: '600',
-                border: '2px solid #e5e7eb',
-                borderRadius: '12px',
-                padding: '16px',
-              },
-              success: {
-                iconTheme: {
-                  primary: '#10b981',
-                  secondary: '#fff',
-                },
-                style: {
-                  border: '2px solid #10b981',
-                },
-              },
-              error: {
-                iconTheme: {
-                  primary: '#ef4444',
-                  secondary: '#fff',
-                },
-                style: {
-                  border: '2px solid #ef4444',
-                },
-              },
-            }}
-          />
-        </>
-      )}
+      <TopNav />
+      <main className="min-h-[70vh]">{children}</main>
+      <div className="pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0">
+        <Footer />
+      </div>
+      <TabBar />
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          duration: 4000,
+          style: { background: '#0A0A0A', color: '#fff', fontWeight: 600, borderRadius: '16px', padding: '12px 16px', fontSize: '14px' },
+          success: { iconTheme: { primary: '#10B981', secondary: '#fff' } },
+          error: { iconTheme: { primary: '#EF4444', secondary: '#fff' } },
+        }}
+      />
+      <AnimatePresence>{intro && <StartupScreen onComplete={done} />}</AnimatePresence>
     </>
   )
 }

@@ -193,7 +193,7 @@ function read(asset: Watched, frames: Frames): { row: RadarRow; candidate: Candi
   return { row, candidate }
 }
 
-type ChartRead = { verdict: 'BUY' | 'WAIT' | 'AVOID'; conviction: number; why: string; wouldChangeMind: string; vetoes: string[] }
+type ChartRead = { verdict: 'BUY' | 'WAIT' | 'AVOID'; conviction: number; why: string; plain?: string; wouldChangeMind: string; vetoes: string[] }
 
 /** The AI chart read: the founder's rubric applied to the rendered chart. It approves or vetoes; it never sets prices. */
 async function chartRead(c: Candidate, png: Buffer): Promise<ChartRead> {
@@ -229,6 +229,7 @@ async function chartRead(c: Candidate, png: Buffer): Promise<ChartRead> {
     'Work top-down, apply a hard veto only if one genuinely fires, then grade.',
     '',
     'Reply with JSON only: {"verdict":"BUY"|"WAIT"|"AVOID","conviction":1-5,"why":"one or two sentences",' +
+      '"plain":"the same verdict in one sentence of at most 20 words that someone who has never traded understands, with no indicator names",' +
       '"wouldChangeMind":"what would invalidate this","vetoes":["any hard veto that fired"]}',
   ].join('\n')
   let lastErr: unknown
@@ -352,6 +353,7 @@ export async function previewScan() {
 }
 
 let scanning = false
+let lastCandidates = new Set<string>()
 
 /** One pass over the universe: find setups, let the chart read veto the sniper's, seal what survives. */
 export async function scanOnce(agentId: number): Promise<void> {
@@ -370,7 +372,9 @@ async function scan(agentId: number): Promise<void> {
   const markets = BINANCE_MARKETS.length + (pools.length || MAX_POOLS)
   emit(agentId, 'scan', { phase: 'start', markets })
   const found = await findCandidates(agentId)
-  for (const c of found) emit(agentId, 'candidate', { symbol: c.asset.symbol, route: c.route, score: c.score })
+  // A market that is still a candidate next scan is not news again.
+  for (const c of found) if (!lastCandidates.has(refOf(c.asset))) emit(agentId, 'candidate', { symbol: c.asset.symbol, route: c.route, score: c.score })
+  lastCandidates = new Set(found.map(c => refOf(c.asset)))
 
   let published = 0
   let aiReads = 0
@@ -389,7 +393,8 @@ async function scan(agentId: number): Promise<void> {
         aiToday = 0
       }
       if (!llmConfigured() || !models.vision() || aiReads >= AI_READS_PER_SCAN || aiToday >= AI_READS_PER_DAY) {
-        emit(agentId, 'skipped', { symbol: c.asset.symbol, why: 'no chart read available right now' })
+        // Out of chart reads for this scan: the setup waits for the next one. Not news for the floor.
+        l.info(`${c.asset.symbol}: waiting for a chart read next scan`)
         continue
       }
       aiReads++
@@ -400,7 +405,7 @@ async function scan(agentId: number): Promise<void> {
       mkdirSync(CHART_DIR, { recursive: true })
       const file = `read-${randomBytes(6).toString('hex')}.png`
       writeFileSync(`${CHART_DIR}/${file}`, png)
-      emit(agentId, 'chart_read', { symbol: c.asset.symbol, verdict: read.verdict, conviction: read.conviction, why: read.why, vetoes: read.vetoes ?? [], chart: file })
+      emit(agentId, 'chart_read', { symbol: c.asset.symbol, verdict: read.verdict, conviction: read.conviction, why: read.why, plain: typeof read.plain === 'string' ? read.plain.slice(0, 200) : undefined, vetoes: read.vetoes ?? [], chart: file })
       l.info(`chart read ${c.asset.symbol}: ${read.verdict} ${read.conviction}`, { why: read.why })
       if (read.verdict === 'BUY' && read.conviction >= 4) {
         await publish(agentId, { ...c, conviction: read.conviction }, read.why)

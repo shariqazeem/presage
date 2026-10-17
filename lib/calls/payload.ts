@@ -35,10 +35,15 @@ export type DirectionPayload = {
   priceAtIssue: number
   /** Moves smaller than this (in basis points) count as flat, neither right nor wrong. */
   flatBandBps: number
+  /** The reason in one plain sentence. */
   why: string
+  /** The facts behind it, in the market's own terms. Calls sealed before 17 Oct 2026 put these in `why`. */
+  detail?: string
   models: { model: string; direction: 'up' | 'down'; confidence: number }[]
   /** The paid request this call answers, when it was bought. */
   request?: Hex
+  /** The asker's own call, made before the Oracle answered and sealed with it. */
+  asker?: { direction: 'up' | 'down' }
 }
 
 export type CallPayload = SetupPayload | DirectionPayload

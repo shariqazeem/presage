@@ -30,6 +30,11 @@ function sealedFor(agentId: number): Set<string> {
 
 const HIDE_SYMBOL = new Set(['candidate', 'chart_read', 'sealed', 'skipped'])
 
+function callStillSealed(callId: number): boolean {
+  const row = getDb().select({ status: schema.calls.status }).from(schema.calls).where(eq(schema.calls.id, callId)).get()
+  return row?.status === 'sealed' || row?.status === 'pending'
+}
+
 export function toEvent(
   r: EventRow,
   agent: { slug: string; name: string; creator: string } | undefined,
@@ -38,6 +43,13 @@ export function toEvent(
   const data = JSON.parse(r.data) as Record<string, unknown>
   let masked = false
   const symbol = typeof data.symbol === 'string' ? data.symbol : null
+  // An answer's direction is the asker's until the call opens; a paid question's coin is theirs too.
+  if (r.kind === 'answered' && typeof data.callId === 'number' && callStillSealed(data.callId)) {
+    delete data.direction
+    delete data.confidence
+    if (data.paid) delete data.symbol
+    masked = true
+  }
   if (symbol && HIDE_SYMBOL.has(r.kind)) {
     const canSee = viewer != null && (agent?.creator.toLowerCase() === viewer || isSubscriber(r.agentId, viewer))
     const stillSealed = sealedFor(r.agentId).has(symbol)
@@ -64,9 +76,16 @@ export function toEvent(
   }
 }
 
-export function recentEvents(opts: { agentId?: number; limit?: number; viewer?: string | null; since?: number } = {}): AgentEvent[] {
+/** The events worth reading in a feed. Scans and near-misses live on the radar instead. */
+export const FEED_KINDS = ['sealed', 'resolved', 'answered', 'chart_read', 'skipped', 'forfeited']
+
+export function recentEvents(opts: { agentId?: number; limit?: number; viewer?: string | null; since?: number; kinds?: string[] } = {}): AgentEvent[] {
   const db = getDb()
-  const where = [opts.agentId != null ? eq(schema.agentEvents.agentId, opts.agentId) : undefined, opts.since ? gt(schema.agentEvents.at, opts.since) : undefined].filter(Boolean)
+  const where = [
+    opts.agentId != null ? eq(schema.agentEvents.agentId, opts.agentId) : undefined,
+    opts.since ? gt(schema.agentEvents.at, opts.since) : undefined,
+    opts.kinds ? inArray(schema.agentEvents.kind, opts.kinds) : undefined,
+  ].filter(Boolean)
   const rows = db
     .select()
     .from(schema.agentEvents)
@@ -78,32 +97,45 @@ export function recentEvents(opts: { agentId?: number; limit?: number; viewer?: 
   return rows.map(r => toEvent(r, agents.find(a => a.id === r.agentId), opts.viewer ?? null))
 }
 
-/** What an agent is doing right now, read from its latest events. */
+/** When ST Quant and creator agents next look: they scan a minute after each 15-minute candle closes. */
+export function nextScanAt(now = Math.floor(Date.now() / 1000)): number {
+  const next = Math.ceil((now - 60) / 900) * 900 + 60
+  return next <= now ? next + 900 : next
+}
+
+const VERDICT_WORDS: Record<string, string> = { BUY: 'looks right', WAIT: 'not yet', AVOID: 'no' }
+
+/** What an agent is doing right now, in plain words, read from its latest events. */
 export function agentStatus(agentId: number, kind: 'direction' | 'setup', viewer: string | null = null): AgentStatus {
   const now = Math.floor(Date.now() / 1000)
   const last = recentEvents({ agentId, limit: 6, viewer })
   const latest = last[0]
-  if (!latest) return { state: 'idle', line: kind === 'direction' ? 'Waiting for the next question' : 'Waiting for the next candle', at: now }
+  if (!latest) return { state: 'idle', line: kind === 'direction' ? 'Waiting for a question' : 'Waiting for the next candle', at: now }
   const d = latest.data
+  const sym = typeof d.symbol === 'string' ? d.symbol : null
   const age = now - latest.at
   switch (latest.kind) {
     case 'scan':
-      if (d.phase === 'start' && age < 20 * 60) return { state: 'scanning', line: `Scanning ${d.markets} markets`, at: latest.at }
-      return { state: 'waiting', line: `Scanned ${d.markets} markets, ${d.candidates} setups`, at: latest.at }
+      if (d.phase === 'start' && age < 20 * 60) return { state: 'scanning', line: `Checking ${d.markets} markets`, at: latest.at }
+      return { state: 'waiting', line: `Checked ${d.markets} markets${Number(d.candidates) ? ` · ${d.candidates} forming` : ''}`, at: latest.at }
     case 'candidate':
-      return { state: 'reading', line: latest.masked ? 'Found a setup, reading the chart' : `Found a setup on ${d.symbol}`, at: latest.at }
+      return { state: 'reading', line: sym ? `Looking closely at ${sym}` : 'Looking closely at a market', at: latest.at }
     case 'chart_read':
-      return { state: 'waiting', line: latest.masked ? `Chart read: ${d.verdict}` : `Chart read on ${d.symbol}: ${d.verdict} ${d.conviction}/5`, at: latest.at }
+      return { state: 'waiting', line: sym ? `Read the ${sym} chart: ${VERDICT_WORDS[String(d.verdict)] ?? d.verdict}` : 'Read a chart', at: latest.at }
     case 'sealed':
-      return { state: 'sealed', line: latest.masked ? `Sealed call #${d.chainCallId}` : `Sealed call #${d.chainCallId} on ${d.symbol}`, at: latest.at }
-    case 'resolved':
-      return { state: 'waiting', line: `Call #${d.chainCallId} ${String(d.outcome).toUpperCase()} on ${d.symbol}`, at: latest.at }
+      return { state: 'sealed', line: sym ? `Sealed a ${sym} call` : 'Sealed a call', at: latest.at }
+    case 'resolved': {
+      const o = String(d.outcome)
+      const word = d.kind === 'setup' ? o.toUpperCase() : o === 'win' ? 'right' : o === 'loss' ? 'wrong' : o
+      return { state: 'waiting', line: `${sym} call opened: ${word}`, at: latest.at }
+    }
     case 'forfeited':
-      return { state: 'waiting', line: `Forfeited call #${d.chainCallId}`, at: latest.at }
+      return { state: 'waiting', line: 'Missed a reveal (counts as a loss)', at: latest.at }
     case 'answered':
-      return { state: 'answering', line: `${d.paid ? 'Answered' : 'Called'} ${d.symbol} ${d.horizon}: ${d.direction} ${d.confidence}%`, at: latest.at }
+      if (latest.masked) return { state: 'answering', line: d.paid ? 'Answered a question' : `Called ${sym ?? 'a coin'} · ${d.horizon}`, at: latest.at }
+      return { state: 'answering', line: `Called ${sym} ${d.direction} · ${d.horizon}`, at: latest.at }
     case 'skipped':
-      return { state: 'waiting', line: 'Passed on a setup', at: latest.at }
+      return { state: 'waiting', line: sym ? `Passed on ${sym}` : 'Passed on a setup', at: latest.at }
     default:
       return { state: 'idle', line: 'Idle', at: latest.at }
   }

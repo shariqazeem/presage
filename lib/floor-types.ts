@@ -42,6 +42,8 @@ export type RadarRow = {
   state: RadarState
   /** The first thing stopping an entry, in the rules' own words. */
   blocker: string | null
+  /** A creator agent's own rules against this market, as a checklist. ST Quant's come from the MFI fields. */
+  checks?: { label: string; ok: boolean; saw: string }[]
   at: number
 }
 

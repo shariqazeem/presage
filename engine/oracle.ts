@@ -16,7 +16,7 @@ import { patternSupport, patternTargets } from './stquant/structure.js'
 
 const l = log('oracle')
 
-type Vote = { model: string; direction: 'up' | 'down'; confidence: number; why: string }
+type Vote = { model: string; direction: 'up' | 'down'; confidence: number; why: string; detail?: string }
 
 const pct = (a: number, b: number) => ((a - b) / b) * 100
 const round = (n: number, d = 2) => Number(n.toFixed(d))
@@ -83,11 +83,16 @@ export function quantVote(x: Features, horizon: Horizon): Vote {
   if (x.bullishDivergence1h) score += 0.5
   const direction = score >= 0 ? 'up' : 'down'
   const confidence = Math.round(50 + Math.min(Math.abs(score), 2.5) * 8)
+  const span = horizon === '24h' ? 'day' : horizon === '4h' ? 'four hours' : 'hour'
+  const moved = Math.abs(r) < 0.15 ? `barely moved over the last ${span}` : `${r > 0 ? 'risen' : 'fallen'} ${Math.abs(r).toFixed(1)}% over the last ${span}`
+  const bigger = x.trend['4h']?.startsWith('EMA20 above') ? 'the bigger trend is up' : x.trend['4h']?.startsWith('EMA20 below') ? 'the bigger trend is down' : 'the bigger trend is unclear'
+  const stretch = m > 80 ? ', but buyers look stretched' : m < 20 ? ', and sellers look exhausted' : ''
   return {
     model: 'presage-quant-v1',
     direction,
     confidence,
-    why: `Momentum ${r >= 0 ? '+' : ''}${r}% over the horizon, 4H ${x.trend['4h'] ?? 'trend unclear'}, 1H MFI ${m}.`,
+    why: `Price has ${moved} and ${bigger}${stretch}.`,
+    detail: `Momentum ${r >= 0 ? '+' : ''}${r}% over the horizon, 4H ${x.trend['4h'] ?? 'trend unclear'}, 1H MFI ${m}.`,
   }
 }
 
@@ -97,11 +102,13 @@ You get facts computed from public Binance candles. Decide whether the price wil
 Rules:
 - Answer "up" or "down". There is no neutral; if it is close, pick the likelier side and lower your confidence.
 - confidence is your probability (50 to 90) that you are right. Be calibrated: most honest calls sit between 52 and 65.
-- why: two short sentences in plain English that name the specific facts you used. No hype, no advice, no promises.
-Reply with JSON only: {"direction":"up"|"down","confidence":number,"why":string}`
+- why: ONE sentence, at most 22 words, that someone who has never traded understands. Say what the price has been doing and why you lean this way. Never name an indicator (no EMA, MFI, ATR, RSI, percentile); say trend, momentum, buying or selling pressure, support or resistance instead.
+- detail: one or two sentences naming the specific facts you used, indicators allowed.
+No hype, no advice, no promises.
+Reply with JSON only: {"direction":"up"|"down","confidence":number,"why":string,"detail":string}`
 
 async function llmVote(model: string, x: Features, horizon: Horizon): Promise<Vote> {
-  const v = await chatJson<{ direction: string; confidence: number; why: string }>({
+  const v = await chatJson<{ direction: string; confidence: number; why: string; detail?: string }>({
     model,
     temperature: 0.2,
     maxTokens: 400,
@@ -114,7 +121,7 @@ async function llmVote(model: string, x: Features, horizon: Horizon): Promise<Vo
   })
   const direction = String(v.direction).toLowerCase() === 'down' ? 'down' : 'up'
   const confidence = Math.max(50, Math.min(90, Math.round(Number(v.confidence) || 50)))
-  return { model, direction, confidence, why: String(v.why ?? '').slice(0, 400) }
+  return { model, direction, confidence, why: String(v.why ?? '').slice(0, 200), detail: String(v.detail ?? '').slice(0, 400) }
 }
 
 export type Progress = { stage: 'reading' | 'voting' | 'sealing'; votes: Vote[]; voters: string[] }
@@ -166,7 +173,8 @@ export async function forecast(symbol: string, horizon: Horizon, onProgress?: (p
     priceMinute: last.minute,
     direction: side as 'up' | 'down',
     confidence,
-    why: `${majority.length} of ${votes.length} models say ${side}. ${lead.why}`.trim(),
+    why: lead.why.trim(),
+    detail: `${majority.length} of ${votes.length} voters say ${side}. ${lead.detail ?? ''}`.trim(),
     votes,
     features: x,
   }
@@ -174,7 +182,7 @@ export async function forecast(symbol: string, horizon: Horizon, onProgress?: (p
 
 /** Answer paid Oracle requests: forecast, seal against the payment, record it. */
 /** Build and seal one Oracle call. Paid calls pass their requestId, so the seal releases their escrow. */
-async function sealForecast(oracleAgentId: number, asset: string, horizon: Horizon, requestId?: Hex, onProgress?: (p: Progress) => void) {
+async function sealForecast(oracleAgentId: number, asset: string, horizon: Horizon, requestId?: Hex, onProgress?: (p: Progress) => void, askerCall?: 'up' | 'down' | null) {
   const h = HORIZONS[horizon]
   const fc = await forecast(asset, horizon, onProgress)
   const issuedAt = Math.floor(Date.now() / 1000)
@@ -190,8 +198,10 @@ async function sealForecast(oracleAgentId: number, asset: string, horizon: Horiz
     priceAtIssue: fc.price,
     flatBandBps: h.flatBandBps,
     why: fc.why,
+    detail: fc.detail,
     models: fc.votes.map(v => ({ model: v.model, direction: v.direction, confidence: v.confidence })),
     ...(requestId ? { request: requestId } : {}),
+    ...(askerCall ? { asker: { direction: askerCall } } : {}),
   }
   const row = await publishCall({ payload, revealBy: issuedAt + h.seconds + h.graceSec, requestId })
   emit(oracleAgentId, 'answered', { callId: row.id, chainCallId: row.chainCallId, symbol: asset, horizon, direction: fc.direction, confidence: fc.confidence, paid: Boolean(requestId), voters: fc.votes.length })
@@ -223,9 +233,16 @@ export async function answerPaid(oracleAgentId: number): Promise<void> {
     await db.update(schema.oracleRequests).set({ status: 'answering' }).where(eq(schema.oracleRequests.requestId, req.requestId))
     try {
       const horizon = req.horizon as Horizon
-      const { row, fc } = await sealForecast(oracleAgentId, req.asset, horizon, req.requestId as Hex, p => {
-        db.update(schema.oracleRequests).set({ progress: JSON.stringify(p) }).where(eq(schema.oracleRequests.requestId, req.requestId)).run()
-      })
+      const { row, fc } = await sealForecast(
+        oracleAgentId,
+        req.asset,
+        horizon,
+        req.requestId as Hex,
+        p => {
+          db.update(schema.oracleRequests).set({ progress: JSON.stringify(p) }).where(eq(schema.oracleRequests.requestId, req.requestId)).run()
+        },
+        req.askerCall,
+      )
       await db
         .update(schema.oracleRequests)
         .set({ status: 'sealed', callId: row.id, sealedAt: row.sealedAt })
