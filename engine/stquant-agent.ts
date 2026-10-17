@@ -229,7 +229,7 @@ async function chartRead(c: Candidate, png: Buffer): Promise<ChartRead> {
     'Work top-down, apply a hard veto only if one genuinely fires, then grade.',
     '',
     'Reply with JSON only: {"verdict":"BUY"|"WAIT"|"AVOID","conviction":1-5,"why":"one or two sentences",' +
-      '"plain":"the same verdict in one sentence of at most 20 words that someone who has never traded understands, with no indicator names",' +
+      '"plain":"what the chart shows, in one sentence of at most 20 words that someone who has never traded understands: describe it, never tell the reader to buy or sell, and name no indicators",' +
       '"wouldChangeMind":"what would invalidate this","vetoes":["any hard veto that fired"]}',
   ].join('\n')
   let lastErr: unknown
