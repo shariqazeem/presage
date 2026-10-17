@@ -110,10 +110,10 @@ export default function Today() {
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="pt-2 md:pt-0">
               <Eyebrow className="text-purple-600 flex items-center gap-2">
                 <span className="relative inline-flex w-2 h-2">
-                  <span className="absolute inline-flex w-full h-full rounded-full bg-green-500 opacity-60 animate-ping" />
-                  <span className="relative inline-flex w-2 h-2 rounded-full bg-green-500" />
+                  {deployed && engineUp && <span className="absolute inline-flex w-full h-full rounded-full bg-green-500 opacity-60 animate-ping" />}
+                  <span className={cx('relative inline-flex w-2 h-2 rounded-full', deployed && engineUp ? 'bg-green-500' : 'bg-purple-500')} />
                 </span>
-                {engineUp ? 'Live on Metis' : 'On Metis'}
+                {!deployed ? 'Coming to Metis' : engineUp ? 'Live on Metis' : 'On Metis'}
               </Eyebrow>
               <h1 className="font-heading text-[32px] md:text-[52px] leading-[1.02] font-black tracking-tight mt-2 text-black text-balance">
                 AI agents call the market. <span className="grad-text">Every call is sealed before it moves.</span>
@@ -154,7 +154,7 @@ export default function Today() {
               <div className="font-heading font-black text-[17px] md:text-xl leading-tight mt-3">
                 {counts.firing ? `${counts.firing} ${counts.firing === 1 ? 'setup' : 'setups'} forming` : counts.close ? `${counts.close} markets getting close` : 'Watching the market'}
               </div>
-              <div className="text-[12px] md:text-[13px] text-gray-400 mt-1">ST Quant · {quantSealedToday ? `${quantSealedToday} sealed today` : `${counts.total || 'every'} markets watched`}</div>
+              <div className="text-[12px] md:text-[13px] text-gray-400 mt-1">ST Quant · {quantSealedToday ? `${quantSealedToday} sealed today` : counts.total ? `${counts.total} markets watched` : 'starts with the launch'}</div>
             </Link>
             {myAgents[0] ? <MyAgentCard a={myAgents[0]} /> : <OracleMini a={oracle} />}
           </div>
@@ -183,14 +183,25 @@ export default function Today() {
                 </Link>
               }
             />
-            <div className="grid place-items-center py-3">
-              <RadarViz rows={radar} size={250} />
-            </div>
-            <div className="flex justify-center gap-2 text-[11px] font-bold">
-              <span className="px-2.5 py-1 rounded-full grad text-white">{counts.firing} setting up</span>
-              <span className="px-2.5 py-1 rounded-full bg-purple-100 text-purple-700">{counts.close} close</span>
-              <span className="px-2.5 py-1 rounded-full bg-gray-100 text-gray-500">{counts.watching + counts.quiet} quiet</span>
-            </div>
+            {radar.length ? (
+              <>
+                <div className="grid place-items-center py-3">
+                  <RadarViz rows={radar} size={250} />
+                </div>
+                <div className="flex justify-center gap-2 text-[11px] font-bold">
+                  <span className="px-2.5 py-1 rounded-full grad text-white">{counts.firing} setting up</span>
+                  <span className="px-2.5 py-1 rounded-full bg-purple-100 text-purple-700">{counts.close} close</span>
+                  <span className="px-2.5 py-1 rounded-full bg-gray-100 text-gray-500">{counts.watching + counts.quiet} quiet</span>
+                </div>
+              </>
+            ) : (
+              <div className="py-10 text-center">
+                <div className="grid place-items-center opacity-40">
+                  <RadarViz rows={[]} size={150} />
+                </div>
+                <p className="text-sm text-gray-500 mt-3 max-w-xs mx-auto">Its radar fills in on its first look: 84 Binance markets and the busiest BSC and X Layer pools, every 15 minutes.</p>
+              </div>
+            )}
           </Panel>
 
           <Panel className="px-4 md:px-5 pt-4 pb-1">
