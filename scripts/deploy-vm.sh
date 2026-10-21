@@ -38,4 +38,4 @@ sleep 6
 
 echo "== verify"
 for p in / /oracle /agents /build /record /api/stats; do printf "%-12s → " "$p"; curl -s -o /dev/null -w "%{http_code}\n" --max-time 30 "$SITE$p"; done
-S "pm2 jlist | node -e 'let d=\"\";process.stdin.on(\"data\",c=>d+=c).on(\"end\",()=>{for(const p of JSON.parse(d).filter(p=>p.name.startsWith(\"called\")))console.log(p.name,p.pm2_env.status,\"restarts\",p.pm2_env.restart_time)})'"
+S "pm2 jlist | node -e 'let d=\"\";process.stdin.on(\"data\",c=>d+=c).on(\"end\",()=>{for(const p of JSON.parse(d).filter(p=>p.name.startsWith(\"parallaxpay\")))console.log(p.name,p.pm2_env.status,\"restarts\",p.pm2_env.restart_time)})'"
