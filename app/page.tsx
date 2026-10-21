@@ -260,7 +260,7 @@ export default function Today() {
 }
 
 function OpeningCard({ c, mine, myCall }: { c: CallView; mine: boolean; myCall: 'up' | 'down' | null }) {
-  const p = c.payload?.rules === 'called/direction-v1' ? c.payload : null
+  const p = c.payload?.rules === 'parallaxpay/direction-v1' ? c.payload : null
   return (
     <Link href={`/calls/${c.id}`} className="block group">
       <Panel tone="ticket" className="px-[18px] py-4 md:px-5 flex items-center gap-4" as="div">

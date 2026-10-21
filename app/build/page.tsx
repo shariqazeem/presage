@@ -13,7 +13,7 @@ import { IconCheck, IconPencil, IconPlus, IconX } from '@/components/icons'
 import { ActionButton, Eyebrow, Panel, Sealed } from '@/components/kit'
 import { cx } from '@/components/ui'
 import { identityRegistryAbi } from '@/lib/abi/erc8004'
-import { calledAgentsAbi } from '@/lib/abi/CalledAgents'
+import { parallaxPayAgentsAbi } from '@/lib/abi/ParallaxPayAgents'
 import { deployment, erc8004, txUrl } from '@/lib/chain'
 import { useSession } from '@/lib/client/hooks'
 import { ORACLE_ASSETS } from '@/lib/oracle-assets'
@@ -142,7 +142,7 @@ export default function BuildPage() {
       mark('seal', { active: true })
       const sealHash = await writeContractAsync({
         address: deployment.agents,
-        abi: calledAgentsAbi,
+        abi: parallaxPayAgentsAbi,
         functionName: 'register',
         args: [reg.args.agentId, 2, draft.specHash as Hex, draft.specURI, BigInt(Math.round(priceUsd * 1e6)), 0n],
       })
@@ -238,7 +238,7 @@ export default function BuildPage() {
                 </span>
                 <div>
                   <div className="font-heading font-black tight text-[15px] text-ink">In your own words</div>
-                  <div className="text-[12.5px] text-ink-3 leading-snug">Describe it like you would to a friend. Called turns it into rules you check before anything runs.</div>
+                  <div className="text-[12.5px] text-ink-3 leading-snug">Describe it like you would to a friend. ParallaxPay turns it into rules you check before anything runs.</div>
                 </div>
               </div>
             </button>
@@ -270,7 +270,7 @@ export default function BuildPage() {
                 </Panel>
                 {missing && (
                   <div className="mt-3 rounded-[14px] border border-line px-4 py-3 text-[13px] text-ink-2">
-                    <b className="text-ink">It can’t do this yet:</b> {missing.join('; ')}. Called only runs rules it can check on live prices, so it says no rather than guess.
+                    <b className="text-ink">It can’t do this yet:</b> {missing.join('; ')}. ParallaxPay only runs rules it can check on live prices, so it says no rather than guess.
                   </div>
                 )}
               </motion.div>
@@ -388,7 +388,7 @@ export default function BuildPage() {
                 </div>
               ) : (
                 <ActionButton className="mt-4" onClick={deploy} disabled={!spec || !confirmed || name.trim().length < 3 || !deployment}>
-                  {!deployment ? 'Opens when Called is live on Metis' : !isConnected ? 'Connect a wallet to deploy' : 'Deploy on Metis · 2 signatures'}
+                  {!deployment ? 'Opens when ParallaxPay is live on Metis' : !isConnected ? 'Connect a wallet to deploy' : 'Deploy on Metis · 2 signatures'}
                 </ActionButton>
               )}
               <div className="text-[11px] text-ink-3 mt-3">Two transactions from your own wallet: its identity, then its rules. Only gas, a fraction of a cent on Metis.</div>
@@ -445,7 +445,7 @@ function Live({ slug, id, name, markets }: { slug: string; id: number; name: str
           <ActionButton href={`/agents/${slug}`} tone="black">
             Watch it work
           </ActionButton>
-          <Share path={`/agents/${slug}`} text={`I just deployed ${name} on Called: an AI agent whose every call is sealed on Metis before the market moves.`} className="justify-center" />
+          <Share path={`/agents/${slug}`} text={`I just deployed ${name} on ParallaxPay: an AI agent whose every call is sealed on Metis before the market moves.`} className="justify-center" />
         </div>
         <Link href="/agents" className="inline-block mt-6 text-sm font-semibold text-ink-3 hover:text-ink">
           See it on the board

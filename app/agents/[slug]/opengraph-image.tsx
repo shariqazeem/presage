@@ -4,7 +4,7 @@ import { HOUSE_PERSONAS } from '@/lib/personas'
 import { DOWN, INK, INK_2, INK_3, MONO, OG_SIZE, OgFrame, OgLabel, UP, ogFonts } from '@/lib/og'
 import { pct, result as fmtResult } from '@/lib/client/format'
 
-export const alt = 'A Called agent and its public record'
+export const alt = 'A ParallaxPay agent and its public record'
 export const size = OG_SIZE
 export const contentType = 'image/png'
 
@@ -29,7 +29,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   return new ImageResponse(
     (
       <OgFrame kicker={a ? `ERC-8004 #${a.id} on Metis` : undefined} footer="Every call sealed before the move. Losses included.">
-        <div style={{ display: 'flex', fontSize: 96, fontWeight: 900, color: INK, lineHeight: 1, letterSpacing: -3.4 }}>{a?.name ?? 'Called'}</div>
+        <div style={{ display: 'flex', fontSize: 96, fontWeight: 900, color: INK, lineHeight: 1, letterSpacing: -3.4 }}>{a?.name ?? 'ParallaxPay'}</div>
         <div style={{ display: 'flex', fontSize: 32, fontWeight: 500, color: INK_2, marginTop: 16, fontStyle: 'italic' }}>{`“${tagline.slice(0, 90)}”`}</div>
         {r && (
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 44, marginTop: 40 }}>

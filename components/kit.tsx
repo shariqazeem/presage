@@ -175,7 +175,7 @@ export function CallLine({ c, mine, className = '' }: { c: CallView; mine?: { my
   const horizon = c.horizonSec ? `${c.horizonSec / 3600}h` : null
   let title: ReactNode
   let sub: ReactNode
-  if (p?.rules === 'called/direction-v1') {
+  if (p?.rules === 'parallaxpay/direction-v1') {
     title = (
       <>
         {p.asset.symbol} <Dir d={p.direction} /> <span className="text-ink-3 font-medium text-[13px]">· {p.horizonSec / 3600}h</span>
@@ -188,7 +188,7 @@ export function CallLine({ c, mine, className = '' }: { c: CallView; mine?: { my
         {mine?.myCall ? ` · you said ${mine.myCall}` : ''}
       </>
     )
-  } else if (p?.rules === 'called/setup-v1') {
+  } else if (p?.rules === 'parallaxpay/setup-v1') {
     const risk = ((p.entry.price - p.stop) / p.entry.price) * 100
     const reward = ((p.target - p.entry.price) / p.entry.price) * 100
     title = (

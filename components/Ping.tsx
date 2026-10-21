@@ -11,7 +11,7 @@ import { cx } from './ui'
 
 /**
  * "Ping me when it opens." The browser's own notifications first; on an iPhone that hasn't added
- * Called to its home screen, how to do that; Telegram when the bot is set up.
+ * ParallaxPay to its home screen, how to do that; Telegram when the bot is set up.
  */
 export function PingButton({ target, id, label = 'Ping me when it opens', className = '', tone = 'black' }: { target: 'call' | 'agent'; id: number; label?: string; className?: string; tone?: 'black' | 'white' }) {
   const { address } = useAccount()
@@ -43,7 +43,7 @@ export function PingButton({ target, id, label = 'Ping me when it opens', classN
         await openTelegram()
         await fetch('/api/watch', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ target, id }) }).catch(() => {})
         try {
-          localStorage.setItem(`called_watch_${target}_${id}`, '1')
+          localStorage.setItem(`parallaxpay_watch_${target}_${id}`, '1')
         } catch {}
         setDone(true)
         return
@@ -73,7 +73,7 @@ export function PingButton({ target, id, label = 'Ping me when it opens', classN
         <ol className="mt-4 space-y-3 text-[15px] text-ink">
           <li className="flex gap-3"><span className="w-7 h-7 rounded-full bg-ink text-white grid place-items-center text-sm font-semibold num shrink-0">1</span>Tap the Share button at the bottom of Safari.</li>
           <li className="flex gap-3"><span className="w-7 h-7 rounded-full bg-ink text-white grid place-items-center text-sm font-semibold num shrink-0">2</span>Choose “Add to Home Screen”.</li>
-          <li className="flex gap-3"><span className="w-7 h-7 rounded-full bg-ink text-white grid place-items-center text-sm font-semibold num shrink-0">3</span>Open Called from your home screen and tap “Ping me” again.</li>
+          <li className="flex gap-3"><span className="w-7 h-7 rounded-full bg-ink text-white grid place-items-center text-sm font-semibold num shrink-0">3</span>Open ParallaxPay from your home screen and tap “Ping me” again.</li>
         </ol>
         {bot && (
           <button

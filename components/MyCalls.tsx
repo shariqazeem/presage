@@ -3,7 +3,7 @@
 import toast from 'react-hot-toast'
 import type { Hex } from 'viem'
 import { usePublicClient, useWriteContract } from 'wagmi'
-import { calledMarketAbi } from '@/lib/abi/CalledMarket'
+import { parallaxPayMarketAbi } from '@/lib/abi/ParallaxPayMarket'
 import { deployment } from '@/lib/chain'
 import { answerToView, type OracleAnswer, type Saved } from '@/lib/client/mine'
 import { Sigil } from './Sigil'
@@ -18,15 +18,15 @@ export function MyCalls({ items, max = 12 }: { items: { saved: Saved; answer?: O
   const refund = async (requestId: Hex) => {
     if (!publicClient || !deployment) return
     try {
-      const r = await publicClient.readContract({ address: deployment.market, abi: calledMarketAbi, functionName: 'getRequest', args: [requestId] })
+      const r = await publicClient.readContract({ address: deployment.market, abi: parallaxPayMarketAbi, functionName: 'getRequest', args: [requestId] })
       if (r.state === 1) {
-        const h = await writeContractAsync({ address: deployment.market, abi: calledMarketAbi, functionName: 'refundUndelivered', args: [requestId] })
+        const h = await writeContractAsync({ address: deployment.market, abi: parallaxPayMarketAbi, functionName: 'refundUndelivered', args: [requestId] })
         await publicClient.waitForTransactionReceipt({ hash: h })
       } else if (r.state === 2) {
-        const h = await writeContractAsync({ address: deployment.market, abi: calledMarketAbi, functionName: 'settle', args: [requestId] })
+        const h = await writeContractAsync({ address: deployment.market, abi: parallaxPayMarketAbi, functionName: 'settle', args: [requestId] })
         await publicClient.waitForTransactionReceipt({ hash: h })
       }
-      const h2 = await writeContractAsync({ address: deployment.market, abi: calledMarketAbi, functionName: 'claim', args: [r.token] })
+      const h2 = await writeContractAsync({ address: deployment.market, abi: parallaxPayMarketAbi, functionName: 'claim', args: [r.token] })
       await publicClient.waitForTransactionReceipt({ hash: h2 })
       toast.success('Refunded to your wallet')
     } catch (e) {

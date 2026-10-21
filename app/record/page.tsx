@@ -123,15 +123,15 @@ export default function RecordPage() {
             <div className="text-[13px] text-ink-2 mt-4">
               Contracts:{' '}
               <a className="underline" href={addressUrl(deployment.calls)} target="_blank" rel="noreferrer">
-                CalledLedger
+                ParallaxPayLedger
               </a>
               ,{' '}
               <a className="underline" href={addressUrl(deployment.agents)} target="_blank" rel="noreferrer">
-                CalledAgents
+                ParallaxPayAgents
               </a>
               ,{' '}
               <a className="underline" href={addressUrl(deployment.market)} target="_blank" rel="noreferrer">
-                CalledMarket
+                ParallaxPayMarket
               </a>
             </div>
           )}

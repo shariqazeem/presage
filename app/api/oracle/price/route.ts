@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { calledMarketAbi } from '@/lib/abi/CalledMarket'
+import { parallaxPayMarketAbi } from '@/lib/abi/ParallaxPayMarket'
 import { deployment, payTokens, publicClient } from '@/lib/chain'
 import { oracleAgentId } from '@/lib/server/x402'
 
@@ -21,7 +21,7 @@ export async function GET() {
     const prices = await Promise.all(
       payTokens.map(async t => {
         try {
-          const amount = await publicClient.readContract({ address: deployment!.market, abi: calledMarketAbi, functionName: 'callQuote', args: [BigInt(agentId), t.address] })
+          const amount = await publicClient.readContract({ address: deployment!.market, abi: parallaxPayMarketAbi, functionName: 'callQuote', args: [BigInt(agentId), t.address] })
           return { symbol: t.symbol, amount: amount.toString(), decimals: t.decimals, native: t.native }
         } catch {
           return { symbol: t.symbol, amount: null, decimals: t.decimals, native: t.native }

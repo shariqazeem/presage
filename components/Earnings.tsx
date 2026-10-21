@@ -4,7 +4,7 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { formatUnits } from 'viem'
 import { usePublicClient, useReadContracts, useWriteContract } from 'wagmi'
-import { calledMarketAbi } from '@/lib/abi/CalledMarket'
+import { parallaxPayMarketAbi } from '@/lib/abi/ParallaxPayMarket'
 import { deployment, payTokens } from '@/lib/chain'
 import { Eyebrow } from './kit'
 
@@ -14,7 +14,7 @@ export function Earnings({ address }: { address: string }) {
   const { writeContractAsync } = useWriteContract()
   const [busy, setBusy] = useState<string | null>(null)
   const { data, refetch } = useReadContracts({
-    contracts: deployment ? payTokens.map(t => ({ address: deployment!.market, abi: calledMarketAbi, functionName: 'earnings', args: [address as `0x${string}`, t.address] }) as const) : [],
+    contracts: deployment ? payTokens.map(t => ({ address: deployment!.market, abi: parallaxPayMarketAbi, functionName: 'earnings', args: [address as `0x${string}`, t.address] }) as const) : [],
     query: { enabled: Boolean(deployment) },
   })
   const owed = payTokens.map((t, i) => ({ t, amount: (data?.[i]?.result as bigint | undefined) ?? 0n })).filter(x => x.amount > 0n)
@@ -23,7 +23,7 @@ export function Earnings({ address }: { address: string }) {
     if (!deployment || !publicClient) return
     setBusy(token.symbol)
     try {
-      const h = await writeContractAsync({ address: deployment.market, abi: calledMarketAbi, functionName: 'claim', args: [token.address] })
+      const h = await writeContractAsync({ address: deployment.market, abi: parallaxPayMarketAbi, functionName: 'claim', args: [token.address] })
       await publicClient.waitForTransactionReceipt({ hash: h })
       toast.success(`Claimed your ${token.symbol.replace(/^m\./, '')}`)
       await refetch()

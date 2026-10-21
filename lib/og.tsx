@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 /**
- * Shared pieces for the share cards (the images X and Telegram show for a Called link), in the
+ * Shared pieces for the share cards (the images X and Telegram show for a ParallaxPay link), in the
  * same paper-and-ink look as the app: ink type, mono numbers, and foil only on what is sealed.
  */
 
@@ -41,7 +41,7 @@ export async function ogFonts() {
   ]
 }
 
-/** The Called mark: a foil check on a black tile. */
+/** The ParallaxPay mark: a white P with a foil P set behind it, a little offset. */
 export function OgMark({ size = 72 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 64 64">
@@ -54,8 +54,12 @@ export function OgMark({ size = 72 }: { size?: number }) {
         </linearGradient>
       </defs>
       <rect width="64" height="64" rx="16" fill={INK} />
-      <path d="M15 31 L27 43.5 L50 18" fill="none" stroke="url(#g)" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="27" cy="43.5" r="4.4" fill="#FFFFFF" />
+      <g transform="translate(-1.5 0)">
+        <path d="M27 49 V19 H36.5 a9.5 9.5 0 0 1 0 19 H27" fill="none" stroke="url(#g)" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M21 15 H30.5 a9.5 9.5 0 0 1 0 19 H21 Z" fill={INK} />
+        <path d="M21 45 V15 H30.5 a9.5 9.5 0 0 1 0 19 H21" fill="none" stroke={INK} strokeWidth="12.5" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M21 45 V15 H30.5 a9.5 9.5 0 0 1 0 19 H21" fill="none" stroke="#FFFFFF" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+      </g>
     </svg>
   )
 }
@@ -83,7 +87,8 @@ export function OgFrame({ children, footer, kicker, cta = 'Check the record' }: 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <OgMark size={56} />
-          <div style={{ fontSize: 40, fontWeight: 900, color: INK, letterSpacing: -1.4 }}>Called</div>
+          <div style={{ display: 'flex', fontSize: 40, fontWeight: 900, color: INK, letterSpacing: -1.2 }}>ParallaxPay</div>
+          <OgLabel>by Sage</OgLabel>
         </div>
         {kicker && <OgLabel>{kicker}</OgLabel>}
       </div>

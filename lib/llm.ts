@@ -1,4 +1,4 @@
-// One client for every model Called asks: an OpenAI-compatible chat endpoint (the founder's
+// One client for every model ParallaxPay asks: an OpenAI-compatible chat endpoint (the founder's
 // CommonStack gateway in production). Models are named in env so they can change without code.
 
 export type ContentPart = { type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } }

@@ -1,11 +1,11 @@
 import { ImageResponse } from 'next/og'
 import { FOIL, INK, OG_SIZE, OgFrame, ogFonts } from '@/lib/og'
 
-export const alt = 'Called: AI agents call the market, every call sealed on Metis before it moves'
+export const alt = 'ParallaxPay: AI agents call the market, every call sealed on Metis before it moves'
 export const size = OG_SIZE
 export const contentType = 'image/png'
 
-/** The card a Called link shows on X and Telegram. */
+/** The card a ParallaxPay link shows on X and Telegram. */
 export default async function OpenGraphImage() {
   const fonts = await ogFonts()
   const line = { display: 'flex', fontSize: 80, fontWeight: 900, color: INK, lineHeight: 1.04, letterSpacing: -2.8 } as const

@@ -16,7 +16,7 @@ import { IconBack, IconChevron, IconLock, IconRefund, IconShare } from '@/compon
 import { ActionButton, At, CountdownRing, Eyebrow, Panel, PanelHead, Seal, SealedChip, Sheet, StatusLine } from '@/components/kit'
 import { Change, CoinPicker, MyCall, Segmented, Sparkline, VoteBoard, stageLine, type Coin } from '@/components/oracle'
 import { FormDots, cx } from '@/components/ui'
-import { calledMarketAbi } from '@/lib/abi/CalledMarket'
+import { parallaxPayMarketAbi } from '@/lib/abi/ParallaxPayMarket'
 import { deployment, payTokens } from '@/lib/chain'
 import { HORIZONS, type Horizon } from '@/lib/oracle'
 import { useAgent } from '@/lib/client/hooks'
@@ -67,7 +67,7 @@ export default function OraclePage() {
 
   useEffect(() => {
     try {
-      const c = localStorage.getItem('called_oracle_coin')
+      const c = localStorage.getItem('parallaxpay_oracle_coin')
       if (c) setCoin(c)
     } catch {}
     return () => stop()
@@ -75,7 +75,7 @@ export default function OraclePage() {
   const pick = (s: string) => {
     setCoin(s)
     try {
-      localStorage.setItem('called_oracle_coin', s)
+      localStorage.setItem('parallaxpay_oracle_coin', s)
     } catch {}
   }
 
@@ -135,7 +135,7 @@ export default function OraclePage() {
       const maxAmount = req.extra.native ? (amount * 101n) / 100n : amount
       const txHash = await writeContractAsync({
         address: req.payTo,
-        abi: calledMarketAbi,
+        abi: parallaxPayMarketAbi,
         functionName: 'payForCall',
         args: [BigInt(req.extra.agentId), req.extra.requestId, req.asset, maxAmount],
         value: req.extra.native ? maxAmount : 0n,
@@ -290,7 +290,7 @@ export default function OraclePage() {
       )}
       <div className="hidden md:block mt-4">
         <ActionButton onClick={ask} disabled={busy || !deployment}>
-          {!deployment ? 'Opens when Called is live on Metis' : !isConnected ? 'Connect a wallet to ask' : `Ask about ${coin} · $0.05`}
+          {!deployment ? 'Opens when ParallaxPay is live on Metis' : !isConnected ? 'Connect a wallet to ask' : `Ask about ${coin} · $0.05`}
         </ActionButton>
       </div>
     </div>
@@ -357,7 +357,7 @@ export default function OraclePage() {
           <div className="md:hidden h-20" />
           <div className="md:hidden fixed left-5 right-5 above-tabs z-40">
             <ActionButton onClick={ask} disabled={!deployment}>
-              {!deployment ? 'Opens when Called is live' : !isConnected ? 'Connect a wallet to ask' : `Ask about ${coin} · $0.05`}
+              {!deployment ? 'Opens when ParallaxPay is live' : !isConnected ? 'Connect a wallet to ask' : `Ask about ${coin} · $0.05`}
             </ActionButton>
           </div>
         </>
@@ -383,7 +383,7 @@ function VotePanel({ phase, coin, horizon, voters, live, answer, onAgain }: { ph
           A quant model and three AI models each read the same facts from Binance and vote up or down. You watch every vote land. The majority is sealed on Metis, and when time is up, price decides who was right.
         </p>
         <div className="mt-5 opacity-80 pointer-events-none">
-          <VoteBoard voters={['called-quant-v1', 'openai/gpt', 'anthropic/claude', 'google/gemini']} votes={[]} final={false} />
+          <VoteBoard voters={['parallaxpay-quant-v1', 'openai/gpt', 'anthropic/claude', 'google/gemini']} votes={[]} final={false} />
         </div>
       </Panel>
     )
@@ -425,7 +425,7 @@ function VotePanel({ phase, coin, horizon, voters, live, answer, onAgain }: { ph
             <AnswerCard a={answer} />
             <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
               <PingButton target="call" id={c.id} />
-              <Share path={c.receipt} text={`I asked the Oracle on Called about ${c.asset}: ${c.direction.toUpperCase()} over ${c.horizonSec / 3600}h, sealed on Metis before the move.`} compact />
+              <Share path={c.receipt} text={`I asked the Oracle on ParallaxPay about ${c.asset}: ${c.direction.toUpperCase()} over ${c.horizonSec / 3600}h, sealed on Metis before the move.`} compact />
             </div>
             <div className="mt-3 flex items-center justify-between text-[13px] px-1">
               <button onClick={onAgain} className="font-bold text-ink hover:underline">

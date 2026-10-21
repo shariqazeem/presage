@@ -16,8 +16,8 @@ import { chain, rpcUrls } from '@/lib/chain'
 import '@rainbow-me/rainbowkit/styles.css'
 
 const config = getDefaultConfig({
-  appName: 'Called',
-  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'called-local',
+  appName: 'ParallaxPay',
+  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'parallaxpay-local',
   chains: [chain],
   transports: { [chain.id]: fallback(rpcUrls.map(url => http(url))) },
   wallets: [

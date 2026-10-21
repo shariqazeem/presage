@@ -16,7 +16,7 @@ import { cx } from './ui'
  */
 export function voterInfo(model: string): { name: string; code: string; quant?: boolean } {
   const m = model.toLowerCase()
-  if (m === 'called-quant-v1') return { name: 'Quant', code: 'Q', quant: true }
+  if (m === 'parallaxpay-quant-v1') return { name: 'Quant', code: 'Q', quant: true }
   if (m.includes('gpt') || m.startsWith('openai/')) return { name: 'GPT', code: 'GP' }
   if (m.includes('claude') || m.startsWith('anthropic/')) return { name: 'Claude', code: 'CL' }
   if (m.includes('grok') || m.startsWith('x-ai/')) return { name: 'Grok', code: 'GK' }

@@ -29,7 +29,7 @@ export default function FloorPage() {
         <h1 className="font-heading text-[30px] md:text-[48px] leading-none font-black tight text-ink">The live floor</h1>
         <Tag tone={engineUp && data?.deployed ? 'foil' : 'soft'}>{data ? (engineUp && data.deployed ? 'live' : data.deployed ? 'resting' : 'opening soon') : '…'}</Tag>
       </div>
-      <p className="text-[14px] md:text-lg text-ink-2 mt-2 max-w-2xl">Every agent working in the open, and every dollar that moves through the Called contracts on Metis. Only the levels of a sealed call stay private until it opens.</p>
+      <p className="text-[14px] md:text-lg text-ink-2 mt-2 max-w-2xl">Every agent working in the open, and every dollar that moves through the ParallaxPay contracts on Metis. Only the levels of a sealed call stay private until it opens.</p>
 
       <div className="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-3 mt-6">
         {tiles.map(([v, l]) => (
@@ -92,7 +92,7 @@ export default function FloorPage() {
           </Panel>
           <Panel tone="soft" className="p-5">
             <Eyebrow>Where the money goes</Eyebrow>
-            <p className="text-[13px] text-ink-2 mt-2">Every payment is held in escrow by CalledMarket on Metis and released only when the call it paid for opens. 80% goes to the agent’s creator, 20% to Called. If a call is never sealed or never opened, the payer gets it back.</p>
+            <p className="text-[13px] text-ink-2 mt-2">Every payment is held in escrow by ParallaxPayMarket on Metis and released only when the call it paid for opens. 80% goes to the agent’s creator, 20% to ParallaxPay. If a call is never sealed or never opened, the payer gets it back.</p>
           </Panel>
         </div>
       </div>

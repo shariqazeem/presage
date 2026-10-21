@@ -1,12 +1,12 @@
-// Pay for one Called Oracle call over x402 from any wallet: the flow another agent would follow.
+// Pay for one ParallaxPay Oracle call over x402 from any wallet: the flow another agent would follow.
 //
 //   PAYER_KEY=0x... npx tsx scripts/x402-client.ts BTC 4h METIS
 //
-// CALLED_API (default https://called.80.225.209.190.sslip.io) and METIS_RPC_URL (default Andromeda) can be overridden.
+// PARALLAXPAY_API (default https://parallaxpay.80.225.209.190.sslip.io) and METIS_RPC_URL (default Andromeda) can be overridden.
 import { createPublicClient, createWalletClient, http, parseEventLogs, erc20Abi, formatUnits, type Hex } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { metis } from 'viem/chains'
-import { calledMarketAbi } from '../lib/abi/CalledMarket'
+import { parallaxPayMarketAbi } from '../lib/abi/ParallaxPayMarket'
 
 const [asset = 'BTC', horizon = '4h', tokenSymbol = 'METIS'] = process.argv.slice(2)
 const rpc = process.env.METIS_RPC_URL ?? 'https://andromeda.metis.io/?owner=1088'
@@ -14,7 +14,7 @@ if (!process.env.PAYER_KEY) throw new Error('Set PAYER_KEY to the private key of
 const account = privateKeyToAccount(process.env.PAYER_KEY as Hex)
 const pub = createPublicClient({ chain: metis, transport: http(rpc) })
 const wallet = createWalletClient({ account, chain: metis, transport: http(rpc) })
-const api = `${(process.env.CALLED_API ?? 'https://called.80.225.209.190.sslip.io').replace(/\/$/, '')}/api/oracle/call`
+const api = `${(process.env.PARALLAXPAY_API ?? 'https://parallaxpay.80.225.209.190.sslip.io').replace(/\/$/, '')}/api/oracle/call`
 
 const t0 = Date.now()
 const r1 = await fetch(api, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ asset, horizon }) })
@@ -27,9 +27,9 @@ if (!req.extra.native) {
   await pub.waitForTransactionReceipt({ hash: h })
 }
 const max = req.extra.native ? (amount * 101n) / 100n : amount
-const txHash = await wallet.writeContract({ address: req.payTo, abi: calledMarketAbi, functionName: 'payForCall', args: [BigInt(req.extra.agentId), req.extra.requestId, req.asset, max], value: req.extra.native ? max : 0n, type: 'legacy' })
+const txHash = await wallet.writeContract({ address: req.payTo, abi: parallaxPayMarketAbi, functionName: 'payForCall', args: [BigInt(req.extra.agentId), req.extra.requestId, req.asset, max], value: req.extra.native ? max : 0n, type: 'legacy' })
 const rc = await pub.waitForTransactionReceipt({ hash: txHash })
-const paid = parseEventLogs({ abi: calledMarketAbi, eventName: 'CallPaid', logs: rc.logs })[0]
+const paid = parseEventLogs({ abi: parallaxPayMarketAbi, eventName: 'CallPaid', logs: rc.logs })[0]
 console.log(`2. paid ${formatUnits(paid.args.amount, req.extra.decimals)} ${tokenSymbol} into escrow, tx ${txHash.slice(0, 12)}…`)
 const header = Buffer.from(JSON.stringify({ x402Version: 1, scheme: req.scheme, network: req.network, payload: { requestId: req.extra.requestId, txHash } })).toString('base64')
 const r2 = await fetch(api, { method: 'POST', headers: { 'content-type': 'application/json', 'X-PAYMENT': header }, body: JSON.stringify({ secret: q.secret }) })
@@ -41,6 +41,6 @@ if (ans.call) {
   console.log(`   ${c.asset} ${c.direction.toUpperCase()} ${c.confidence}% over ${c.horizonSec / 3600}h from $${c.priceAtIssue}, call #${c.chainCallId} sealed ${c.sealTx.slice(0, 12)}…`)
   console.log(`   votes: ${c.models.map((m: any) => `${m.model.split('/').pop()} ${m.direction} ${m.confidence}`).join(' · ')}`)
   console.log(`   why: ${c.why.slice(0, 200)}`)
-  const r = await pub.readContract({ address: req.payTo, abi: calledMarketAbi, functionName: 'getRequest', args: [req.extra.requestId] })
+  const r = await pub.readContract({ address: req.payTo, abi: parallaxPayMarketAbi, functionName: 'getRequest', args: [req.extra.requestId] })
   console.log(`4. escrow on chain: state=${['None', 'Paid', 'Sealed', 'Settled', 'Refunded'][r.state]} callId=${r.callId} amount=${formatUnits(r.amount, req.extra.decimals)} ${tokenSymbol}`)
 } else console.log('   no answer:', JSON.stringify(ans))

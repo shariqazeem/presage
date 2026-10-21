@@ -3,7 +3,7 @@ import { getCall } from '@/lib/server/records'
 import { DOWN_D, FOIL, INK, MONO, OG_SIZE, OgFrame, OgLabel, OgSeal, UP_D, ogFonts } from '@/lib/og'
 import { result as fmtResult, price as fmtPrice } from '@/lib/client/format'
 
-export const alt = 'A Called call, sealed on Metis before the move'
+export const alt = 'A ParallaxPay call, sealed on Metis before the move'
 export const size = OG_SIZE
 export const contentType = 'image/png'
 
@@ -31,11 +31,11 @@ export default async function Image({ params }: { params: Promise<{ id: string }
   const sealed = outcome === 'SEALED'
   const tone = outcome === 'WIN' || outcome === 'RIGHT' ? UP_D : outcome === 'LOSS' || outcome === 'WRONG' || outcome === 'FORFEITED' ? DOWN_D : '#C9C9CF'
   const exit = (c?.resolution as { exitPrice?: number } | null)?.exitPrice
-  const headline = !c ? 'A Called call' : p ? (p.rules === 'called/setup-v1' ? `${p.asset.symbol} long` : `${p.asset.symbol} ${p.direction === 'up' ? '↑ up' : '↓ down'}`) : 'A sealed call'
+  const headline = !c ? 'A ParallaxPay call' : p ? (p.rules === 'parallaxpay/setup-v1' ? `${p.asset.symbol} long` : `${p.asset.symbol} ${p.direction === 'up' ? '↑ up' : '↓ down'}`) : 'A sealed call'
   const detail = !c
     ? ''
     : p
-      ? p.rules === 'called/setup-v1'
+      ? p.rules === 'parallaxpay/setup-v1'
         ? `buy $${fmtPrice(p.entry.price)} · stop $${fmtPrice(p.stop)} · target $${fmtPrice(p.target)}`
         : exit != null && c.status === 'revealed'
           ? `$${fmtPrice(p.priceAtIssue)} → $${fmtPrice(exit)} · ${p.horizonSec / 3600}h`

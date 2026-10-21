@@ -4,8 +4,9 @@ import { useEffect, useId, useRef } from 'react'
 import { motion } from 'framer-motion'
 
 /**
- * The first-visit intro, under three seconds: the mark draws its check in foil, the name lands,
- * and the three promises tick in like lines on a receipt. A tap anywhere skips it.
+ * The first-visit intro, under three seconds: the white P draws, its foil twin slides out from
+ * behind it, the name lands, and the three promises tick in like lines on a receipt. A tap
+ * anywhere skips it.
  */
 const LINES = ['Sealed on Metis before the move', 'Scored by price, losses included', 'Nothing is ever edited or deleted']
 
@@ -26,7 +27,7 @@ export function StartupScreen({ onComplete }: { onComplete: () => void }) {
       className="fixed inset-0 z-[9999] bg-ink text-white grid place-items-center cursor-pointer px-6"
       onClick={onComplete}
       role="dialog"
-      aria-label="Called"
+      aria-label="ParallaxPay"
     >
       <div className="absolute top-5 right-5 label !text-[9.5px] text-[#6B6B72]">tap to skip</div>
 
@@ -41,22 +42,30 @@ export function StartupScreen({ onComplete }: { onComplete: () => void }) {
             </linearGradient>
           </defs>
           <rect width="64" height="64" rx="16" fill="#151517" stroke="#26262A" />
-          <motion.path
-            d="M15 31 L27 43.5 L50 18"
-            fill="none"
-            stroke={`url(#i${id})`}
-            strokeWidth="7"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 0.7, ease: [0.65, 0, 0.35, 1], delay: 0.15 }}
-          />
-          <motion.circle cx="27" cy="43.5" r="4.4" fill="#FFFFFF" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 500, damping: 18, delay: 0.55 }} style={{ transformOrigin: '27px 43.5px' }} />
+          <g transform="translate(-1.5 0)">
+            {/* The foil P starts hidden behind the white one and slides out: the parallax. */}
+            <motion.g initial={{ x: -6, y: -4 }} animate={{ x: 0, y: 0 }} transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1], delay: 0.8 }}>
+              <path d="M27 49 V19 H36.5 a9.5 9.5 0 0 1 0 19 H27" fill="none" stroke={`url(#i${id})`} strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+            </motion.g>
+            <path d="M21 15 H30.5 a9.5 9.5 0 0 1 0 19 H21 Z" fill="#151517" />
+            <path d="M21 45 V15 H30.5 a9.5 9.5 0 0 1 0 19 H21" fill="none" stroke="#151517" strokeWidth="12.5" strokeLinecap="round" strokeLinejoin="round" />
+            <motion.path
+              d="M21 45 V15 H30.5 a9.5 9.5 0 0 1 0 19 H21"
+              fill="none"
+              stroke="#FFFFFF"
+              strokeWidth="7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 0.65, ease: [0.65, 0, 0.35, 1], delay: 0.15 }}
+            />
+          </g>
         </svg>
 
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.75, duration: 0.4 }} className="font-heading text-[56px] leading-none font-black tight mt-6">
-          Called
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.75, duration: 0.4 }} className="mt-6">
+          <div className="font-heading text-[46px] leading-none font-black tight">ParallaxPay</div>
+          <div className="label !text-[10px] text-[#6B6B72] mt-2.5">by Sage</div>
         </motion.div>
         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.0, duration: 0.4 }} className="text-[15px] text-[#9C9CA3] mt-3 leading-snug">
           AI agents call the market. Every call is sealed before it moves.

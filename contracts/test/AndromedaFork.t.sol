@@ -2,9 +2,9 @@
 pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {CalledAgents, IERC8004Identity} from "../src/CalledAgents.sol";
-import {CalledLedger, ICalledAgents} from "../src/CalledLedger.sol";
-import {CalledMarket, AggregatorV3Interface} from "../src/CalledMarket.sol";
+import {ParallaxPayAgents, IERC8004Identity} from "../src/ParallaxPayAgents.sol";
+import {ParallaxPayLedger, IParallaxPayAgents} from "../src/ParallaxPayLedger.sol";
+import {ParallaxPayMarket, AggregatorV3Interface} from "../src/ParallaxPayMarket.sol";
 
 interface IIdentityRegistry {
     function register(string calldata agentURI) external returns (uint256 agentId);
@@ -25,9 +25,9 @@ contract AndromedaForkTest is Test {
     address constant M_USDC = 0xEA32A96608495e54156Ae48931A7c20f0dcc1a21;
     address constant M_USDT = 0xbB06DCA3AE6887fAbF931640f67cab3e3a16F4dC;
 
-    CalledAgents agents;
-    CalledLedger calls;
-    CalledMarket market;
+    ParallaxPayAgents agents;
+    ParallaxPayLedger calls;
+    ParallaxPayMarket market;
     address creator = makeAddr("creator");
     address runner = makeAddr("runner");
 
@@ -36,9 +36,9 @@ contract AndromedaForkTest is Test {
         vm.skip(bytes(rpc).length == 0);
         vm.createSelectFork(rpc);
 
-        agents = new CalledAgents(IERC8004Identity(IDENTITY));
-        calls = new CalledLedger(address(this), ICalledAgents(address(agents)));
-        market = new CalledMarket(
+        agents = new ParallaxPayAgents(IERC8004Identity(IDENTITY));
+        calls = new ParallaxPayLedger(address(this), IParallaxPayAgents(address(agents)));
+        market = new ParallaxPayMarket(
             address(this),
             agents,
             calls,
@@ -71,16 +71,16 @@ contract AndromedaForkTest is Test {
 
     function test_realIdentityRegistryEndToEnd() public {
         vm.startPrank(creator);
-        uint256 id = IIdentityRegistry(IDENTITY).register("https://called.xyz/agents/card/test.json");
+        uint256 id = IIdentityRegistry(IDENTITY).register("https://parallaxpay.xyz/agents/card/test.json");
         assertEq(IIdentityRegistry(IDENTITY).ownerOf(id), creator);
-        agents.register(id, CalledAgents.Kind.Setup, keccak256("spec"), "https://called.xyz/specs/test", 3e6, 0);
+        agents.register(id, ParallaxPayAgents.Kind.Setup, keccak256("spec"), "https://parallaxpay.xyz/specs/test", 3e6, 0);
         vm.stopPrank();
 
         bytes memory payload = bytes('{"v":1,"asset":"ETH","side":"long"}');
         bytes32 salt = keccak256("s");
         vm.startPrank(runner);
         uint256 callId = calls.seal(id, keccak256(abi.encodePacked(salt, payload)), uint40(block.timestamp + 1 hours));
-        calls.reveal(callId, salt, payload, CalledLedger.Outcome.Win, 180);
+        calls.reveal(callId, salt, payload, ParallaxPayLedger.Outcome.Win, 180);
         vm.stopPrank();
 
         assertEq(calls.recordOf(id).wins, 1);

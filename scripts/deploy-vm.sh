@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Ship Called to the VM without a downtime window: sync the code (never secrets), install, build into
+# Ship ParallaxPay to the VM without a downtime window: sync the code (never secrets), install, build into
 # .next-new while the live site keeps serving .next, swap, restart, verify.
 #   scripts/deploy-vm.sh            web only
 #   scripts/deploy-vm.sh --engine   web and engine
 # Contains no secrets; the key path is the operator's. Never touches the other apps on the VM.
 set -euo pipefail
-KEY="${CALLED_VM_KEY:-$HOME/.ssh/sage-vm.key}"
-VM="${CALLED_VM:-ubuntu@80.225.209.190}"
-R=/home/ubuntu/called
+KEY="${PARALLAXPAY_VM_KEY:-$HOME/.ssh/sage-vm.key}"
+VM="${PARALLAXPAY_VM:-ubuntu@80.225.209.190}"
+R=/home/ubuntu/parallaxpay
 NODE=/home/ubuntu/.nvm/versions/node/v22.23.2/bin
-SITE="${CALLED_PUBLIC_URL:-https://called.80.225.209.190.sslip.io}"
+SITE="${PARALLAXPAY_PUBLIC_URL:-https://parallaxpay.80.225.209.190.sslip.io}"
 S() { ssh -n -o StrictHostKeyChecking=no -i "$KEY" "$VM" "$@"; }
 cd "$(dirname "$0")/.."
 
@@ -31,8 +31,8 @@ S "cd $R && export PATH=$NODE:\$PATH && rm -rf .next-new && NEXT_DIST_DIR=.next-
   || { echo "BUILD FAILED, live site untouched"; exit 6; }
 
 echo "== swap and restart"
-APPS=called-web
-[ "${1:-}" = "--engine" ] && APPS=called-web,called-engine
+APPS=parallaxpay-web
+[ "${1:-}" = "--engine" ] && APPS=parallaxpay-web,parallaxpay-engine
 S "cd $R && rm -rf .next-prev && { [ -d .next ] && mv .next .next-prev || true; } && mv .next-new .next && pm2 startOrReload ecosystem.config.cjs --only $APPS --update-env >/dev/null && pm2 save >/dev/null && rm -rf .next-prev"
 sleep 6
 

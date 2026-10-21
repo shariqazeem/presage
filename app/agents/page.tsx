@@ -91,7 +91,7 @@ export default function AgentsPage() {
                 </div>
               </div>
               <div className="mt-4 label text-ink-2 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full foil" /> Starts the day Called goes live on Metis
+                <span className="w-2 h-2 rounded-full foil" /> Starts the day ParallaxPay goes live on Metis
               </div>
             </Link>
           ))}

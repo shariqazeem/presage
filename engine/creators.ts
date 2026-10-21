@@ -1,6 +1,6 @@
 import { and, eq, gt, inArray, isNotNull } from 'drizzle-orm'
 import { keccak256, stringToBytes } from 'viem'
-import { calledAgentsAbi } from '../lib/abi/CalledAgents'
+import { parallaxPayAgentsAbi } from '../lib/abi/ParallaxPayAgents'
 import type { SetupPayload } from '../lib/calls/payload'
 import { publicClient } from '../lib/chain'
 import { getDb, schema } from '../lib/db'
@@ -18,7 +18,7 @@ const l = log('creators')
 const MAX_OPEN_PER_AGENT = 6
 const REVEAL_GRACE_SEC = 2 * 3600
 
-/** Spec hashes read from CalledAgents, so the runner only ever runs the strategy that was sealed. */
+/** Spec hashes read from ParallaxPayAgents, so the runner only ever runs the strategy that was sealed. */
 const sealedHash = new Map<number, string>()
 
 async function onChainSpecHash(agentId: number): Promise<string> {
@@ -26,7 +26,7 @@ async function onChainSpecHash(agentId: number): Promise<string> {
   if (hit) return hit
   const a = await publicClient.readContract({
     address: contracts().agents,
-    abi: calledAgentsAbi,
+    abi: parallaxPayAgentsAbi,
     functionName: 'getAgent',
     args: [BigInt(agentId)],
   })
@@ -95,7 +95,7 @@ export async function runCreatorAgents(): Promise<void> {
         const fillBy = signal.entry.type === 'market' ? now : now + spec.fillWindowHours * 3600
         const payload: SetupPayload = {
           v: 1,
-          rules: 'called/setup-v1',
+          rules: 'parallaxpay/setup-v1',
           agent: agent.id,
           asset: { symbol, source: 'binance', market },
           side: 'long',

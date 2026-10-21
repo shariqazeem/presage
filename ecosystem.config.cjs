@@ -1,5 +1,5 @@
-// pm2 on the VM. Both processes run on Node 22 from nvm and share var/called.db.
-//   pm2 startOrReload ecosystem.config.cjs --only called-web
+// pm2 on the VM. Both processes run on Node 22 from nvm and share var/parallaxpay.db.
+//   pm2 startOrReload ecosystem.config.cjs --only parallaxpay-web
 const HOME = process.env.HOME || '/home/ubuntu'
 const NODE = `${HOME}/.nvm/versions/node/v22.23.2/bin`
 const env = { NODE_ENV: 'production', PATH: `${NODE}:/usr/local/bin:/usr/bin:/bin` }
@@ -7,8 +7,8 @@ const env = { NODE_ENV: 'production', PATH: `${NODE}:/usr/local/bin:/usr/bin:/bi
 module.exports = {
   apps: [
     {
-      name: 'called-web',
-      cwd: `${HOME}/called`,
+      name: 'parallaxpay-web',
+      cwd: `${HOME}/parallaxpay`,
       script: 'node_modules/next/dist/bin/next',
       args: 'start -p 3500 -H 127.0.0.1',
       interpreter: `${NODE}/node`,
@@ -16,8 +16,8 @@ module.exports = {
       max_memory_restart: '900M',
     },
     {
-      name: 'called-engine',
-      cwd: `${HOME}/called`,
+      name: 'parallaxpay-engine',
+      cwd: `${HOME}/parallaxpay`,
       script: 'node_modules/tsx/dist/cli.mjs',
       args: 'engine/main.ts',
       interpreter: `${NODE}/node`,

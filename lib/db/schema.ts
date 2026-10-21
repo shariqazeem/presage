@@ -1,6 +1,6 @@
 import { sqliteTable, text, integer, real, index, primaryKey } from 'drizzle-orm/sqlite-core'
 
-/** A Called agent. `id` is its ERC-8004 identity id, which is also its id in CalledAgents. */
+/** A ParallaxPay agent. `id` is its ERC-8004 identity id, which is also its id in ParallaxPayAgents. */
 export const agents = sqliteTable('agents', {
   id: integer('id').primaryKey(),
   slug: text('slug').notNull().unique(),
@@ -41,7 +41,7 @@ export const calls = sqliteTable(
   'calls',
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
-    /** Id in CalledLedger once sealed. */
+    /** Id in ParallaxPayLedger once sealed. */
     chainCallId: integer('chain_call_id'),
     agentId: integer('agent_id').notNull(),
     kind: text('kind', { enum: ['direction', 'setup'] }).notNull(),
@@ -128,7 +128,7 @@ export const telegramCodes = sqliteTable('telegram_codes', {
   usedAt: integer('used_at'),
 })
 
-/** Every Called contract event, indexed from the chain. The chain is the source of truth. */
+/** Every ParallaxPay contract event, indexed from the chain. The chain is the source of truth. */
 export const chainEvents = sqliteTable(
   'chain_events',
   {

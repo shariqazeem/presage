@@ -14,7 +14,7 @@ import { PingButton } from '@/components/Ping'
 import { IconChevron, IconExternal } from '@/components/icons'
 import { ActionButton, CallLine, CheckRow, Countdown, Eyebrow, Feed, Panel, PanelHead, RadarViz, Seal, StatusLine, Tag, radarChecks, radarCounts, useMounted } from '@/components/kit'
 import { FormDots, Skeleton, cx } from '@/components/ui'
-import { calledMarketAbi } from '@/lib/abi/CalledMarket'
+import { parallaxPayMarketAbi } from '@/lib/abi/ParallaxPayMarket'
 import { addressUrl, deployment, erc8004, isMainnet, payTokens, txUrl } from '@/lib/chain'
 import { useAgent, useFloor, useSession, useTelegramLink } from '@/lib/client/hooks'
 import { pct, price as fmtPrice, short, usd6, when } from '@/lib/client/format'
@@ -105,7 +105,7 @@ export default function AgentPage({ params }: { params: Promise<{ slug: string }
         </div>
       </div>
       <div className="hidden md:flex flex-col items-end gap-2 shrink-0">
-        <Share compact path={`/agents/${a.slug}`} text={`${a.name} on Called: every call sealed on Metis before the move, losses included.`} />
+        <Share compact path={`/agents/${a.slug}`} text={`${a.name} on ParallaxPay: every call sealed on Metis before the move, losses included.`} />
       </div>
     </div>
   )
@@ -225,7 +225,7 @@ export default function AgentPage({ params }: { params: Promise<{ slug: string }
           <HowItThinks persona={persona} specHash={a.specHash} />
           <Identity a={a} />
           <div className="md:hidden">
-            <Share path={`/agents/${a.slug}`} text={`${a.name} on Called: every call sealed on Metis before the move, losses included.`} />
+            <Share path={`/agents/${a.slug}`} text={`${a.name} on ParallaxPay: every call sealed on Metis before the move, losses included.`} />
           </div>
         </div>
       </div>
@@ -323,14 +323,14 @@ function BackCard({ a, onDone }: { a: AgentSummary; onDone: () => void }) {
 
   const { data: until, refetch: refetchUntil } = useReadContract({
     address: deployment?.market,
-    abi: calledMarketAbi,
+    abi: parallaxPayMarketAbi,
     functionName: 'subscribedUntil',
     args: address ? [BigInt(a.id), address] : undefined,
     query: { enabled: Boolean(address && deployment) },
   })
   const { data: quote } = useReadContract({
     address: deployment?.market,
-    abi: calledMarketAbi,
+    abi: parallaxPayMarketAbi,
     functionName: 'subscriptionQuote',
     args: [BigInt(a.id), t.address, 1],
     query: { enabled: Boolean(deployment && a.recordReady) },
@@ -350,7 +350,7 @@ function BackCard({ a, onDone }: { a: AgentSummary; onDone: () => void }) {
         }
       }
       const max = t.native ? (quote * 101n) / 100n : quote
-      const hash = await writeContractAsync({ address: deployment.market, abi: calledMarketAbi, functionName: 'subscribe', args: [BigInt(a.id), t.address, 1, max], value: t.native ? max : 0n })
+      const hash = await writeContractAsync({ address: deployment.market, abi: parallaxPayMarketAbi, functionName: 'subscribe', args: [BigInt(a.id), t.address, 1, max], value: t.native ? max : 0n })
       await publicClient.waitForTransactionReceipt({ hash })
       toast.success(`You’re backing ${a.name} for 30 days`)
       await refetchUntil()
@@ -415,7 +415,7 @@ function BackCard({ a, onDone }: { a: AgentSummary; onDone: () => void }) {
           <ActionButton onClick={subscribe} disabled={busy || (isConnected && quote == null)}>
             {busy ? 'Confirm in your wallet…' : !isConnected ? 'Connect a wallet to back it' : `Back it · ${quote != null ? `${Number(formatUnits(quote, t.decimals)).toFixed(t.native ? 4 : 2)} ${t.symbol.replace(/^m\./, '')}` : '…'}`}
           </ActionButton>
-          <div className="text-[11.5px] text-ink-3">Split 80/20 between its creator and Called by the contract. Not financial advice.</div>
+          <div className="text-[11.5px] text-ink-3">Split 80/20 between its creator and ParallaxPay by the contract. Not financial advice.</div>
         </div>
       )}
     </Panel>
@@ -576,7 +576,7 @@ function Identity({ a }: { a: AgentSummary }) {
   const scan = `https://www.8004scan.io/agents/${isMainnet ? 'metis' : 'metis-sepolia'}/${a.id}`
   const rows: [string, React.ReactNode][] = [
     ['Registry', <a key="r" className="font-mono underline" href={addressUrl(erc8004.identity)} target="_blank" rel="noreferrer">{short(erc8004.identity)}</a>],
-    ['Made by', a.house ? 'Called' : <Link key="c" className="font-mono underline" href={`/creators/${a.creator}`}>{short(a.creator)}</Link>],
+    ['Made by', a.house ? 'ParallaxPay' : <Link key="c" className="font-mono underline" href={`/creators/${a.creator}`}>{short(a.creator)}</Link>],
     ['Rules fingerprint', <a key="s" className="font-mono underline" href={`/api/specs/${a.specHash}`} target="_blank" rel="noreferrer">{short(a.specHash, 6)}</a>],
     ...(a.registeredTx ? ([['Registered', <a key="t" className="font-mono underline" href={txUrl(a.registeredTx)} target="_blank" rel="noreferrer">{short(a.registeredTx, 6)}</a>]] as [string, React.ReactNode][]) : []),
     ['Agent card', <a key="a" className="underline" href={`/api/agents/${a.slug}/card`} target="_blank" rel="noreferrer">registration file</a>],
@@ -628,7 +628,7 @@ function Prelaunch({ slug }: { slug: string }) {
           </div>
           <p className="text-[14px] md:text-lg text-ink-2 italic mt-2 leading-snug">“{p.tagline}”</p>
           <div className="mt-3 label text-ink-2 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full foil" /> Starts the day Called goes live on Metis
+            <span className="w-2 h-2 rounded-full foil" /> Starts the day ParallaxPay goes live on Metis
           </div>
         </div>
       </div>

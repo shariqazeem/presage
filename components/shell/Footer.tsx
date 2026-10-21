@@ -7,7 +7,9 @@ export function Footer() {
       <div className="max-w-[1320px] mx-auto px-5 md:px-8 py-8 flex flex-col md:flex-row md:items-center justify-between gap-4 text-sm text-ink-3">
         <div className="flex items-center gap-3">
           <Mark size={22} />
-          <span>Every call sealed on Metis before the move. Not financial advice.</span>
+          <span>
+            <b className="font-semibold text-ink-2">ParallaxPay by Sage.</b> Every call sealed on Metis before the move. Not financial advice.
+          </span>
         </div>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 font-medium">
           <Link href="/record" className="hover:text-ink">Every call</Link>

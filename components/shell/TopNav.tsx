@@ -16,7 +16,7 @@ export function TopNav() {
       <div className="max-w-[1320px] mx-auto px-6 lg:px-8 h-16 flex items-center justify-between gap-6">
         <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
           <Mark size={34} className="transition-transform group-hover:rotate-[-6deg]" />
-          <span className="font-heading text-[23px] font-black tight text-ink">Called</span>
+          <span className="font-heading text-[23px] font-black tight text-ink">ParallaxPay</span>
         </Link>
         <nav className="flex items-center gap-1">
           {DESKTOP.map(item => {

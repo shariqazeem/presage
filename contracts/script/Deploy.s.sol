@@ -2,16 +2,16 @@
 pragma solidity 0.8.28;
 
 import {Script, console2} from "forge-std/Script.sol";
-import {CalledAgents, IERC8004Identity} from "../src/CalledAgents.sol";
-import {CalledLedger, ICalledAgents} from "../src/CalledLedger.sol";
-import {CalledMarket, AggregatorV3Interface} from "../src/CalledMarket.sol";
+import {ParallaxPayAgents, IERC8004Identity} from "../src/ParallaxPayAgents.sol";
+import {ParallaxPayLedger, IParallaxPayAgents} from "../src/ParallaxPayLedger.sol";
+import {ParallaxPayMarket, AggregatorV3Interface} from "../src/ParallaxPayMarket.sol";
 import {ManualFeed} from "../src/testnet/ManualFeed.sol";
 import {TestDollar} from "../src/testnet/TestDollar.sol";
 
-/// Deploys Called to Metis Andromeda (1088) or Metis Sepolia (59902).
+/// Deploys ParallaxPay to Metis Andromeda (1088) or Metis Sepolia (59902).
 ///
 ///   RUNNER=0x... TREASURY=0x... forge script script/Deploy.s.sol \
-///     --rpc-url metis --broadcast --legacy --account called-deployer
+///     --rpc-url metis --broadcast --legacy --account parallaxpay-deployer
 ///
 /// RUNNER is the engine's key: it seals and reveals calls and delivers paid calls.
 /// TREASURY receives the platform's 20%. The deployer stays owner and can hand ownership on later.
@@ -56,9 +56,9 @@ contract Deploy is Script {
             stables[0] = address(new TestDollar());
         }
 
-        CalledAgents agents = new CalledAgents(IERC8004Identity(mainnet ? IDENTITY_ANDROMEDA : IDENTITY_SEPOLIA));
-        CalledLedger calls = new CalledLedger(deployer, ICalledAgents(address(agents)));
-        CalledMarket market = new CalledMarket(
+        ParallaxPayAgents agents = new ParallaxPayAgents(IERC8004Identity(mainnet ? IDENTITY_ANDROMEDA : IDENTITY_SEPOLIA));
+        ParallaxPayLedger calls = new ParallaxPayLedger(deployer, IParallaxPayAgents(address(agents)));
+        ParallaxPayMarket market = new ParallaxPayMarket(
             deployer, agents, calls, AggregatorV3Interface(feed), AggregatorV3Interface(sequencer), MAX_PRICE_AGE, treasury
         );
 
@@ -87,8 +87,8 @@ contract Deploy is Script {
         string memory out = vm.envOr("DEPLOY_OUT", string.concat("./deployments/", vm.toString(chainId), ".json"));
         vm.writeJson(json, out);
 
-        console2.log("CalledAgents", address(agents));
-        console2.log("CalledLedger ", address(calls));
-        console2.log("CalledMarket", address(market));
+        console2.log("ParallaxPayAgents", address(agents));
+        console2.log("ParallaxPayLedger ", address(calls));
+        console2.log("ParallaxPayMarket", address(market));
     }
 }

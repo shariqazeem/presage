@@ -12,7 +12,7 @@ import { PingButton } from '@/components/Ping'
 import { IconCheck, IconX } from '@/components/icons'
 import { CountdownRing, Eyebrow, Panel, ResultPill, Seal, outcomeWord } from '@/components/kit'
 import { VoteBoard } from '@/components/oracle'
-import { calledLedgerAbi } from '@/lib/abi/CalledLedger'
+import { parallaxPayLedgerAbi } from '@/lib/abi/ParallaxPayLedger'
 import { commitmentOf, type CallPayload } from '@/lib/calls/payload'
 import { DIRECTION_RULES, SETUP_RULES, resolveDirection, resolveSetup } from '@/lib/calls/rules'
 import { deployment, addressUrl, txUrl } from '@/lib/chain'
@@ -57,7 +57,7 @@ const pctFrom = (a: number, b: number) => ((b - a) / a) * 100
 function story(c: CallView, p: CallPayload | null): string {
   if (!p) return c.status === 'forfeited' ? 'It was never opened in time, so it counts as a loss.' : 'Sealed on Metis. What it says stays private until it opens.'
   const res = c.resolution as { exitPrice?: number; fillPrice?: number } | null
-  if (p.rules === 'called/direction-v1') {
+  if (p.rules === 'parallaxpay/direction-v1') {
     const said = `Said ${p.direction} at $${price(p.priceAtIssue)}`
     if (c.status !== 'revealed' || res?.exitPrice == null) return `${said}, ${p.confidence}% sure. Opens when the ${p.horizonSec / 3600} hours are up.`
     const word = c.outcome === 'win' ? 'right' : c.outcome === 'loss' ? 'wrong' : `flat (it moved under ${p.flatBandBps / 100}%)`
@@ -76,7 +76,7 @@ function Receipt({ c }: { c: CallView }) {
     { done: c.status === 'revealed' || c.status === 'forfeited', title: c.status === 'forfeited' ? 'Forfeited' : 'Scored by price', when: c.revealedAt ?? (c.status === 'forfeited' ? c.revealBy : null), tx: null, bad: c.status === 'forfeited' },
     { done: c.status === 'revealed', title: 'Opened on Metis', when: c.revealedAt, tx: c.revealTx, bad: false },
   ]
-  const headline = p ? (p.rules === 'called/setup-v1' ? `${p.asset.symbol} long` : `${p.asset.symbol} ${p.direction}`) : c.asset ? `${c.asset} · sealed` : 'A sealed call'
+  const headline = p ? (p.rules === 'parallaxpay/setup-v1' ? `${p.asset.symbol} long` : `${p.asset.symbol} ${p.direction}`) : c.asset ? `${c.asset} · sealed` : 'A sealed call'
   const tone = c.outcome === 'win' ? 'text-up' : c.outcome === 'loss' || c.status === 'forfeited' ? 'text-down' : 'text-ink-3'
   return (
     <>
@@ -216,7 +216,7 @@ function CallBody({ c, p }: { c: CallView; p: CallPayload }) {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
       <Panel className="p-5 md:p-6">
         <Eyebrow>The call</Eyebrow>
-        {p.rules === 'called/setup-v1' ? (
+        {p.rules === 'parallaxpay/setup-v1' ? (
           <div className="grid grid-cols-3 gap-2 mt-3">
             <Box label={p.entry.type === 'market' ? 'Buy at' : 'Buy at (limit)'} value={`$${price(p.entry.price)}`} />
             <Box label={`Stop · −${Math.abs(pctFrom(p.entry.price, p.stop)).toFixed(1)}%`} value={`$${price(p.stop)}`} cls="text-down" />
@@ -231,11 +231,11 @@ function CallBody({ c, p }: { c: CallView; p: CallPayload }) {
         )}
         <div className="text-[12.5px] text-ink-3 mt-3">
           {p.asset.source === 'binance' ? `Binance ${p.asset.market}` : `${p.asset.network} pool ${short(p.asset.pool)}`} · ${price(p.priceAtIssue)} when it was made
-          {p.rules === 'called/setup-v1' && p.conviction ? ` · conviction ${p.conviction}/5` : ''}
+          {p.rules === 'parallaxpay/setup-v1' && p.conviction ? ` · conviction ${p.conviction}/5` : ''}
         </div>
         <div className="mt-4 rounded-[14px] bg-paper-2 p-4">
           <div className="label text-ink-3">Why</div>
-          {p.rules === 'called/setup-v1' ? (
+          {p.rules === 'parallaxpay/setup-v1' ? (
             <ul className="text-[13px] text-ink-2 space-y-1 mt-1.5">
               {(more ? p.why : p.why.slice(0, 3)).map(w => (
                 <li key={w}>· {w}</li>
@@ -247,19 +247,19 @@ function CallBody({ c, p }: { c: CallView; p: CallPayload }) {
               {p.detail && more && <p className="text-[12.5px] text-ink-3 mt-2">{p.detail}</p>}
             </>
           )}
-          {((p.rules === 'called/setup-v1' && p.why.length > 3) || (p.rules === 'called/direction-v1' && p.detail)) && (
+          {((p.rules === 'parallaxpay/setup-v1' && p.why.length > 3) || (p.rules === 'parallaxpay/direction-v1' && p.detail)) && (
             <button onClick={() => setMore(m => !m)} className="text-[12px] font-semibold text-ink-3 hover:text-ink mt-2">
               {more ? 'less' : 'the details'}
             </button>
           )}
         </div>
-        {p.rules === 'called/direction-v1' && (
+        {p.rules === 'parallaxpay/direction-v1' && (
           <div className="mt-4">
             <VoteBoard voters={p.models.map(m => m.model)} votes={p.models} final />
             {p.asker && <div className="mt-3 text-[13px] text-ink-2">The person who asked called <b className={p.asker.direction === 'up' ? 'text-up' : 'text-down'}>{p.asker.direction}</b> first, sealed in the same fingerprint.</div>}
           </div>
         )}
-        {p.rules === 'called/setup-v1' && (
+        {p.rules === 'parallaxpay/setup-v1' && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={`/api/charts/${c.id}`} alt="" className="mt-4 rounded-[14px] border border-line w-full" onError={e => ((e.target as HTMLImageElement).style.display = 'none')} />
         )}
@@ -327,7 +327,7 @@ function PriceChart({ p, c }: { p: CallPayload; c: CallView }) {
         chart = ch
         const s = ch.addSeries(CandlestickSeries, { upColor: '#12A150', downColor: '#E5484D', borderVisible: false, wickUpColor: '#12A150', wickDownColor: '#E5484D' })
         s.setData(candles.map(k => ({ time: (k.ts / 1000) as never, open: k.o, high: k.h, low: k.l, close: k.c })))
-        if (p.rules === 'called/setup-v1') {
+        if (p.rules === 'parallaxpay/setup-v1') {
           s.createPriceLine({ price: p.entry.price, color: '#0B0B0C', lineWidth: 2, lineStyle: 2, title: 'entry' })
           s.createPriceLine({ price: p.stop, color: '#E5484D', lineWidth: 2, lineStyle: 2, title: 'stop' })
           s.createPriceLine({ price: p.target, color: '#12A150', lineWidth: 2, lineStyle: 2, title: 'target' })
@@ -362,7 +362,7 @@ function Verify({ c, p }: { c: CallView; p: CallPayload }) {
   const [outcomeCheck, setOutcomeCheck] = useState<Check>({ state: 'idle', detail: '' })
   const { data: onchain } = useReadContract({
     address: deployment?.calls,
-    abi: calledLedgerAbi,
+    abi: parallaxPayLedgerAbi,
     functionName: 'getCall',
     args: c.chainCallId != null ? [BigInt(c.chainCallId)] : undefined,
     query: { enabled: Boolean(deployment && c.chainCallId != null) },
@@ -372,11 +372,11 @@ function Verify({ c, p }: { c: CallView; p: CallPayload }) {
     setHashCheck({ state: 'running', detail: '' })
     const local = commitmentOf(c.salt as `0x${string}`, c.payloadJson!)
     const chainCommitment = onchain?.commitment
-    if (!chainCommitment) setHashCheck({ state: 'fail', detail: 'Could not read the call from CalledLedger.' })
+    if (!chainCommitment) setHashCheck({ state: 'fail', detail: 'Could not read the call from ParallaxPayLedger.' })
     else
       setHashCheck(
         local.toLowerCase() === chainCommitment.toLowerCase()
-          ? { state: 'pass', detail: `keccak256(salt ‖ payload) = ${short(local, 8)}, the same fingerprint CalledLedger stored at ${when(Number(onchain!.sealedAt))}.` }
+          ? { state: 'pass', detail: `keccak256(salt ‖ payload) = ${short(local, 8)}, the same fingerprint ParallaxPayLedger stored at ${when(Number(onchain!.sealedAt))}.` }
           : { state: 'fail', detail: `Computed ${short(local, 8)} but the chain holds ${short(chainCommitment, 8)}.` },
       )
 
@@ -385,7 +385,7 @@ function Verify({ c, p }: { c: CallView; p: CallPayload }) {
       const chainOutcome = onchain ? OUTCOME_CODES[Number(onchain.outcome)] : c.outcome
       const chainResult = onchain ? Number(onchain.result) : c.result
       let mine: { outcome: string; result: number } | null = null
-      if (p.rules === 'called/setup-v1') {
+      if (p.rules === 'parallaxpay/setup-v1') {
         const candles = await publicCandles(p, c.sealedAt!, (c.revealedAt ?? c.revealBy) + 900, '15m')
         mine = resolveSetup(p, candles, c.sealedAt!, c.revealedAt ?? Math.floor(Date.now() / 1000))
       } else if (p.asset.source === 'binance') {
@@ -400,7 +400,7 @@ function Verify({ c, p }: { c: CallView; p: CallPayload }) {
     }
   }
 
-  const rules = p.rules === 'called/setup-v1' ? SETUP_RULES : DIRECTION_RULES
+  const rules = p.rules === 'parallaxpay/setup-v1' ? SETUP_RULES : DIRECTION_RULES
   return (
     <div className="bg-ink text-white rounded-[20px] p-6 md:p-8 mt-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
@@ -434,7 +434,7 @@ function Verify({ c, p }: { c: CallView; p: CallPayload }) {
             <div>
               contract:{' '}
               <a className="underline" href={addressUrl(deployment.calls)} target="_blank" rel="noreferrer">
-                CalledLedger {deployment.calls}
+                ParallaxPayLedger {deployment.calls}
               </a>
             </div>
           )}

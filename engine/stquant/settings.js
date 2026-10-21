@@ -1,4 +1,4 @@
-// Called settings for ST Quant, replacing okxtradingagent/config.json.
+// ParallaxPay settings for ST Quant, replacing okxtradingagent/config.json.
 //
 // Taken from the config ST Quant was running live in August 2026, with one
 // deliberate change: hold mode is OFF. In hold mode the target was the "pump

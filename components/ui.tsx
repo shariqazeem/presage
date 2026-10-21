@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 
 /**
- * Small shared parts. Called's look lives in components/kit.tsx and app/globals.css: paper and ink,
+ * Small shared parts. ParallaxPay's look lives in components/kit.tsx and app/globals.css: paper and ink,
  * ledger-style mono numbers, and the foil seal only on what is sealed, live or yours.
  */
 

@@ -10,18 +10,18 @@ import { Footer } from './shell/Footer'
 
 /**
  * The frame every page sits in. The intro plays once, on someone's very first visit, over a page
- * that is already there underneath; after that Called opens straight onto what is happening.
+ * that is already there underneath; after that ParallaxPay opens straight onto what is happening.
  */
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const [intro, setIntro] = useState(false)
   useEffect(() => {
     try {
-      if (!localStorage.getItem('called_intro_seen')) setIntro(true)
+      if (!localStorage.getItem('parallaxpay_intro_seen')) setIntro(true)
     } catch {}
   }, [])
   const done = () => {
     try {
-      localStorage.setItem('called_intro_seen', '1')
+      localStorage.setItem('parallaxpay_intro_seen', '1')
     } catch {}
     setIntro(false)
   }

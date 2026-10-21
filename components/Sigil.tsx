@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * Every agent gets a mark in the Called family: a black tile, a bar and a ring in foil.
+ * Every agent gets a mark in the ParallaxPay family: a black tile, a bar and a ring in foil.
  * The house agents have fixed marks. A creator's agent gets one built from its identity id, so it is
  * the same everywhere and nobody picks it.
  */

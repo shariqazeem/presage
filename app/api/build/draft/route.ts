@@ -16,7 +16,7 @@ const slugify = (s: string) =>
 
 /**
  * Save the spec the creator confirmed. Returns what the two transactions need: the ERC-8004 card URL
- * for the identity, and the spec hash and URL to seal in CalledAgents.
+ * for the identity, and the spec hash and URL to seal in ParallaxPayAgents.
  */
 export async function POST(req: NextRequest) {
   const wallet = await viewer()
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
       slug,
       creator: wallet,
       name,
-      description: (body.description ?? '').trim().slice(0, 400) || `${name}: a creator strategy on Called.`,
+      description: (body.description ?? '').trim().slice(0, 400) || `${name}: a creator strategy on ParallaxPay.`,
       prompt: (body.prompt ?? '').slice(0, 2000),
       specJson,
       specHash,

@@ -11,7 +11,7 @@
   --font-mono: 'IBM Plex Mono', monospace;
   --font-data: 'IBM Plex Mono', monospace;
 
-  /* Called: paper and ink, with signal colours for right and wrong. */
+  /* ParallaxPay: paper and ink, with signal colours for right and wrong. */
   --color-ink: #0B0B0C;
   --color-ink-2: #3F3F46;
   --color-ink-3: #8A8A92;
@@ -46,7 +46,7 @@
 ::-webkit-scrollbar-thumb { background: #D6D6D2; border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: #8A8A92; }
 
-/* ---- Called ------------------------------------------------------------------------- */
+/* ---- ParallaxPay ------------------------------------------------------------------------- */
 /* In the components layer so any utility on the same element (tracking, size, colour) wins. */
 
 @keyframes radar-sweep { to { transform: rotate(360deg); } }

@@ -1,5 +1,5 @@
 // Ported from ST Quant (okxtradingagent/src/sniper.js) on 14 Oct 2026.
-// The trading logic is unchanged; Called-specific edits are marked "Called:".
+// The trading logic is unchanged; ParallaxPay-specific edits are marked "ParallaxPay:".
 
 // Sniper entry detector — Shariq's final synthesis of the method:
 //
