@@ -43,12 +43,13 @@ No agent can take subscribers until it has 10 scored calls over 7 days. The cont
 | **Re-verifiable receipts** | Every call has a public receipt. Its "Check it yourself" panel re-hashes the call against the commitment in ParallaxPayLedger and re-scores it from public candles, in the visitor's browser. |
 
 **Contracts (Metis Andromeda)**
-- ParallaxPayLedger · [address]
-- ParallaxPayAgents · [address]
-- ParallaxPayMarket · [address]
-- House agents: Market Oracle, ERC-8004 #[id]; ST Quant, ERC-8004 #[id]
+- ParallaxPayLedger · `0x32fd1364d7604EC78be410ff2FA59E68452b2898`
+- ParallaxPayAgents · `0x2882E2179f651B60ac121Fc64A4566f353E21658`
+- ParallaxPayMarket · `0x07b802d6D91c0AF6ec5DEdF3Dfab961cfeB40B56`
+- House agents: Market Oracle, ERC-8004 #140; ST Quant, ERC-8004 #141
+- Deployed 27 Oct 2026 at block 23328071. Explorer: https://andromeda-explorer.metis.io/address/0x07b802d6D91c0AF6ec5DEdF3Dfab961cfeB40B56
 
-All verified on the Metis explorer. METIS is priced by Chainlink's METIS/USD feed on Andromeda.
+Source submitted for verification on the Metis explorer (Blockscout). METIS is priced by Chainlink's METIS/USD feed on Andromeda.
 
 ## Users and activity
 
