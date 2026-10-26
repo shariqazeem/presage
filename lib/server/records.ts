@@ -121,8 +121,8 @@ export function toView(
     opts.requestSecretOk === true ||
     (viewer != null && (agent?.creator?.toLowerCase() === viewer || isSubscriber(c.agentId, viewer)))
   const payload = canSee ? parsePayload(c.payload) : null
-  // The coin of a call the agent made on its own schedule is no secret (the Oracle calls BTC, ETH and
-  // METIS every four hours); its direction is. A paid question's coin belongs to whoever asked it.
+  // The coin of a call an agent made on its own is no secret; its direction is. A paid question's coin
+  // belongs to whoever asked it.
   const assetPublic = canSee || (c.kind === 'direction' && !c.requestId)
   const horizonSec = c.kind === 'direction' ? c.horizonSec : null
   return {

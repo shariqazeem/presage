@@ -57,7 +57,7 @@ Every user action is a transaction from the user's own wallet on Andromeda:
 - An Oracle call is one transaction (two the first time in a stablecoin: approve, then pay). Three calls a month makes a counted user.
 - A subscription is $2 or more settled, which makes a counted user by itself.
 - A creator mints an identity, seals a spec, sets prices and claims earnings: four transactions from their own wallet.
-- Every seal, reveal, settlement and claim burns METIS gas. The Oracle also seals its own calls every 4 hours, so its record keeps growing whether or not anyone is paying.
+- Every seal, reveal, settlement and claim burns METIS gas. The Oracle answers only when someone pays, so every call on its record was bought by a real person.
 
 Users can link Telegram to get calls and outcomes, which also gives each one a unique Telegram ID.
 

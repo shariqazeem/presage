@@ -30,7 +30,7 @@ const NETWORKS = (process.env.STQUANT_NETWORKS ?? 'bsc,x-layer').split(',').map(
 const MAX_OPEN = Number(process.env.STQUANT_MAX_OPEN ?? 8)
 const AI_READS_PER_SCAN = 2
 // A chart read costs a few cents of model time; cap them per UTC day so spend stays bounded.
-const AI_READS_PER_DAY = Number(process.env.STQUANT_MAX_AI_READS_PER_DAY ?? 60)
+const AI_READS_PER_DAY = Number(process.env.STQUANT_MAX_AI_READS_PER_DAY ?? 20)
 let aiDay = ''
 let aiToday = 0
 // Wrapped, pegged, staked or tokenised majors: they track something else. Same list as ST Quant.

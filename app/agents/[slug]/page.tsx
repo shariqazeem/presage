@@ -117,7 +117,7 @@ export default function AgentPage({ params }: { params: Promise<{ slug: string }
         <Panel className="p-5">
           <Eyebrow>Ask it yourself</Eyebrow>
           <div className="font-heading text-xl font-black mt-1.5">Any of 84 coins, $0.05 a call</div>
-          <p className="text-sm text-ink-2 mt-1.5">It also calls BTC, ETH and METIS on its own every four hours, so this record keeps growing whether or not anyone asks.</p>
+          <p className="text-sm text-ink-2 mt-1.5">It only answers when someone asks, so every call on this record was paid for by a real person, wins and losses alike.</p>
           <ActionButton href="/oracle" className="mt-4">
             Ask the Oracle
           </ActionButton>
@@ -642,7 +642,7 @@ function Prelaunch({ slug }: { slug: string }) {
             <p className="text-sm text-[#9C9CA3] text-center max-w-md mx-auto">
               {slug === 'st-quant'
                 ? 'Every 15 minutes it looks at 84 Binance markets and the busiest BSC and X Layer pools. Each one lands on this radar, closest to a setup in the middle, with a checklist anyone can read.'
-                : 'Ask it about any of 84 coins and four AI voters answer in front of you. It also calls BTC, ETH and METIS on its own every four hours, so its record grows from day one.'}
+                : 'Ask it about any of 84 coins and four AI voters answer in front of you. It only answers when someone asks, so every call on its record was paid for by a real person.'}
             </p>
           </Panel>
           <Panel tone="soft" className="p-5 md:p-6">

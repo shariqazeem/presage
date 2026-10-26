@@ -77,9 +77,11 @@ async function main() {
   every('resolver', 60_000, resolveDue)
   every('refunds', 5 * 60_000, refundUndelivered)
   if (oracleId != null) every('oracle', 2_000, () => answerPaid(oracleId))
-  // The Oracle's own calls every 4 hours, two minutes past the hour, so its record never stands still.
-  if (oracleId != null && process.env.ORACLE_SCHEDULE !== 'off') onCandleClose('oracle-schedule', 240, 120, () => scheduledCalls(oracleId))
-  else l.warn('no Oracle agent registered yet: run scripts/register-house-agents.ts')
+  // The Oracle answers when someone pays. Its own unpaid calls spend model credits and gas with nobody
+  // waiting, so they only run when ORACLE_SCHEDULE names them (e.g. "BTC,ETH,METIS:4h").
+  const oracleSchedule = process.env.ORACLE_SCHEDULE
+  if (oracleId != null && oracleSchedule && oracleSchedule !== 'off') onCandleClose('oracle-schedule', 240, 120, () => scheduledCalls(oracleId))
+  if (oracleId == null) l.warn('no Oracle agent registered yet: run scripts/register-house-agents.ts')
   // ST Quant reads 15-minute candles, so it scans once per candle, a minute after each one closes.
   if (stquantId != null && process.env.STQUANT_ENABLED !== '0') {
     onCandleClose('stquant', 15, 60, () => scanOnce(stquantId))

@@ -209,11 +209,11 @@ async function sealForecast(oracleAgentId: number, asset: string, horizon: Horiz
 }
 
 /**
- * The Oracle's own calls, on a schedule, so its record keeps growing whether or not anyone is paying.
- * They are sealed and scored exactly like paid calls. ORACLE_SCHEDULE is "BTC,ETH,METIS:4h".
+ * The Oracle's own unpaid calls, sealed and scored exactly like paid ones. Off unless ORACLE_SCHEDULE
+ * names them, e.g. "BTC,ETH,METIS:4h": each one spends model credits and gas with nobody asking.
  */
 export async function scheduledCalls(oracleAgentId: number): Promise<void> {
-  const [list, hz] = (process.env.ORACLE_SCHEDULE ?? 'BTC,ETH,METIS:4h').split(':')
+  const [list, hz] = (process.env.ORACLE_SCHEDULE ?? '').split(':')
   const horizon = (hz ?? '4h') as Horizon
   if (!HORIZONS[horizon]) throw new Error(`Bad ORACLE_SCHEDULE horizon ${hz}`)
   for (const asset of list.split(',').map(s => s.trim()).filter(Boolean)) {
