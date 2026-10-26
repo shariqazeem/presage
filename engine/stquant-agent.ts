@@ -417,8 +417,8 @@ async function scan(agentId: number): Promise<void> {
         l.error(`${c.asset.symbol} not sealed: ${e.message}`)
         break
       }
-      // The floor should show a setup that was dropped, not just the log.
-      emit(agentId, 'skipped', { symbol: c.asset.symbol, why: `could not finish: ${errMsg(e).slice(0, 120)}` })
+      // The floor shows that a setup was dropped, in plain words; the error itself stays in the log.
+      emit(agentId, 'skipped', { symbol: c.asset.symbol, why: 'It could not finish checking this one, so nothing was sealed.' })
       l.error(`${c.asset.symbol} not published: ${errMsg(e)}`)
     }
   }

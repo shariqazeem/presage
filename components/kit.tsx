@@ -503,7 +503,12 @@ export function tell(e: AgentEvent): Told | null {
     }
     case 'skipped':
       if (typeof d.why === 'string' && /no chart read available/.test(d.why)) return null
-      return { text: <>{who} passed on {sym ? <b className="text-ink">{sym}</b> : 'a setup'}</>, detail: typeof d.why === 'string' ? d.why : undefined, tone: 'gray' }
+      // Older events carried the raw error; show the plain sentence instead.
+      return {
+        text: <>{who} passed on {sym ? <b className="text-ink">{sym}</b> : 'a setup'}</>,
+        detail: typeof d.why === 'string' ? (d.why.startsWith('could not finish:') ? 'It could not finish checking this one, so nothing was sealed.' : d.why) : undefined,
+        tone: 'gray',
+      }
     case 'forfeited':
       return { text: <>{who} missed a reveal</>, detail: 'It counts as a loss, and the payer is refunded.', href: `/calls/${d.callId}`, tone: 'red' }
     default:
