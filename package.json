@@ -18,7 +18,8 @@
     "test": "tsx --test tests/*.test.ts",
     "engine:near": "tsx engine/near/main.ts",
     "near:test": "cd near/vault && cargo test",
-    "near:build": "cd near/vault && cargo near build non-reproducible-wasm"
+    "near:build": "cd near/vault && cargo near build non-reproducible-wasm",
+    "near:e2e": "tsx scripts/near/testnet-e2e.ts"
   },
   "dependencies": {
     "@hot-labs/near-connect": "0.12.0",

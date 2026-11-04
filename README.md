@@ -36,7 +36,10 @@ npm run dev            # the app at http://localhost:3000
 npm run engine:near    # the agent: reads markets without keys, trades once NEAR_AGENT_KEY is set
 npm run near:test      # the vault's 43 unit tests
 npm run near:build     # near/vault/target/near/parallaxpay_vault.wasm
+npm run near:e2e       # the vault's whole life on NEAR testnet against Rhea's real exchange (27 checks)
 ```
+
+`near:e2e` makes throwaway accounts from the testnet faucet, opens a USDC/wNEAR pool on `ref-finance-101.testnet`, deploys the vault and runs join, deposit, an agent buy with its plan sealed, a sell, the plan opened, a buy that misses its minimum, the limits the vault must refuse, withdraw and leave, checking every balance against the vault's state. The last run passed all 27 checks: [vault.pp-e2e-mw2mf9t4.testnet](https://testnet.nearblocks.io/address/vault.pp-e2e-mw2mf9t4.testnet).
 
 Environment for the agent (in `.env.local`): `NEAR_AGENT_KEY` (the function-call key from `scripts/near/setup.ts agent`), `NEAR_AI_API_KEY` (NEAR AI Cloud), optionally `NEAR_AI_MODEL` (default `z-ai/glm-5.3-flash`) and `ONECLICK_JWT`.
 
