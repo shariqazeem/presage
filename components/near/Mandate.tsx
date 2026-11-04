@@ -36,6 +36,7 @@ export function MandateCard({
   footer,
   compact = false,
   className = '',
+  children,
 }: {
   rules: Rules
   state?: MandateState
@@ -43,6 +44,8 @@ export function MandateCard({
   footer?: ReactNode
   compact?: boolean
   className?: string
+  /** Controls for a signed mandate (autopilot, edit), under the signature. */
+  children?: ReactNode
 }) {
   return (
     <div className={cx('rounded-[22px] bg-white border border-line relative overflow-hidden', className)}>
@@ -81,6 +84,7 @@ export function MandateCard({
         )}
         {footer && <div className="ml-auto shrink-0">{footer}</div>}
       </div>
+      {children && <div className={cx('border-t border-line', compact ? 'px-4 py-3' : 'px-5 py-4')}>{children}</div>}
     </div>
   )
 }

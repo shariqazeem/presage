@@ -4,26 +4,38 @@ import Link from 'next/link'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { useQueryClient } from '@tanstack/react-query'
-import { IconChevron, IconLive, IconPencil, IconPlus, IconRefund, IconX } from '../icons'
-import { Ring, Sheet } from '../kit'
+import { IconChevron } from '../icons'
+import { Ring, Sheet, useNow } from '../kit'
 import { Mark } from '../shell/Mark'
 import { cx } from '../ui'
 import { COINS, USDC, USDC_ID, coinById, tokenById } from '@/lib/near/config'
-import type { AgentState, Desk as DeskData } from '@/lib/near/hooks'
+import { px } from '@/lib/near/drawing'
+import type { AgentState, CoinRead, Desk as DeskData } from '@/lib/near/hooks'
 import { quoteBuy, quoteSell } from '@/lib/near/rhea'
 import type { PositionView } from '@/lib/near/store'
 import { setRulesTx, stopTx, tradeTx } from '@/lib/near/tx'
 import { fromUnits, lessBps } from '@/lib/near/units'
 import type { Member } from '@/lib/near/vault'
 import { Floor } from './agent'
-import { money, pctText, qty, usd } from './kit'
+import { AgentDrawing } from './AgentDrawing'
+import { Ask } from './Ask'
+import { pctText, qty, usd } from './kit'
+import { MandateCard } from './Mandate'
 import { RollingNumber } from './motion'
 import { useNear } from './NearWallet'
-import { Chip, IconAction, Switch } from './primitives'
-import { rulesSummary } from './RulesForm'
+import { Switch } from './primitives'
+import { Ticket } from './Promises'
 import { FundSheet, RulesSheet, WithdrawSheet, sayError, tellAgent } from './sheets'
+import { focusOf, statusOf, voice } from './Stage'
+
+/**
+ * Your agent: ParallaxPay working for one person. What it wants your answer on, the trades it is
+ * running for you (drawn on its charts with their plans), what it is watching for you, the mandate
+ * you signed, and a place to talk to it. The account sits in the header, not at the centre.
+ */
 
 const SLIPPAGE_BPS = 80
+const READ_EVERY = 15 * 60
 
 function holdings(member: Member, prices: Record<string, number>) {
   return [USDC_ID, ...COINS.map(c => c.id)]
@@ -35,56 +47,93 @@ function holdings(member: Member, prices: Record<string, number>) {
     .filter(r => r.amount > 0 || r.id === USDC_ID)
 }
 
-/** Where price sits between the stop and the target, as an exchange shows a position's range. */
-function Range({ stop, target, entry, now }: { stop: number; target: number; entry: number | null; now: number | null }) {
-  if (!stop || !target || target <= stop) return null
-  const at = (p: number) => `${Math.min(100, Math.max(0, ((p - stop) / (target - stop)) * 100))}%`
+function Heartbeat({ at }: { at: number | undefined }) {
+  const now = useNow(1000)
+  if (!at) return null
+  const left = Math.max(0, at - now)
   return (
-    <div className="w-full">
-      <div className="relative h-1.5 rounded-full bg-gradient-to-r from-down/30 via-paper-2 to-up/35">
-        {entry != null && <span className="absolute top-1/2 -translate-y-1/2 w-[2px] h-3.5 bg-ink-3 rounded-full" style={{ left: at(entry) }} />}
-        {now != null && <span className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-ink ring-2 ring-white" style={{ left: `calc(${at(now)} - 6px)` }} />}
-      </div>
-      <div className="flex justify-between mt-1 num text-[11px] text-ink-3">
-        <span>stop {money(stop)}</span>
-        <span>target {money(target)}</span>
+    <div className="flex items-center gap-2.5 shrink-0">
+      <Ring progress={left === 0 ? 1 : 1 - left / READ_EVERY} size={32} stroke={3} label="" />
+      <div className="leading-tight">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8A8A92]">{left === 0 ? 'Reading' : 'Next read'}</div>
+        <div className="num text-[14px] text-white">{left === 0 ? 'now…' : `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`}</div>
       </div>
     </div>
   )
 }
 
-function PositionRow({ p, price, action }: { p: PositionView; price: number | null; action?: React.ReactNode }) {
+function SectionTitle({ eyebrow, title, right }: { eyebrow: string; title: string; right?: React.ReactNode }) {
+  return (
+    <div className="flex items-end justify-between gap-3">
+      <div>
+        <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3">{eyebrow}</div>
+        <h2 className="font-heading text-[22px] font-black tight mt-0.5">{title}</h2>
+      </div>
+      {right}
+    </div>
+  )
+}
+
+/** A trade it is running for you, on its chart: where it bought, where it gets out either way. */
+function Mission({ p, price, action }: { p: PositionView; price: number | null; action?: React.ReactNode }) {
   const pnl = price != null && p.coinAmount != null ? p.coinAmount * price - p.usdcIn : null
   const pnlPct = pnl != null && p.usdcIn > 0 ? pnl / p.usdcIn : null
   return (
-    <div className="rounded-[20px] border border-line p-4">
-      <div className="flex items-center gap-3">
-        <span className="w-10 h-10 rounded-full bg-ink text-white grid place-items-center font-heading font-black text-[12px] shrink-0">{p.coin.slice(0, 4)}</span>
+    <div className="rounded-[22px] bg-ink text-white overflow-hidden relative">
+      <div className="flex items-start gap-3 px-4 pt-4">
+        <Mark size={30} className="shrink-0" />
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-[15px]">{p.coin}</span>
-            <Chip tone={p.mode === 'ask' ? 'muted' : 'strong'}>{p.mode === 'ask' ? 'Approved' : 'Autopilot'}</Chip>
+          <div className="text-[15px] font-semibold leading-tight">
+            {p.coin} · {p.mode === 'ask' ? 'you approved' : 'autopilot'}
           </div>
-          <div className="text-[12.5px] text-ink-3 num mt-0.5 truncate">
-            {qty(p.coinAmount)} · in {money(p.entryPrice)} · now {price != null ? money(price) : '—'}
+          <div className="num text-[12.5px] text-[#8A8A92] mt-0.5 truncate">
+            {qty(p.coinAmount)} {p.coin} · in at {p.entryPrice != null ? px(p.entryPrice) : '—'}
           </div>
         </div>
         <div className="text-right">
-          <div className={cx('num text-[16px] font-semibold', pnl == null ? 'text-ink-3' : pnl >= 0 ? 'text-up' : 'text-down')}>{usd(pnl, { sign: true })}</div>
-          <div className={cx('num text-[12px]', pnl == null ? 'text-ink-3' : pnl >= 0 ? 'text-up' : 'text-down')}>{pctText(pnlPct)}</div>
+          <div className={cx('num text-[18px] font-semibold', pnl == null ? 'text-[#8A8A92]' : pnl >= 0 ? 'text-up-d' : 'text-down-d')}>{usd(pnl, { sign: true })}</div>
+          <div className={cx('num text-[12px]', pnl == null ? 'text-[#8A8A92]' : pnl >= 0 ? 'text-up-d' : 'text-down-d')}>{pctText(pnlPct)}</div>
         </div>
       </div>
-      <div className="mt-3">
-        <Range stop={p.stop} target={p.target} entry={p.entryPrice} now={price} />
+      <div className="px-2 pt-2">
+        <AgentDrawing
+          coin={p.coin}
+          tf="1h"
+          size="card"
+          plan={{ entry: p.entryPrice, stop: p.stop || null, target: p.target || null, from: p.openedAt }}
+          markers={p.openedAt && p.entryPrice ? [{ at: p.openedAt, price: p.entryPrice, label: 'In', tone: 'in' }] : []}
+          className="aspect-[16/9]"
+          label={`ParallaxPay's ${p.coin} chart with this trade's stop and target`}
+        />
       </div>
-      <div className="mt-2 flex items-center justify-between text-[12.5px]">
-        <span className="text-ink-3">{p.callId != null ? `Plan #${p.callId} ${p.opened ? 'opened' : 'sealed'}` : ''}</span>
-        <Link href={`/record/${p.id}`} className="font-semibold flex items-center gap-0.5">
+      <div className="px-4 pb-4 pt-1 flex items-center justify-between text-[12.5px]">
+        <span className="text-[#8A8A92]">{p.callId != null ? `Plan #${p.callId} ${p.opened ? 'opened' : 'sealed'} on NEAR` : ''}</span>
+        <Link href={`/record/${p.id}`} className="font-semibold text-[#C9C9CF] hover:text-white flex items-center gap-0.5">
           Receipt <IconChevron size={13} />
         </Link>
       </div>
-      {action && <div className="mt-3">{action}</div>}
+      {action && <div className="px-4 pb-4">{action}</div>}
     </div>
+  )
+}
+
+/** A coin it is watching for you: its drawing and what it says about it. */
+function Watch({ r }: { r: CoinRead }) {
+  const s = statusOf(r)
+  return (
+    <Link href={`/?coin=${r.coin}#live`} className="rounded-[20px] bg-ink text-white overflow-hidden press block">
+      <div className="flex items-center justify-between gap-2 px-4 pt-3.5">
+        <span className="font-heading text-[16px] font-black tight">{r.coin}</span>
+        <span className="flex items-center gap-2">
+          <span className="num text-[13px] text-[#C9C9CF]">{px(r.price)}</span>
+          <span className={cx('rounded-full px-2 h-[20px] inline-flex items-center text-[10.5px] font-semibold uppercase tracking-[0.07em]', s.tone === 'live' ? 'foil text-white' : s.tone === 'close' ? 'bg-white text-ink' : 'bg-white/[0.08] text-[#A1A1AA]')}>{s.word}</span>
+        </span>
+      </div>
+      <div className="px-1.5 pt-1">
+        <AgentDrawing coin={r.coin} tf="1h" size="card" focus={focusOf(r)} className="aspect-[16/8]" label={`ParallaxPay's drawing of ${r.coin}`} />
+      </div>
+      <p className="px-4 pb-4 pt-1 text-[13px] text-[#C9C9CF] leading-snug line-clamp-3">{voice(r)}</p>
+    </Link>
   )
 }
 
@@ -93,6 +142,7 @@ export function Desk({ data, agent, refresh, preview = false }: { data: DeskData
   const { accountId, send } = useNear()
   const qc = useQueryClient()
   const member = data.member!
+  const now = useNow(30_000)
   const [sheet, setSheet] = useState<'fund' | 'withdraw' | 'rules' | null>(null)
   const [shot, setShot] = useState<PositionView | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
@@ -104,6 +154,8 @@ export function Desk({ data, agent, refresh, preview = false }: { data: DeskData
   const past = data.positions.filter(p => p.status === 'closed' || p.status === 'not_filled' || p.status === 'declined')
   const usdc = BigInt(member.balances[USDC_ID] ?? '0')
   const openPnl = open.reduce((s, p) => s + (prices[p.token] != null && p.coinAmount != null ? p.coinAmount * prices[p.token] - p.usdcIn : 0), 0)
+  const mine = reads.filter(r => member.rules.coins.includes(r.token))
+  const watching = mine.map(r => r.coin).join(' and ')
   const guard = () => {
     if (preview) toast('This is a preview with sample data.')
     return preview
@@ -122,9 +174,9 @@ export function Desk({ data, agent, refresh, preview = false }: { data: DeskData
         await send([stopTx()])
         toast.success('Autopilot is off. ParallaxPay will ask before every trade.')
       } else {
-        if (!member.rules.coins.length) throw new Error('Pick at least one coin in your rules first.')
+        if (!member.rules.coins.length) throw new Error('Pick at least one coin in your mandate first.')
         await send([setRulesTx({ ...member.rules, autopilot: true })])
-        toast.success('Autopilot is on, inside your limits.')
+        toast.success('Autopilot is on, inside your mandate.')
       }
       await after()
     } catch (e) {
@@ -183,160 +235,196 @@ export function Desk({ data, agent, refresh, preview = false }: { data: DeskData
   const allowed = member.rules.trades_per_day
 
   return (
-    <div className="max-w-[1120px] mx-auto px-4 md:px-6 lg:px-8 pt-4 md:pt-8 pb-28 md:pb-12">
+    <div className="max-w-[1180px] mx-auto px-4 md:px-6 lg:px-8 pt-4 md:pt-7 pb-28 md:pb-12">
       {preview && <div className="mb-4 rounded-[14px] bg-paper-2 px-4 py-2.5 text-[13px] text-ink-2">Preview with sample data. Nothing here is real.</div>}
-      <section className="grid lg:grid-cols-[1.15fr_0.85fr] gap-4">
-        <div className="rounded-[24px] bg-ink text-white p-5 md:p-6 relative overflow-hidden">
-          <span className="absolute top-0 inset-x-0 h-[3px] foil-line" />
-          <div className="text-[13px] text-[#A1A1AA]">Your account</div>
-          <RollingNumber value={usd(total)} className="text-[44px] md:text-[54px] font-semibold mt-2 tracking-[-0.02em]" />
-          <div className={cx('num text-[14px] mt-2', openPnl > 0 ? 'text-up-d' : openPnl < 0 ? 'text-down-d' : 'text-[#A1A1AA]')}>{open.length ? `${usd(openPnl, { sign: true })} on ${open.length} open trade${open.length === 1 ? '' : 's'}` : 'Nothing open right now'}</div>
-          <div className="flex gap-2 mt-4 overflow-x-auto no-scrollbar">
-            {rows.map(r => (
-              <span key={r.id} className="shrink-0 rounded-full bg-white/[0.07] px-3 py-1.5 text-[13px]">
-                <b className="font-semibold">{r.symbol}</b> <span className="num text-[#C9C9CF]">{r.id === USDC_ID ? usd(r.amount) : `${qty(r.amount)} · ${usd(r.usd)}`}</span>
-              </span>
-            ))}
-          </div>
-          <div className="mt-6 grid grid-cols-4 gap-2 max-w-[400px]">
-            <IconAction tone="night" icon={<IconPlus size={20} />} label="Add" onClick={() => setSheet('fund')} />
-            <IconAction tone="night" icon={<IconRefund size={20} />} label="Withdraw" onClick={() => setSheet('withdraw')} />
-            <IconAction tone="night" icon={<IconPencil size={18} />} label="Rules" onClick={() => setSheet('rules')} />
-            {member.rules.autopilot ? <IconAction tone="danger" icon={<IconX size={18} />} label="Stop" onClick={toggle} /> : <IconAction tone="night" icon={<IconLive size={18} />} label="Autopilot" onClick={toggle} />}
-          </div>
-        </div>
 
-        <div className="rounded-[24px] border border-line p-5 md:p-6 flex flex-col">
-          <div className="flex items-center gap-3">
-            <Mark size={40} />
-            <div className="min-w-0">
-              <div className="font-semibold text-[15.5px]">{member.rules.autopilot ? 'ParallaxPay is trading for you' : 'ParallaxPay asks before it trades'}</div>
-              <div className="text-[13px] text-ink-3 truncate">{rulesSummary(member.rules)}</div>
+      {/* your agent and your account */}
+      <section className="rounded-[28px] bg-ink text-white relative overflow-hidden">
+        <span className="absolute top-0 inset-x-0 h-[3px] foil-line" />
+        <div className="flex items-center gap-3 px-4 md:px-6 pt-4 md:pt-5">
+          <div className="relative shrink-0">
+            <span className="absolute -inset-1 rounded-[14px] foil opacity-40 blur-[6px] animate-[soft-pulse_2.4s_ease-in-out_infinite]" />
+            <span className="relative block">
+              <Mark size={40} />
+            </span>
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[16px] font-semibold leading-tight">Your ParallaxPay</div>
+            <div className="text-[12.5px] text-[#A1A1AA] mt-0.5 truncate">
+              Watching {watching || 'your coins'} for you · {member.rules.autopilot ? 'autopilot' : 'asks first'}
             </div>
           </div>
-          <div className="mt-5 flex items-center justify-between gap-3 rounded-[18px] bg-paper-2 px-4 py-3">
-            <div>
-              <div className="font-semibold text-[15px]">Autopilot</div>
-              <div className="text-[13px] text-ink-3">{member.rules.autopilot ? 'Trades inside your limits' : 'Off: it proposes, you approve'}</div>
-            </div>
-            <Switch on={member.rules.autopilot} onChange={toggle} disabled={busy === 'toggle'} label="Autopilot" />
-          </div>
-          <div className="mt-3 flex items-center gap-3 rounded-[18px] bg-paper-2 px-4 py-3">
-            <Ring progress={allowed ? used / allowed : 0} size={44} stroke={4} dark={false} label={`${used}/${allowed}`} />
-            <div>
-              <div className="font-semibold text-[15px]">Buys today</div>
-              <div className="text-[13px] text-ink-3">up to {usd(fromUnits(member.rules.max_trade, USDC.decimals), { trim: true })} each, resets at midnight UTC</div>
-            </div>
-          </div>
-          <Link href="/" className="mt-auto pt-4 text-[13.5px] font-semibold flex items-center gap-1">
-            See what it’s watching <IconChevron size={14} />
-          </Link>
+          <Heartbeat at={agent?.nextCheckAt} />
         </div>
-      </section>
-
-      {proposals.length > 0 && (
-        <section className="mt-6">
-          <div className="flex items-center gap-2">
-            <h2 className="font-heading text-[22px] font-black tight">Waiting for you</h2>
-            <span className="w-2 h-2 rounded-full foil" />
-          </div>
-          <div className="grid md:grid-cols-2 gap-3 mt-3">
-            {proposals.map(p => (
-              <div key={p.id} className="rounded-[22px] bg-ink text-white p-4 relative overflow-hidden">
-                <span className="absolute top-0 inset-x-0 h-[3px] foil-line" />
-                <div className="flex items-start gap-3">
-                  <Mark size={34} />
-                  <div className="min-w-0 flex-1">
-                    <div className="font-semibold text-[15px]">
-                      Buy {usd(p.usdcIn, { trim: true })} of {p.coin}?
-                    </div>
-                    {p.plan && (
-                      <p className="text-[13.5px] text-[#C9C9CF] leading-snug mt-1">
-                        Near {money(p.plan.entry.priceAtIssue)}, stop {money(p.plan.stop)}, target {money(p.plan.target)}. {p.plan.why[0]}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
-                  <button onClick={() => approve(p)} disabled={busy != null} className="h-12 rounded-[14px] bg-white text-ink font-semibold press disabled:opacity-50">
-                    {busy === `approve-${p.id}` ? 'Confirm in your wallet…' : `Approve ${usd(p.usdcIn, { trim: true })}`}
-                  </button>
-                  <button onClick={() => setShot(p)} className="h-12 px-4 rounded-[14px] bg-white/10 text-white text-[14px] font-semibold press">
-                    The chart
-                  </button>
-                </div>
-                <div className="text-[12px] text-[#8A8A92] mt-2">Plan #{p.callId} sealed on NEAR · open for 30 minutes</div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      <section className="mt-6">
-        <h2 className="font-heading text-[22px] font-black tight">Open trades</h2>
-        {open.length ? (
-          <div className="grid md:grid-cols-2 gap-3 mt-3">
-            {open.map(p => (
-              <PositionRow
-                key={p.id}
-                p={p}
-                price={prices[p.token] ?? null}
-                action={
-                  p.exitProposed || !member.rules.autopilot ? (
-                    <button onClick={() => sell(p)} disabled={busy != null} className={cx('w-full h-11 rounded-[14px] font-semibold press disabled:opacity-50', p.exitProposed ? 'bg-ink text-white' : 'bg-paper-2 text-ink')}>
-                      {busy === `sell-${p.id}` ? 'Confirm in your wallet…' : p.exitProposed ? `Sell now: ${p.exitReason}` : `Sell ${p.coin} now`}
-                    </button>
-                  ) : undefined
-                }
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="mt-3 rounded-[20px] bg-paper-2 p-5 text-[14px] text-ink-2 leading-snug">
-            Nothing open. {member.rules.autopilot ? 'ParallaxPay buys when a setup fits your rules.' : 'When a setup fits your rules, it shows up here for you to approve.'}
-            {usdc === 0n && (
-              <button onClick={() => setSheet('fund')} className="block mt-2 font-semibold text-ink underline decoration-line underline-offset-2">
-                Add USDC so it has something to work with
-              </button>
-            )}
-          </div>
-        )}
-      </section>
-
-      <section className="mt-6 grid lg:grid-cols-2 gap-4">
-        <div className="rounded-[22px] border border-line p-4 md:p-5">
-          <h2 className="font-heading text-[18px] font-black tight">Activity</h2>
-          <Floor lines={data.feed} max={10} showMine={false} />
-        </div>
-        <div className="rounded-[22px] border border-line p-4 md:p-5">
-          <div className="flex items-center justify-between">
-            <h2 className="font-heading text-[18px] font-black tight">History</h2>
-            <Link href="/record" className="text-[13px] font-semibold text-ink-3">
-              Everyone’s
-            </Link>
-          </div>
-          {past.length ? (
-            <ol className="mt-2 divide-y divide-line">
-              {past.slice(0, 8).map(p => (
-                <li key={p.id}>
-                  <Link href={`/record/${p.id}`} className="flex items-center gap-3 py-3 press">
-                    <span className="font-semibold text-[14px] w-16">{p.coin}</span>
-                    <span className="flex-1 text-[13px] text-ink-3 truncate">{p.status === 'closed' ? p.exitReason : p.status === 'not_filled' ? 'didn’t fill' : 'not taken'}</span>
-                    <span className={cx('num text-[14px] font-semibold', p.pnlUsd == null ? 'text-ink-3' : p.pnlUsd >= 0 ? 'text-up' : 'text-down')}>{p.pnlUsd == null ? '—' : usd(p.pnlUsd, { sign: true })}</span>
-                  </Link>
-                </li>
+        <div className="px-4 md:px-6 pt-5 pb-5 flex flex-col md:flex-row md:items-end gap-4 md:gap-8">
+          <div className="min-w-0 flex-1">
+            <div className="text-[12.5px] text-[#8A8A92]">In your account</div>
+            <RollingNumber value={usd(total)} className="text-[40px] md:text-[48px] font-semibold mt-1.5 tracking-[-0.02em]" />
+            <div className={cx('num text-[13.5px] mt-2', openPnl > 0 ? 'text-up-d' : openPnl < 0 ? 'text-down-d' : 'text-[#8A8A92]')}>{open.length ? `${usd(openPnl, { sign: true })} on ${open.length} open trade${open.length === 1 ? '' : 's'}` : 'Nothing open right now'}</div>
+            <div className="flex gap-2 mt-3 overflow-x-auto no-scrollbar">
+              {rows.map(r => (
+                <span key={r.id} className="shrink-0 rounded-full bg-white/[0.07] px-3 py-1.5 text-[12.5px]">
+                  <b className="font-semibold">{r.symbol}</b> <span className="num text-[#C9C9CF]">{r.id === USDC_ID ? usd(r.amount) : `${qty(r.amount)} · ${usd(r.usd)}`}</span>
+                </span>
               ))}
-            </ol>
-          ) : (
-            <p className="text-[14px] text-ink-3 py-4">No finished trades yet.</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 md:w-[280px] shrink-0">
+            <button onClick={() => setSheet('fund')} className="h-11 rounded-full bg-white text-ink text-[14px] font-semibold press">
+              Add USDC
+            </button>
+            <button onClick={() => setSheet('withdraw')} className="h-11 rounded-full bg-white/10 text-white text-[14px] font-semibold press">
+              Withdraw
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <div className="mt-5 grid lg:grid-cols-[minmax(0,1fr)_370px] gap-5 items-start">
+        <div className="grid gap-6 min-w-0">
+          {proposals.length > 0 && (
+            <section>
+              <SectionTitle eyebrow="Needs you" title={`It wants your answer${proposals.length > 1 ? ` on ${proposals.length} trades` : ''}`} right={<span className="w-2.5 h-2.5 rounded-full foil mb-2" />} />
+              <div className="grid gap-3 mt-3">
+                {proposals.map(p => (
+                  <div key={p.id} className="rounded-[22px] bg-ink text-white overflow-hidden relative">
+                    <span className="absolute top-0 inset-x-0 h-[3px] foil-line" />
+                    <div className="flex items-start gap-3 px-4 pt-4">
+                      <Mark size={32} className="shrink-0" />
+                      <div className="rounded-[16px] rounded-tl-[6px] bg-white/[0.07] px-3.5 py-2.5 text-[14.5px] leading-snug text-[#F4F4F2]">
+                        I&rsquo;d buy {usd(p.usdcIn, { trim: true })} of {p.coin}
+                        {p.plan ? ` near ${px(p.plan.entry.priceAtIssue)}. If it's wrong I'm out at ${px(p.plan.stop)}; I'm aiming for ${px(p.plan.target)}.` : '.'} {p.plan?.why[0]}
+                      </div>
+                    </div>
+                    <div className="px-2 pt-2">
+                      <AgentDrawing
+                        coin={p.coin}
+                        tf="1h"
+                        size="card"
+                        plan={p.plan ? { entry: p.plan.entry.priceAtIssue, stop: p.plan.stop, target: p.plan.target, from: p.plan.issuedAt } : { stop: p.stop, target: p.target }}
+                        className="aspect-[16/9]"
+                        label={`The ${p.coin} plan ParallaxPay sealed, on its chart`}
+                      />
+                    </div>
+                    <div className="px-4 pb-4 pt-2 grid grid-cols-[1fr_auto] gap-2">
+                      <button onClick={() => approve(p)} disabled={busy != null} className="h-12 rounded-[14px] bg-white text-ink font-semibold press disabled:opacity-50">
+                        {busy === `approve-${p.id}` ? 'Confirm in your wallet…' : `Approve ${usd(p.usdcIn, { trim: true })}`}
+                      </button>
+                      <button onClick={() => setShot(p)} className="h-12 px-4 rounded-[14px] bg-white/10 text-white text-[14px] font-semibold press">
+                        Exact chart
+                      </button>
+                    </div>
+                    <div className="px-4 pb-4 -mt-2 text-[12px] text-[#8A8A92]">Plan #{p.callId} is sealed on NEAR. It stays open for 30 minutes.</div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section>
+            <SectionTitle eyebrow="Working on" title={open.length ? `${open.length} trade${open.length === 1 ? '' : 's'} for you` : 'No trades open'} />
+            {open.length ? (
+              <div className={cx('grid gap-3 mt-3', open.length > 1 && 'md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2')}>
+                {open.map(p => (
+                  <Mission
+                    key={p.id}
+                    p={p}
+                    price={prices[p.token] ?? null}
+                    action={
+                      p.exitProposed || !member.rules.autopilot ? (
+                        <button onClick={() => sell(p)} disabled={busy != null} className={cx('w-full h-11 rounded-[14px] font-semibold press disabled:opacity-50', p.exitProposed ? 'bg-white text-ink' : 'bg-white/10 text-white')}>
+                          {busy === `sell-${p.id}` ? 'Confirm in your wallet…' : p.exitProposed ? `Sell now: ${p.exitReason}` : `Sell ${p.coin} now`}
+                        </button>
+                      ) : undefined
+                    }
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="mt-3 rounded-[20px] bg-paper-2 p-4 text-[14px] text-ink-2 leading-snug">
+                {member.rules.autopilot ? 'When a setup fits your mandate, it buys and the trade shows up here with its stop and target.' : 'When a setup fits your mandate, it asks you here first, with the chart and the plan it sealed.'}
+                {usdc === 0n && (
+                  <button onClick={() => setSheet('fund')} className="block mt-2 font-semibold text-ink underline decoration-line underline-offset-2">
+                    Add USDC so it has something to work with
+                  </button>
+                )}
+              </div>
+            )}
+          </section>
+
+          {mine.length > 0 && (
+            <section>
+              <SectionTitle eyebrow="Watching for you" title={`What it sees on ${watching}`} />
+              <div className="grid sm:grid-cols-2 gap-3 mt-3">
+                {mine.map(r => (
+                  <Watch key={r.coin} r={r} />
+                ))}
+              </div>
+            </section>
           )}
         </div>
-      </section>
 
-      <Sheet open={shot != null} onClose={() => setShot(null)} title={shot ? `What ParallaxPay read on ${shot.coin}` : ''}>
+        <aside className="grid gap-4 min-w-0 lg:sticky lg:top-[120px]">
+          <MandateCard rules={member.rules} state="signed" signer={accountId ?? (preview ? 'you.near' : null)} compact>
+            <div className="grid gap-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-[14.5px] font-semibold">Autopilot</div>
+                  <div className="text-[12.5px] text-ink-3">{member.rules.autopilot ? 'It trades on its own, inside this mandate' : 'Off: it asks you before every trade'}</div>
+                </div>
+                <Switch on={member.rules.autopilot} onChange={toggle} disabled={busy === 'toggle'} label="Autopilot" />
+              </div>
+              <div className="flex items-center gap-3">
+                <Ring progress={allowed ? used / allowed : 0} size={40} stroke={4} dark={false} label={`${used}/${allowed}`} />
+                <div className="min-w-0 flex-1 text-[12.5px] text-ink-3 leading-snug">
+                  {used} of {allowed} buys used today. Resets at midnight UTC.
+                </div>
+                <button onClick={() => setSheet('rules')} className="h-9 px-3.5 rounded-full bg-paper-2 text-[13px] font-semibold press shrink-0">
+                  Edit
+                </button>
+              </div>
+            </div>
+          </MandateCard>
+
+          <div className="rounded-[22px] border border-line p-4">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3">Talk to it</div>
+            <div className="font-heading text-[18px] font-black tight mt-0.5 mb-3">Ask your agent anything</div>
+            <Ask dark={false} coin={mine[0]?.coin} />
+            <div className="mt-3 border-t border-line pt-1">
+              <Floor lines={data.feed} max={6} showMine={false} empty="Nothing yet. It tells you here when it finds something for you." />
+            </div>
+          </div>
+
+          <div className="rounded-[22px] border border-line p-4">
+            <div className="flex items-baseline justify-between">
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3">Kept promises</div>
+                <div className="font-heading text-[18px] font-black tight mt-0.5">Your finished trades</div>
+              </div>
+              <Link href="/record" className="text-[13px] font-semibold text-ink-3 flex items-center gap-0.5">
+                Everyone&rsquo;s <IconChevron size={13} />
+              </Link>
+            </div>
+            {past.length ? (
+              <div className="grid gap-2 mt-3">
+                {past.slice(0, 5).map(p => (
+                  <Ticket key={p.id} t={p} now={now} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-[13.5px] text-ink-3 mt-3 leading-snug">None yet. Each trade it finishes for you lands here with the plan it sealed before buying.</p>
+            )}
+          </div>
+        </aside>
+      </div>
+
+      <Sheet open={shot != null} onClose={() => setShot(null)} title={shot ? `The chart ParallaxPay read on ${shot.coin}` : ''}>
         {shot && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={`/api/near/chart/pos-${shot.id}`} alt={`The ${shot.coin} chart behind this plan`} className="w-full rounded-[14px] border border-line" />
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`/api/near/chart/pos-${shot.id}`} alt={`The ${shot.coin} chart behind this plan`} className="w-full rounded-[14px] border border-line" />
+            <p className="text-[13px] text-ink-3 mt-3 leading-snug">The exact image it read when it sealed this plan: four timeframes, its support and resistance, and money flow.</p>
+          </>
         )}
       </Sheet>
       <FundSheet open={sheet === 'fund'} onClose={() => setSheet(null)} onDone={refresh} />

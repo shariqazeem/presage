@@ -39,12 +39,13 @@ export function voice(r: CoinRead): string {
   if (r.setup) return `I'd buy ${r.coin} here. It's on ${sup ? `its ${sup.tf} support at ${px(sup.price)}` : 'support'} and money flow has bottomed. Stop ${px(r.setup.stop)}, target ${px(r.setup.target)}.`
   let where: string
   if (!sup || dist == null) where = `${r.coin} has no support close enough to lean on.`
-  else if (dist < 0) where = `${r.coin} slipped just under its ${sup.tf} level at ${px(sup.price)}.`
+  else if (dist < -0.05) where = `${r.coin} slipped just under its ${sup.tf} level at ${px(sup.price)}.`
+  else if (dist < 0.1) where = `${r.coin} is sitting right on its ${sup.tf} support at ${px(sup.price)}.`
   else if (dist <= 2.5) where = `${r.coin} is ${dist.toFixed(1)}% above its ${sup.tf} support at ${px(sup.price)}.`
   else where = `${r.coin} is ${dist.toFixed(1)}% above its nearest support at ${px(sup.price)}.`
   let wait: string
   if (failed('trend')) wait = 'The daily trend is falling, so I stay out until it turns.'
-  else if (sup && dist != null && dist < 0) wait = 'I need it to win that level back before I buy.'
+  else if (sup && dist != null && dist < -0.05) wait = 'I need it to win that level back before I buy.'
   else if (failed('momentum')) wait = `Money flow hasn't bottomed${r.mfi15 != null ? ` (MFI ${Math.round(r.mfi15)} on the 15m)` : ''}, so I'm waiting for it to flush and turn up.`
   else if (sup && dist != null && dist > 2.5) wait = 'I wait for a pullback to it.'
   else if (failed('htf')) wait = 'The bigger picture is weak, so I want a clean bounce first.'
