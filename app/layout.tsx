@@ -3,6 +3,10 @@ import { IBM_Plex_Mono, Inter, Inter_Tight } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/Providers'
 import { agentSnapshot, candlesWithin } from '@/lib/near/snapshot'
+import { COINS } from '@/lib/near/config'
+import { WARMUP, WINDOW } from '@/lib/near/drawing'
+import type { AgentState } from '@/lib/near/hooks'
+import type { Candle } from '@/lib/market/types'
 import { ClientLayout } from '@/components/ClientLayout'
 
 const site = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
@@ -15,7 +19,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(site),
   title: 'ParallaxPay: an AI trader that works for you on NEAR, inside your rules',
   description:
-    'ParallaxPay trades NEAR and Zcash for you from your own account in its vault on NEAR, inside the rules you set. Every plan is sealed on NEAR before the trade and opened after it.',
+    'ParallaxPay trades NEAR, ZEC, RHEA and AURORA for you from your own account in its vault on NEAR, inside the rules you set. Every plan is sealed on NEAR before the trade and opened after it.',
   openGraph: {
     title: 'ParallaxPay',
     description: 'An AI trader that works for you on NEAR, inside your rules. Every plan sealed before the trade.',
@@ -35,15 +39,18 @@ export const viewport: Viewport = {
 
 export const dynamic = 'force-dynamic'
 
-/** Pages arrive with the agent's live state and the first chart's candles already in them. */
+/** Pages arrive with the agent's live state and every coin's candles for its drawings already in them. */
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const agent = await agentSnapshot().catch(() => null)
-  const coin = agent?.reads.find(r => r.setup)?.coin ?? 'NEAR'
-  const candles = await candlesWithin(coin, '1h', 700)
+  const [agent, ...series] = await Promise.all([agentSnapshot().catch(() => null), ...COINS.map(c => candlesWithin(c.symbol, '1h', 700))])
+  const draw: Record<string, Candle[]> = {}
+  COINS.forEach((c, i) => {
+    const s = series[i] as Candle[] | null
+    if (s?.length) draw[c.symbol] = s.slice(-(WINDOW['1h'] + WARMUP))
+  })
   return (
     <html lang="en" className={`${inter.variable} ${interTight.variable} ${plexMono.variable}`}>
       <body className="font-sans antialiased">
-        <Providers seed={{ agent, candles: candles ? { coin, tf: '1h', candles } : null }}>
+        <Providers seed={{ now: Math.floor(Date.now() / 1000), agent: agent as AgentState | null, draw }}>
           <ClientLayout>{children}</ClientLayout>
         </Providers>
       </body>

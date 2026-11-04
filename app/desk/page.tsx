@@ -1,16 +1,24 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { ActionButton, Panel } from '@/components/kit'
 import { Desk } from '@/components/near/Desk'
 import { NearButton } from '@/components/near/kit'
 import { useNear } from '@/components/near/NearWallet'
 import { useAgentState, useDesk } from '@/lib/near/hooks'
+import { previewDesk } from '@/lib/near/preview'
 
 /** A member's desk: their vault account, ParallaxPay's proposals and trades for them, their rules. */
 export default function DeskPage() {
   const { accountId, ready } = useNear()
   const { data: agent } = useAgentState()
   const { data: desk, refetch, isLoading } = useDesk(accountId)
+  const [preview, setPreview] = useState(false)
+  useEffect(() => {
+    // Sample data for checking the design locally. Development builds only.
+    if (process.env.NODE_ENV !== 'production' && new URLSearchParams(window.location.search).has('preview')) setPreview(true)
+  }, [])
+  if (preview) return <Desk data={previewDesk(agent?.reads ?? [])} agent={agent} refresh={() => {}} preview />
   if (accountId && desk?.member) return <Desk data={desk} agent={agent} refresh={() => void refetch()} />
   return (
     <div className="max-w-[560px] mx-auto px-4 pt-12 pb-20">

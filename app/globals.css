@@ -54,6 +54,16 @@
 @keyframes rise { from { transform: translateY(8px); } to { transform: none; } }
 @keyframes flash-up { from { background-color: rgba(61, 220, 132, .28); } to { background-color: transparent; } }
 @keyframes flash-down { from { background-color: rgba(255, 107, 107, .28); } to { background-color: transparent; } }
+/*
+ * The agent's drawing sequence: candles print left to right, levels draw across, trendlines extend,
+ * labels settle, money flow traces. Time-based CSS whose final state is the element's own state
+ * (fill-mode backwards), so a drawing is complete even if the animation never runs.
+ */
+@keyframes dr-print { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes dr-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes dr-pop { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+@keyframes dr-breathe { 0%, 100% { transform: scale(1); opacity: .35; } 50% { transform: scale(1.7); opacity: .12; } }
+@keyframes tick-in { from { transform: scale(.4); } to { transform: none; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
 
 @layer components {
@@ -67,6 +77,14 @@
   .press { transition: transform .12s ease, background-color .15s ease, color .15s ease, border-color .15s ease; -webkit-tap-highlight-color: transparent; }
   .press:active { transform: scale(.97); }
   /* A price that just moved flashes its direction, then settles. */
+  .dr-print { animation: dr-print .65s cubic-bezier(.3, .7, .2, 1) backwards; }
+  .dr-draw { animation: dr-draw .8s cubic-bezier(.3, .7, .2, 1) backwards; }
+  .dr-pop { animation: dr-pop .38s cubic-bezier(.2, .8, .2, 1) backwards; }
+  .dr-breathe { animation: dr-breathe 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  .dr-lv { cursor: help; }
+  .dr-lv:hover .dr-ln { stroke-width: 2.4; opacity: 1; }
+  /* A check that passes lands with a small pop, one after another. */
+  .tick-in { animation: tick-in .32s cubic-bezier(.2, 1.4, .4, 1) backwards; }
   .flash-up { animation: flash-up .6s ease-out; }
   .flash-down { animation: flash-down .6s ease-out; }
 
@@ -95,6 +113,6 @@
   .soft-pulse { animation: soft-pulse 1.6s ease-in-out infinite; }
 
   @media (prefers-reduced-motion: reduce) {
-    .radar-sweep, .soft-pulse { animation: none; }
+    .radar-sweep, .soft-pulse, .dr-breathe { animation: none; }
   }
 }

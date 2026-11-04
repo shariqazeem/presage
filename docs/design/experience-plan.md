@@ -1,61 +1,70 @@
 # ParallaxPay: the experience plan
 
-Written 5 Nov 2026 for the NEAR HACKATHON build (deadline 14 Nov). This is the reference every screen
-is built and checked against, so the whole app ends up feeling like one product.
+Written 5 Nov 2026 for the NEAR HACKATHON build (deadline 14 Nov) and reset the same evening after the
+founder's review. This is the reference every screen is built and checked against, so the whole app
+feels like one product.
+
+## The reset (5 Nov, evening)
+
+The first pass borrowed from exchanges: a watchlist, a ticker, a big balance, quick-action circles.
+It came out generic, because exchanges already do that better and it hides the one thing only
+ParallaxPay has. The founder's feedback:
+
+- It should feel like the home of trading agents, where people live too.
+- The technical-analysis screenshots, the agent visibly doing TA, are the best part.
+- We are the first generation building this, so design for where agents are going, not for apps that already exist.
+
+So the product is no longer "an exchange with an AI inside". It is **an AI trader that works in the
+open, and the people who hire it.** Prices, balances and order rows stay, but as supporting detail.
 
 ## North star
 
-Open ParallaxPay and within three seconds you see an agent working with real charts and real money,
-and you want it working for you. It should feel like a top iOS finance app or an exchange (instant,
-tactile, alive, numbers first), in ParallaxPay's own paper-and-ink look with foil for whatever is live
-or sealed.
+Open ParallaxPay and you are watching an agent think. It draws its levels on a real chart in front of
+you, says in one sentence what it is waiting for, and seals its plan on NEAR before it trades. People
+are around it: hiring it, approving its plans, watching their trades. Within ten seconds you
+understand what it does, and you want one working for you.
 
-## What's wrong today
+## Three ideas that make it next-generation
 
-1. **It's a website, not an app.** A marketing hero, long scrolling sections, and copy before product. The product (the live agent) starts below the fold on phones.
-2. **It feels sluggish.**
-   - A 2.9 s intro screen on the first visit.
-   - Every screen fetches its data in the browser after load, so skeletons show first.
-   - Live measurement: data arrives about 1.5–2 s after navigation; the server answers in 0.66 s.
-   - Fonts come through a render-blocking `@import`.
-3. **Typography and density.**
-   - 9–10 px labels.
-   - Sizes chosen screen by screen.
-   - Numbers don't lead.
-4. **Onboarding is a long form.** No excitement and no live feedback on choices. It dead-ends while the vault isn't live.
-5. **Surfaces are inconsistent.** Dark and light panels mixed without a rule. Different radii and spacing. Components styled one by one.
-6. **Motion is either absent or fragile.**
-   - No press feedback.
-   - Prices don't tick.
-   - Fade-ins can stall in background tabs.
-7. **Empty and blocked states are thin.** An empty record, and a desk you can't reach without the vault.
+1. **A visible mind.** Nothing is a black box.
+   - Its drawing animates as it reads: candles print, support and resistance draw themselves, the trendline extends, money flow traces underneath.
+   - Its checks tick off one by one.
+   - It speaks in the first person ("I'm waiting for money flow to turn up at $1,275").
+   - The exact chart image it read is always one tap away, as proof.
+2. **Mandates, not settings.** You don't configure a bot; you give an agent a mandate: how much, how often, which coins, what style, and whether it asks first.
+   - The vault on NEAR enforces it.
+   - You revoke it in one tap.
+   - The mandate is a first-class object, a signed card that appears wherever it matters.
+3. **Promises before actions.** Every plan is sealed on NEAR before the trade and opened after.
+   - The record is a ledger of kept promises, losses included.
+   - A sealed plan is something you can hold: a ticket with a foil seal and the drawing it was made on.
+   - Agents check agents: the NEAR AI analyst, signed in a TEE, reviews ParallaxPay's plan before money moves. Their exchange is shown as a dialogue.
 
 ## Principles
 
-1. **Product first.** The first screen is the agent at work. Marketing copy shrinks to one line and a button.
-2. **Instant.**
-   - Pages arrive rendered with data: server-render, then poll.
-   - No splash.
-   - Skeletons only for what truly can't be known yet.
-   - Budget: LCP under 1.5 s on a phone, CLS 0.
-3. **Alive.**
-   - Every changing number rolls.
-   - Prices flash up or down.
-   - The agent's status pulses.
-   - The floor streams.
-4. **One decision per screen in onboarding.** Every choice previews its consequence right away.
-5. **Tactile.**
-   - Every tap answers within 100 ms: press scale and state change.
-   - Sheets slide up from the bottom.
-   - Segmented controls move their thumb.
-6. **Numbers are the hero.** Big tabular numerals. Colour only for up and down. Foil only for the agent, live states and seals.
-7. **One system.** Tokens and a small component kit; no per-page styling.
-8. **Confident and honest.** We say what it does and show its record, losses included. We never promise returns.
+1. **The agent's work is the hero.** Its drawing, its thinking and its promises lead every screen. Prices and balances support them.
+2. **Instant.** Pages arrive rendered with data and polling takes over. No splash. Skeletons only for what can't be known yet. Budget: LCP under 1.5 s on a phone, CLS 0. No chart library on the first screen; drawings are plain SVG.
+3. **Alive, with purpose.** Motion shows thinking (drawing, ticking, sealing), never decoration. Numbers that change roll.
+4. **People live here.** Who's here, who hired it, who approved what: presence and the floor stream make it a place, not a page.
+5. **One decision per screen when hiring.** Every choice updates the mandate card live.
+6. **Tactile.** Every tap answers within 100 ms. Sheets slide up. Segmented thumbs move.
+7. **One system.** Tokens and a small agent-native kit; no per-page styling.
+8. **Confident and honest.** We show what it does and its record, losses included. We never promise returns, and no backtest numbers go on the site.
 
-## Design system v2
+## Visual language
+
+- **Paper is the human world; night glass is the agent's mind.**
+  - On night: the agent's drawings, its thinking and its live state.
+  - On paper: what people do, such as mandates, approvals, accounts and receipts.
+- **Foil is the agent's signature:** seals, the live dot, the "now" marker on its drawings, the mandate's signature line. Nowhere else.
+- **The founder's TA language, kept exactly:**
+  - Green dashed support and red dashed resistance, each with its touch count ("S 1,275 · 4×").
+  - Solid trendlines labelled with direction and touches.
+  - Money flow (MFI) in violet underneath, with the 20 and 80 bands.
+- **Agent voice:** first person, one or two short sentences, specific prices, no hype.
 
 **Surfaces**
-| Token | Light (paper) | Night (live agent) |
+| Token | Paper | Night |
 | --- | --- | --- |
 | bg | `#FFFFFF` | `#0B0B0C` |
 | surface | `#F6F6F4` | `#141416` |
@@ -64,123 +73,128 @@ or sealed.
 | text-2 | `#3F3F46` | `#C9C9CF` |
 | text-3 | `#8A8A92` | `#8A8A92` |
 | up / down | `#12A150` / `#E5484D` | `#3DDC84` / `#FF6B6B` |
-
-Rule: paper is where people act (rules, approvals, account); night is where the agent works (terminal,
-chart, its thinking).
+| drawing | | support `#3DDC84`, resistance `#FF6B6B`, MFI `#A78BFA`, grid `rgba(255,255,255,0.06)` |
 
 **Type**
-- Display: Inter Tight 900, 40/44 on phones, 56 on desktop. One per screen at most.
-- Title: 28. Headline: 20/24.
-- Body: Inter 15/16.
-- Caption: 13.
-- Micro: 11, the smallest size anywhere. No more 9 px.
-- Numbers: IBM Plex Mono with tabular figures. Prices and balances use the display sizes in mono.
-- Fonts load through `next/font`: self-hosted, preloaded, no layout shift.
+- Display: Inter Tight 900, 40 on phones and 56 on desktop, at most one per screen.
+- Title 28. Headline 20/24. Body Inter 15/16. Caption 13.
+- Micro 11 is the smallest size anywhere, including drawing labels.
+- Numbers: IBM Plex Mono, tabular. Account money is always to the cent.
 
-**Spacing, radius, elevation**
+**Spacing, radius, elevation:**
 - Spacing: 4, 8, 12, 16, 20, 24, 32, 48.
-- Radius: 12 for controls, 16 for cards, 24 for major panels, full for pills.
-- Elevation: cards are flat with a 1 px line. Only floating layers (sheets, sticky bars, toasts) cast a soft shadow.
+- Radius: 12 for controls, 16 for cards, 24 for stages.
+- Cards are flat with a 1 px line. Only floating layers cast shadows.
 
 **Motion**
-- Press: scale to 0.97 in 120 ms.
-- Sheets: spring.
-- Tabs and segmented thumbs: 220 ms.
-- Rolling digits: 400 ms.
-- Price flash: 600 ms tint.
-- Entrances only move, never fade from zero, so content is readable even if animation never runs.
-- Respect `prefers-reduced-motion`.
+- **The drawing sequence**, the signature. Total 1.6 s, and it replays when the coin or timeframe changes:
+  1. Candles print left to right.
+  2. Levels draw across.
+  3. The trendline extends.
+  4. Labels settle.
+  5. MFI traces.
+  6. The foil "now" dot starts to breathe.
+- **Checks:** tick in sequence, 90 ms apart.
+- **Seal:** the foil stamp lands with a short spring.
+- **Press:** scale to 0.97 in 120 ms. **Rolling digits:** 400 ms.
+- **Implementation:** CSS only, time-based, final state by default, so nothing can stall hidden. Respect `prefers-reduced-motion`.
 
-**Kit:** `Button` (primary / secondary / ghost, sizes L/M/S), `IconButton` (round, with label below, like Coinbase quick actions), `Card`, `Stat`, `Pill`/`Chip`, `Segmented`, `Switch`, `Sheet`, `ListRow`, `RollingNumber`, `PriceFlash`, `Sparkline`, `ProgressRing`, `Avatar` (agent, analyst, people), `Toast`, `Skeleton`, `EmptyState`.
+## The agent-native kit
+
+- **`AgentDrawing`**: the live drawing of a coin on one timeframe, computed in the browser with the agent's own level, trendline and MFI code on the agent's own window of candles.
+  - Optional plan zones: entry, stop, target.
+  - Optional in/out markers.
+  - Sizes: stage, card and thumb.
+  - Hovering a level tells its story ("Support at $1,275: price bounced here 4 times").
+- **`AgentVoice`**: the agent's sentence as a message from its avatar.
+- **`ThinkingChecks`**: its checklist, ticking in sequence, with conviction dots.
+- **`Heartbeat`**: "Next read in 7:12", or "Reading now…" with a pulse.
+- **`MandateCard`**: the mandate as a signed card, in three states: draft, signed and paused.
+- **`SealTicket`**: a sealed plan, carrying coin, sealed time, fingerprint, foil stamp and its drawing thumb. After the trade it gets an outcome stamp.
+- **`Mission`**: a live trade, showing its drawing with plan zones and the live price, P&L, and the sell action.
+- **Already built:** `Presence` (avatars of who's here), `Segmented`, `Switch`, `Sheet`, `RollingNumber`, `Chip`.
 
 ## App shell
 
-- **Phones**
-  - Compact top bar: mark, the agent's live dot ("Live · next read 2:31"), wallet pill.
-  - Bottom tab bar: Floor, Desk, Record. The active tab gets a foil thumb.
-  - Safe areas respected.
-  - Installable (PWA, standalone, ink theme colour).
-  - Actions open as bottom sheets.
-- **Desktop**
-  - A top bar with a live ticker strip: each coin's price and 24h change, plus the agent's status.
-  - Navigation and wallet pill.
-  - Exchange-style three-column layouts where there's data.
-- **Transitions:** tab changes slide a little (View Transitions where the browser has them).
+- **Phones:**
+  - Top bar: the mark, the agent's live dot with its next read, and the wallet pill.
+  - Bottom tabs: Floor, Your agent, Its work.
+  - Installable.
+- **Desktop:**
+  - The top bar keeps navigation and the wallet pill.
+  - The price ticker becomes an **agent status strip**: what it's reading, the next read, coins watched, plans sealed today, and people here.
 
 ## Screens
 
-### Floor: the agent at work
-- **Phones, top to bottom:**
-  1. Agent status card: avatar pulse, "Watching 4 coins", next read, people here.
-  2. Coin strip: price rolls, 24h, sparkline, status chip.
-  3. Chart card: chart with its levels and MFI, timeframe control, "the chart it read".
-  4. The agent's thought: its sentence as a message from its avatar, with the checklist ring (4/6) opening into the full list.
-  5. Ask bar.
-  6. The live floor.
-  7. For visitors, a sticky "Hire ParallaxPay" bar above the tab bar.
-- **Desktop:** three columns. Watchlist on the left; chart, thought and checklist in the middle; floor and ask on the right. The value line sits in the top bar area, one line and a button.
-- **Trust:** "Why trust it" becomes a quiet row of three icons under the terminal: rules on NEAR, plans sealed, your money.
+### Floor: the room where it works (`/`)
+1. **Visitors** get one line and two buttons above the stage: "An AI trader that works in the open. Watch it read the market, then hire it to trade for you inside your rules." Members get a slim "your agent" strip instead.
+2. **The stage** (night):
+   - The agent header: breathing mark, "Reading ZEC · 1H", and the heartbeat.
+   - Its voice: one or two sentences.
+   - The drawing, big: tabs 1D, 4H, 1H and 15m, plus "The exact chart it read".
+   - Beside it, its thinking: the checks ticking, its conviction, and what would make it act.
+3. **Its eyes:** the four coins as tiles. Each has a drawing thumb, a status (Watching / Setup forming / In a trade), and the price small. Tapping one moves the stage to that coin and the drawing replays.
+4. **The room:** agents and people in one stream.
+   - Reads, setups, the analyst's reviews, seals, trades, joins.
+   - Drawing thumbs on setups and seals.
+   - Presence: who's here now.
+5. **Its promises:** the latest sealed plans as tickets, sealed or opened, wins and losses alike.
+6. **Hire:** the mandate card as an invitation for visitors, or the member's own card. Trust as one quiet row. NEAR Intents for funds on other chains.
 - **Done when:**
-  - The first paint already has prices and the agent's status; no skeleton on reload.
-  - The phone's first screen shows the agent, a coin and the hire button.
-  - Every price ticks.
+  - The first screen on a phone shows the agent drawing on a real chart, its sentence, and the hire button.
+  - The drawing plays on load.
+  - No chart library loads on this page.
 
-### Get started: hiring the agent, one decision per screen
-0. **Hello.** The agent introduces itself with live proof ("I'm watching NEAR at $4.02. Momentum is mid-range, so I'm waiting.").
-1. **How it works with you:** Ask first or Autopilot. Two big illustrated cards.
-2. **Style:** Calm, Balanced or Bold, with what each means in practice.
-3. **Coins:** live tiles with price and sparkline; tap to choose.
-4. **Size:** largest buy as a slider with presets, buys a day as a stepper, and a live "most it puts into new trades in a day" line.
-5. **Your agent's contract:** a ticket-style summary with the foil seal, and what signing does.
-6. **Fund:** a big amount input with the wallet balance, or "from another chain" through NEAR Intents.
-7. **Done:** the agent's moment ("I'm on it"), its first next step, then your desk.
-- **Mechanics:** full-screen steps, progress dots, swipe or Next, the button pinned at the bottom.
-- **While the vault isn't live:** finish everything, save the rules, and say plainly when joining opens. No dead end.
-- **Done when:** every step fits one phone screen, every choice visibly changes the preview, and the flow takes under 60 seconds.
+### Your agent (`/desk`)
+1. **Header** (night): ParallaxPay working for you, what it's watching for you, the heartbeat. The mandate card sits beside it with edit, the autopilot switch and stop.
+2. **Needs you:** each proposal is the agent's message with its drawing and plan zones inline. Actions: "Approve $10" and "The exact chart".
+3. **Working on:** missions (open trades) on their drawings with plan zones and live P&L. A sell action when it suggests one, or when you're in ask-first mode.
+4. **Talk to it:** its messages to you, and the ask box: "Why didn't you buy NEAR today?"
+5. **Account:** a compact strip with balance, holdings, Add and Withdraw.
+6. **Kept promises:** your trades as small tickets with outcomes.
 
-### Desk: your account
-- **Top:** big rolling balance, today's change, and an account sparkline.
-- **Quick actions:** Add, Withdraw, Rules, Stop, as round icon buttons.
-- **Autopilot:** an iOS switch, with today's buys shown as a ring.
-- **Approvals inbox:** a card per proposal, the chart it read in a sheet, and one-tap approve.
-- **Open positions:** exchange-style rows (coin, size, entry, mark, P&L %, a stop-to-target mini bar).
-- **Activity** (your floor) and **history** (receipts).
-- **Done when:** every action is reachable in one tap from the top half.
-
-### Record and receipt
-- **Record:** win-rate ring, P&L, trade count, filter chips (all / open / closed), and exchange-style history rows.
+### Its work (`/record`) and the receipt (`/record/[id]`)
+- **Its work:** the ledger as a gallery of tickets, each with its drawing thumb, plan zones and outcome stamp. Honest totals on top.
 - **Receipt:**
-  - A ticket with a foil seal.
-  - The chart the plan was sealed on.
-  - Price since, with markers.
-  - Verification checks that tick themselves off.
+  - The drawing the plan was sealed on, as the hero, with plan zones and in/out markers.
+  - The promise timeline: sealed → traded → opened.
+  - The analyst's signed note.
+  - The plan, with in-browser verification.
+  - The exact chart image it read.
 
-### How it trades: the agent's profile
-- A profile header: avatar, name, "Trader · live on NEAR", stats.
-- Method cards, live checklists per coin, the analyst, and the record.
+### Hire ParallaxPay (`/start`)
+1. **Meet:** the stage with the live drawing playing, and the agent introducing itself and its method in two lines.
+2. **Mandate:** asks first or autopilot, then style, coins (tiles with drawing thumbs) and size. The mandate card fills in live at the top of every step.
+3. **Sign:** the finished mandate card and "Sign on NEAR". The seal lands.
+4. **Fund**, then **Done:** "I'm on it", with its first message to you and what it's watching for you.
+- **While the vault isn't live:** the mandate is saved, and the screen says plainly that signing opens when the vault is live. No dead end.
 
-### Fund: NEAR Intents
-- An exchange-style deposit: asset and network picker with chain marks, amount, quote card, deposit address with a QR code, and a status timeline.
+### How it trades (`/how-it-trades`)
+The agent's profile:
+- Identity.
+- The method as the founder's TA, explained on real annotated drawings ("This is support: price bounced here 4 times").
+- Its tools: Rhea, the NEAR AI analyst in a TEE, and NEAR Intents.
+- The rules the vault enforces.
 
-## Performance plan
+### Fund (`/fund`)
+NEAR Intents deposit, polished later.
 
-1. Remove the intro screen.
-2. Move fonts to `next/font`.
-3. Server-render the floor, desk, record and receipt with their data, and hand it to React Query as initial data. The page arrives filled; polling takes over.
-4. Prefetch the default coin's candles on the server, so the chart draws on hydration.
-5. Short cache headers on the read APIs (`s-maxage`).
-6. Measure before and after: LCP, CLS and TBT on phone and desktop.
+## Performance
+
+1. Already done: no splash, `next/font`, pages server-rendered with data.
+2. Hydration matches exactly. Clocks start from the server's render time, so React keeps the server HTML instead of redrawing the page.
+3. Drawings are SVG computed from candles; the floor ships no chart library. The live candle chart only loads where it's still used.
+4. Seed each coin's 1H candles with the page, for the stage and the thumbs.
 
 ## Order of work
 
 Each step ends with desktop and phone screenshots, a commit, a push and a deploy.
 
-- **M0. Unblock (needs the founder's 5 NEAR):** deploy the vault to mainnet, list the 4 coins, start the agent with its key, do a first real trade.
-- **M1. Foundations:** tokens, type scale, `next/font`, splash removed, app shell (top bar, ticker, tab bar), motion helpers (press, rolling number, price flash), kit v2.
-- **M2. Floor:** server-rendered, phone app layout, desktop three columns.
-- **M3. Get started:** the full-screen hiring flow.
-- **M4. Desk.**
-- **M5. Record, receipt, How it trades, Fund.**
-- **M6. QA:** phone and desktop pass, loading/empty/error states, copy pass, performance check, OG and share images.
+- **M0. Unblock** (needs the founder's 5 NEAR): deploy the vault to mainnet, list the 4 coins, start the agent with its key, make a first real trade.
+- **R1. The drawing and the floor:** `AgentDrawing`, the stage, its eyes, the agent status strip, and seeded candles.
+- **R2. Your agent:** proposals and missions on drawings, the mandate card, and talk to it.
+- **R3. Its work and the receipt.**
+- **R4. Hire ParallaxPay:** meet, a live mandate card, and the seal moment.
+- **R5. How it trades, then QA:** phone and desktop pass; loading, empty and error states; copy; performance; share images.
 
-Target: M1–M3 by 7 Nov, M4–M6 by 9 Nov, then mainnet trading, the demo video and the submission.
+Target: R1–R2 by 7 Nov, R3–R5 by 9 Nov, then mainnet trading, the demo video and the submission.

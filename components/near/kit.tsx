@@ -19,6 +19,15 @@ export function money(n: number | null | undefined, opts: { sign?: boolean } = {
   return `${sign}$${body}`
 }
 
+/** Account money: always to the cent, like a bank or exchange balance. `trim` drops a trailing .00 inside sentences. */
+export function usd(n: number | null | undefined, opts: { sign?: boolean; trim?: boolean } = {}): string {
+  if (n == null || !Number.isFinite(n)) return '—'
+  const cents = Math.round(n * 100) / 100
+  const sign = opts.sign ? (cents > 0 ? '+' : cents < 0 ? '−' : '') : cents < 0 ? '−' : ''
+  const body = Math.abs(cents).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return `${sign}$${opts.trim && body.endsWith('.00') ? body.slice(0, -3) : body}`
+}
+
 export const pctText = (p: number | null | undefined) => (p == null ? '—' : `${p > 0 ? '+' : p < 0 ? '−' : ''}${Math.abs(p * 100).toFixed(1)}%`)
 
 export function qty(n: number | null | undefined): string {

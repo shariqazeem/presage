@@ -1,6 +1,6 @@
 import type { Candle, Frames } from '../../lib/market/types'
 import { ARM, armPlan, type ArmPlan } from '../stquant/arming.js'
-import { atr, ema, mfi } from '../stquant/indicators.js'
+import { atr, ema, mfi, ord } from '../stquant/indicators.js'
 import { mfiExtreme } from '../stquant/sniper.js'
 import { fitBoundary, patternTargets, resistanceZones } from '../stquant/structure.js'
 
@@ -227,7 +227,7 @@ export function v2Read(
   read.atr1h = atr(frames.h1, 14)
 
   if (!bottom15 && !bottom1h) {
-    read.blocker = `money flow has not bottomed (15m MFI ${m15?.toFixed(0) ?? '?'} at the ${Math.round((x15?.percentile ?? 1) * 100)}th percentile, 1H MFI ${m1h?.toFixed(0) ?? '?'} at the ${Math.round((x1h?.percentile ?? 1) * 100)}th)`
+    read.blocker = `money flow has not bottomed (15m MFI ${m15?.toFixed(0) ?? '?'} at the ${ord(Math.round((x15?.percentile ?? 1) * 100))} percentile, 1H MFI ${m1h?.toFixed(0) ?? '?'} at the ${ord(Math.round((x1h?.percentile ?? 1) * 100))})`
     return read
   }
   const dist = read.trigger.distPct!

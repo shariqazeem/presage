@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useId, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useId, useMemo, useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { AgentEvent, AgentStatus, RadarRow } from '@/lib/floor-types'
 import type { CallView } from '@/lib/server/records'
@@ -12,10 +12,20 @@ import { cx } from './ui'
 
 /* ---------------------------------------------------------------- time */
 
+/**
+ * The second the server rendered the page. The browser's first render uses it too, so every clock and
+ * countdown hydrates to exactly the server's HTML; otherwise React would discard the page and redraw it.
+ */
+export const RenderedAt = createContext<number | null>(null)
+let hydrating = true
+
 /** The current unix second, ticking. */
 export function useNow(everyMs = 1000): number {
-  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000))
+  const rendered = useContext(RenderedAt)
+  const [now, setNow] = useState(() => (hydrating && rendered != null ? rendered : Math.floor(Date.now() / 1000)))
   useEffect(() => {
+    hydrating = false
+    setNow(Math.floor(Date.now() / 1000))
     const t = setInterval(() => setNow(Math.floor(Date.now() / 1000)), everyMs)
     return () => clearInterval(t)
   }, [everyMs])

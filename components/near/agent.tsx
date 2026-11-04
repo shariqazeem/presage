@@ -67,13 +67,22 @@ export function actorName(actor: string | null): string {
 /* ---------------------------------------------------------------- the floor */
 
 /** Agents and people in one stream: what ParallaxPay sees and does, what the analyst says, who joined and traded. */
-export function Floor({ lines, max = 20, dark = false, empty = 'Quiet for now. ParallaxPay re-reads the market every 15 minutes.' }: { lines: FeedLine[]; max?: number; dark?: boolean; empty?: string }) {
+export function Floor({ lines, max = 20, dark = false, showMine = true, empty = 'Quiet for now. ParallaxPay re-reads the market every 15 minutes.' }: { lines: FeedLine[]; max?: number; dark?: boolean; showMine?: boolean; empty?: string }) {
   const now = useNow(30_000)
   if (!lines.length) return <p className={cx('text-[14px] py-6', dark ? 'text-[#8A8A92]' : 'text-ink-3')}>{empty}</p>
+  // It re-reads every coin every 15 minutes; only its latest read of each coin stays on the floor.
+  const seen = new Set<string>()
+  const shown = lines.filter(l => {
+    if (l.kind !== 'watch') return true
+    const k = l.coin ?? ''
+    if (seen.has(k)) return false
+    seen.add(k)
+    return true
+  })
   return (
     <ol>
       <AnimatePresence initial={false}>
-        {lines.slice(0, max).map(l => {
+        {shown.slice(0, max).map(l => {
           const actor = l.actor ?? (l.kind === 'member' ? null : 'parallaxpay')
           // An actor's name opens their line; a member's own move already starts with their account.
           const startsWithName = actor != null && l.text.startsWith(actor)
@@ -84,7 +93,7 @@ export function Floor({ lines, max = 20, dark = false, empty = 'Quiet for now. P
                 <div className="flex items-baseline gap-2">
                   <span className={cx('text-[13px] font-semibold truncate', dark ? 'text-white' : 'text-ink')}>{actorName(actor)}</span>
                   {actor === 'analyst' && <span className="label !text-[9px] text-ink-3">NEAR AI</span>}
-                  {l.mine && <span className="label !text-[9px] px-1.5 py-0.5 rounded-full bg-paper-2 text-ink-2">for you</span>}
+                  {showMine && l.mine && <span className="label !text-[9px] px-1.5 py-0.5 rounded-full bg-paper-2 text-ink-2">for you</span>}
                   <span className={cx('ml-auto num text-[11px] shrink-0', dark ? 'text-[#6B6B72]' : 'text-ink-3')}>{ago(l.at, now)}</span>
                 </div>
                 <p className={cx('text-[14px] leading-snug mt-0.5', dark ? 'text-[#E6E6E3]' : 'text-ink-2')}>{startsWithName ? l.text.slice(actor!.length).replace(/^\s*/, '').replace(/^./, c => c.toUpperCase()) : l.text}</p>

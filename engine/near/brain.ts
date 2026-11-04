@@ -2,7 +2,7 @@ import { loadFrames } from '../../lib/market/frames'
 import type { Frames } from '../../lib/market/types'
 import { assetOf, type Coin } from '../../lib/near/config'
 import { armPlan, higherTfQuality } from '../stquant/arming.js'
-import { ema } from '../stquant/indicators.js'
+import { ema, ord } from '../stquant/indicators.js'
 import { mfiExtreme, supportMap } from '../stquant/sniper.js'
 import { V2_DEFAULTS, stquantV2Explain } from './strategy'
 import { patternTargets } from '../stquant/structure.js'
@@ -102,7 +102,7 @@ export function readFrames(coin: Coin, frames: Frames): Read {
   const bottom15 = x15 != null && x15.value <= 20 && x15.percentile <= 0.15
   const bottom1h = x1h != null && x1h.value <= 25 && x1h.percentile <= 0.15
   const rr = setup?.rr ?? ('rr' in plan ? plan.rr : null)
-  const pct = (n: number) => `${Math.round(n * 100)}th percentile`
+  const pct = (n: number) => `${ord(Math.round(n * 100))} percentile`
   const checks: Check[] = [
     {
       key: 'support',
@@ -173,20 +173,21 @@ function narrate(
     support && distPct != null
       ? distPct >= 0
         ? `${support.tf} support at ${usd(support.price)} is ${distPct.toFixed(1)}% below`
-        : `just under the ${support.tf} level at ${usd(support.price)}, which it needs to win back`
+        : `just under the ${support.tf} level at ${usd(support.price)}, which I need it to win back`
       : 'no support close enough to lean on'
+  // The agent speaks for itself, in the first person, on the floor and in its answers.
   if (setup) {
-    return `${coin.symbol} ${usd(price)} is on ${support ? `${support.tf} support` : 'support'} with momentum washed out. Plan: buy, stop ${usd(setup.stop)}, target ${usd(setup.target)} (${setup.rr.toFixed(1)}R).`
+    return `${coin.symbol} ${usd(price)} is on its ${support ? `${support.tf} support` : 'support'} with money flow washed out. My plan: buy, stop ${usd(setup.stop)}, target ${usd(setup.target)} (${setup.rr.toFixed(1)}R).`
   }
-  if (armedAt) return `${coin.symbol} ${usd(price)}: the setup is there but price is above it. Waiting for ${usd(armedAt)}.`
+  if (armedAt) return `${coin.symbol} ${usd(price)}: the setup is there but price is above it. I'm waiting for ${usd(armedAt)}.`
   const mom =
     mfi1h == null
       ? ''
       : mfi1hPct != null && mfi1hPct <= 0.15
-        ? ' Momentum is near its low.'
+        ? " Money flow is near its low, so I'm watching closely."
         : mfi1h >= 80
-          ? ' Momentum is stretched; no chasing.'
-          : ' Momentum is mid-range, not an entry.'
+          ? " Money flow is stretched. I don't chase."
+          : ' Money flow is mid-range, so I wait.'
   return `${coin.symbol} ${usd(price)}, ${where}.${mom}`
 }
 
