@@ -1,16 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { IconCheck, IconExternal, IconX } from '../icons'
-import { Sheet, useNow } from '../kit'
+import { useNow } from '../kit'
 import { Mark } from '../shell/Mark'
 import { cx } from '../ui'
-import { coinBySymbol, nearTxUrl } from '@/lib/near/config'
+import { nearTxUrl } from '@/lib/near/config'
 import type { AgentState, CoinRead } from '@/lib/near/hooks'
 import type { FeedLine } from '@/lib/near/store'
-import { LiveChart, TfTabs, type ChartTf } from './LiveChart'
 import { ago, money } from './kit'
 
 /* ---------------------------------------------------------------- who's who */
@@ -148,92 +146,10 @@ export function Checklist({ r, dark = true, compact = false }: { r: CoinRead; da
 
 /* ---------------------------------------------------------------- the desk */
 
-const STATE_WORD = (r: CoinRead) => (r.setup ? 'Setup found' : r.armedAt ? 'Armed' : (r.checks ?? []).filter(c => c.ok).length >= 4 ? 'Getting close' : 'Watching')
-
 /** The sentence without its leading "NEAR $3.84," since the desk shows both already. */
 export function withoutPrice(r: CoinRead): string {
   const rest = r.line.replace(new RegExp(`^${r.coin} \\$[\\d,.]+[,:]?\\s*`), '')
   return rest ? rest[0].toUpperCase() + rest.slice(1) : r.line
-}
-
-function NextCheck({ at }: { at: number }) {
-  const now = useNow(1000)
-  const left = Math.max(0, at - now)
-  return (
-    <span className="num">
-      {Math.floor(left / 60)}:{String(Math.floor(left % 60)).padStart(2, '0')}
-    </span>
-  )
-}
-
-/**
- * ParallaxPay at work: pick a coin and a timeframe, see its levels on the live chart, its momentum
- * underneath, what it's thinking, and its checklist. Opens the exact chart it read.
- */
-export function AgentDesk({ agent, compact = false }: { agent: AgentState | undefined; compact?: boolean }) {
-  const reads = agent?.reads ?? []
-  const [pick, setPick] = useState<string | null>(null)
-  const [tf, setTf] = useState<ChartTf>('1h')
-  const [shot, setShot] = useState(false)
-  const r = reads.find(x => x.coin === pick) ?? reads[0]
-  const coin = r ? coinBySymbol(r.coin) : undefined
-  return (
-    <div className="rounded-[22px] bg-ink text-white overflow-hidden relative">
-      <span className="absolute top-0 inset-x-0 h-[3px] foil-line" />
-      <div className="px-4 md:px-5 pt-4 md:pt-5 flex items-center gap-3">
-        <Mark size={34} />
-        <div className="min-w-0">
-          <div className="text-[14px] font-semibold leading-tight">ParallaxPay</div>
-          <div className="text-[11.5px] text-[#8A8A92] flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-up-d animate-[soft-pulse_2s_ease-in-out_infinite]" />
-            {agent ? <>next read in {agent && <NextCheck at={agent.nextCheckAt} />}</> : 'connecting…'}
-          </div>
-        </div>
-        <div className="ml-auto flex gap-1.5">
-          {reads.map(x => (
-            <button key={x.coin} onClick={() => setPick(x.coin)} className={cx('h-8 px-3 rounded-full text-[13px] font-semibold transition-colors', x.coin === r?.coin ? 'bg-white text-ink' : 'bg-white/[0.07] text-[#C9C9CF] hover:text-white')}>
-              {x.coin}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {r && coin ? (
-        <>
-          <div className="px-4 md:px-5 mt-4 flex items-end justify-between gap-3">
-            <div>
-              <div className="flex items-baseline gap-2">
-                <span className="num text-[28px] md:text-[32px] font-semibold leading-none">{money(r.price)}</span>
-                <span className={cx('label !text-[9.5px] px-2 py-1 rounded-full', r.setup ? 'foil text-white' : 'bg-white/[0.08] text-[#C9C9CF]')}>{STATE_WORD(r)}</span>
-              </div>
-              <p className="text-[14px] text-[#E6E6E3] leading-snug mt-2 max-w-[520px]">{withoutPrice(r)}</p>
-            </div>
-          </div>
-          <div className="px-2 md:px-3 mt-3">
-            <div className="flex items-center justify-between px-2 mb-1">
-              <TfTabs tf={tf} onChange={setTf} />
-              <button onClick={() => setShot(true)} className="text-[12px] text-[#8A8A92] hover:text-white underline decoration-white/20 underline-offset-2">
-                The chart it read
-              </button>
-            </div>
-            <LiveChart coin={coin.symbol} tf={tf} height={compact ? 240 : 300} levels={{ support: r.levels?.support, r1: r.levels?.r1, r2: r.levels?.r2, stop: r.setup?.stop, target: r.setup?.target }} />
-          </div>
-          {!compact && (
-            <div className="px-4 md:px-5 pb-5 pt-3 border-t border-white/[0.06] mt-2">
-              <Checklist r={r} />
-            </div>
-          )}
-          <Sheet open={shot} onClose={() => setShot(false)} title={`What ParallaxPay read on ${r.coin}`}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={`/api/near/chart/${r.coin}`} alt={`ParallaxPay's ${r.coin} chart: 1D, 4H, 1H and 15m with its support, resistance and MFI`} className="w-full rounded-[14px] border border-line" />
-            <p className="text-[13px] text-ink-3 mt-3 leading-snug">Four timeframes with the support (green) and resistance (red) it detected, MFI under each. It re-reads this every 15 minutes; when it finds a setup, the analyst on NEAR AI checks this same image.</p>
-          </Sheet>
-        </>
-      ) : (
-        <div className="h-[360px] m-4 rounded-[14px] bg-white/[0.04] animate-pulse" />
-      )}
-    </div>
-  )
 }
 
 export function StatStrip({ agent }: { agent: AgentState | undefined }) {

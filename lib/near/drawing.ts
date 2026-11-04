@@ -60,6 +60,13 @@ export function readChart(all: Candle[], tf: DrawTf): Drawing | null {
   return { candles, levels, trends, flow, last }
 }
 
+/** The shortest timeframe whose window still reaches back to a moment `sec` seconds ago. */
+export function tfForAge(sec: number): DrawTf {
+  if (sec < 4.5 * 86_400) return '1h'
+  if (sec < 24 * 86_400) return '4h'
+  return '1d'
+}
+
 /** A price the way the drawing labels it: whole dollars above $1,000, 3 decimals above $1, 4 significant digits below. */
 export function px(p: number): string {
   if (!Number.isFinite(p)) return '—'

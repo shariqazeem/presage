@@ -92,18 +92,32 @@ export function previewDesk(reads: CoinRead[]): Desk {
     openedAt: now - 5 * 3600,
   }
 
-  const closed = (id: number, coin: string, token: string, pnl: number, reason: string, hoursAgo: number): PositionView => ({
-    ...base(id),
-    coin,
-    token,
-    status: 'closed',
-    opened: true,
-    pnlUsd: pnl,
-    pnlPct: pnl / 10,
-    usdcOut: 10 + pnl,
-    exitReason: reason,
-    closedAt: now - hoursAgo * 3600,
-  })
+  const closed = (id: number, coin: string, token: string, at: number, pnl: number, reason: string, hoursAgo: number): PositionView => {
+    const entry = +(at * (1 - (pnl > 0 ? 0.03 : -0.004))).toFixed(4)
+    const exit = +(entry * (1 + pnl / 10)).toFixed(4)
+    const stop = +(entry * 0.988).toFixed(4)
+    const target = +(entry * 1.036).toFixed(4)
+    const openedAt = now - (hoursAgo + 9) * 3600
+    return {
+      ...base(id),
+      coin,
+      token,
+      status: 'closed',
+      opened: true,
+      plan: { ...plan(coin, token, entry, stop, target, ['Price held its 1H support with money flow under 20 and turning up.']), issuedAt: openedAt - 300 },
+      entryPrice: entry,
+      exitPrice: exit,
+      stop,
+      target,
+      pnlUsd: pnl,
+      pnlPct: pnl / 10,
+      usdcOut: 10 + pnl,
+      exitReason: reason,
+      createdAt: openedAt - 300,
+      openedAt,
+      closedAt: now - hoursAgo * 3600,
+    }
+  }
 
   return {
     account: 'you.near',
@@ -114,7 +128,7 @@ export function previewDesk(reads: CoinRead[]): Desk {
       buys_today: 1,
       joined_at: String((now - 3 * 86400) * 1e9),
     },
-    positions: [proposal, open, closed(9003, 'ZEC', zec.id, 0.36, 'hit its target', 30), closed(9004, 'NEAR', near.id, -0.12, 'hit its stop', 54)],
+    positions: [proposal, open, closed(9003, 'ZEC', zec.id, pZec, 0.36, 'hit its target', 30), closed(9004, 'NEAR', near.id, pNear, -0.12, 'hit its stop', 54)],
     feed: [
       { id: 4, at: now - 300, kind: 'propose', text: 'ZEC turned up from oversold at the daily low. Proposed $10 for you to approve.', coin: 'ZEC', tx: null, actor: 'parallaxpay', mine: true },
       { id: 3, at: now - 5 * 3600, kind: 'enter', text: 'You approved $10 of NEAR. Stop and target are set.', coin: 'NEAR', tx: null, actor: 'you.near', mine: true },
