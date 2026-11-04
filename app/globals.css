@@ -64,6 +64,8 @@
 @keyframes dr-pop { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
 @keyframes dr-breathe { 0%, 100% { transform: scale(1); opacity: .35; } 50% { transform: scale(1.7); opacity: .12; } }
 @keyframes tick-in { from { transform: scale(.4); } to { transform: none; } }
+/* The seal landing on a signed mandate. */
+@keyframes stamp { from { transform: scale(1.9) rotate(-28deg); opacity: 0; } to { transform: rotate(-12deg); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
 
 @layer components {

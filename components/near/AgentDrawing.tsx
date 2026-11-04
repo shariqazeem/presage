@@ -220,7 +220,8 @@ function Picture({ d, w, h, size, plan, focus, markers, animate, label }: { d: D
   const left: Tag[] = []
   const rightTags: Tag[] = []
   if (!thumb) {
-    const keyOnly = size === 'card'
+    // Narrow drawings keep only the strongest support and resistance so the candles stay readable.
+    const keyOnly = size === 'card' || w < 480
     const shown = keyOnly ? [...levels.filter(l => l.side === 'support').slice(0, 1), ...levels.filter(l => l.side === 'resistance').slice(0, 1)] : levels
     for (const l of shown) left.push({ y: g.y(l.price) - 11, text: `${l.side === 'support' ? 'S' : 'R'} ${px(l.price)} · ${l.touches}×`, tone: l.side === 'support' ? 'up' : 'down', key: `l${l.side}${l.price}` })
     if (focus && g.inRange(focus.price)) left.push({ y: g.y(focus.price) - 11, text: focus.label, tone: 'foil', key: 'focus' })
