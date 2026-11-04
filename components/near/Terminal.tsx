@@ -7,6 +7,7 @@ import { cx } from '../ui'
 import { coinBySymbol } from '@/lib/near/config'
 import { usePresence, type AgentState, type CoinRead } from '@/lib/near/hooks'
 import { Checklist, Floor, withoutPrice } from './agent'
+import { Ask } from './Ask'
 import { LiveChart, TfTabs, type ChartTf } from './LiveChart'
 import { money } from './kit'
 
@@ -187,8 +188,12 @@ export function Terminal({ agent, compact = false }: { agent: AgentState | undef
                 <LiveChart coin={r.coin} tf={tf} height={compact ? 250 : 320} levels={{ support: r.levels?.support, r1: r.levels?.r1, r2: r.levels?.r2, stop: r.setup?.stop, target: r.setup?.target }} />
               </div>
               {!compact && (
-                <div className="px-4 md:px-5 pb-5 pt-4 border-t border-white/[0.06] mt-2">
+                <div className="px-4 md:px-5 pb-5 pt-4 border-t border-white/[0.06] mt-2 grid xl:grid-cols-[1fr_1fr] gap-5">
                   <Checklist r={r} />
+                  <div>
+                    <div className="label !text-[9.5px] text-[#8A8A92] mb-2">Ask it</div>
+                    <Ask coin={r.coin} />
+                  </div>
                 </div>
               )}
               <Sheet open={shot} onClose={() => setShot(false)} title={`What ParallaxPay read on ${r.coin}`}>

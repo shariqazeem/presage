@@ -139,7 +139,14 @@ export default function Start() {
                 </button>
               </Panel>
               <div className="mt-5">
-                {!accountId ? (
+                {agent && !agent.vault ? (
+                  <div className="rounded-[16px] border border-line p-4 text-[14px] text-ink-2 leading-snug">
+                    <b className="text-ink">The vault opens on NEAR mainnet very soon.</b> Your rules are ready; come back to join in a moment. Meanwhile the agent is live on the floor, and the vault has passed its full end-to-end test on testnet.
+                    <a href="https://testnet.nearblocks.io/address/vault.pp-e2e-mw2mf9t4.testnet" target="_blank" rel="noreferrer" className="block mt-2 underline decoration-line underline-offset-2 text-ink-3">
+                      See the testnet run
+                    </a>
+                  </div>
+                ) : !accountId ? (
                   <>
                     <NearButton variant="full" label="Connect a NEAR wallet" />
                     <p className="text-[13px] text-ink-3 mt-2 text-center">HOT, Meteor, Intear, MyNearWallet and more. No NEAR wallet yet? HOT and Meteor create one in a minute.</p>
