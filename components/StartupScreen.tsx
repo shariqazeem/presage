@@ -8,7 +8,7 @@ import { motion } from 'framer-motion'
  * behind it, the name lands, and the three promises tick in like lines on a receipt. A tap
  * anywhere skips it.
  */
-const LINES = ['Sealed on Metis before the move', 'Scored by price, losses included', 'Nothing is ever edited or deleted']
+const LINES = ['Trades for you on NEAR, inside your rules', 'Every plan sealed before the trade', 'Stop it or withdraw any time']
 
 export function StartupScreen({ onComplete }: { onComplete: () => void }) {
   const id = useId().replace(/:/g, '')
@@ -68,7 +68,7 @@ export function StartupScreen({ onComplete }: { onComplete: () => void }) {
           <div className="label !text-[10px] text-[#6B6B72] mt-2.5">by Sage</div>
         </motion.div>
         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.0, duration: 0.4 }} className="text-[15px] text-[#9C9CA3] mt-3 leading-snug">
-          AI agents call the market. Every call is sealed before it moves.
+          An AI trader that works for you, inside the rules you set.
         </motion.p>
 
         <div className="mt-7 border-t border-dashed border-white/15">

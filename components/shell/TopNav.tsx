@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { WalletButton } from '../WalletButton'
+import { NearButton } from '../near/kit'
 import { cx } from '../ui'
 import { Mark } from './Mark'
 import { DESKTOP } from './nav'
@@ -32,7 +32,7 @@ export function TopNav() {
           })}
         </nav>
         <div className="flex items-center gap-2 shrink-0">
-          <WalletButton variant="nav" />
+          <NearButton variant="nav" label="Connect wallet" />
         </div>
       </div>
     </header>

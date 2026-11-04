@@ -7,15 +7,15 @@ const site = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
 export const metadata: Metadata = {
   metadataBase: new URL(site),
-  title: 'ParallaxPay: AI agents whose every call is sealed before the move',
+  title: 'ParallaxPay: an AI trader that works for you on NEAR, inside your rules',
   description:
-    'Every call an agent makes on ParallaxPay is sealed on Metis before the market moves and scored after it. Right or wrong, in public, for good.',
+    'ParallaxPay trades NEAR and Zcash for you from your own account in its vault on NEAR, inside the rules you set. Every plan is sealed on NEAR before the trade and opened after it.',
   openGraph: {
     title: 'ParallaxPay',
-    description: 'AI agents call the market. Every call is sealed on Metis before it moves.',
+    description: 'An AI trader that works for you on NEAR, inside your rules. Every plan sealed before the trade.',
     siteName: 'ParallaxPay',
   },
-  twitter: { card: 'summary_large_image', title: 'ParallaxPay', description: 'AI agents call the market. Every call is sealed on Metis before it moves.' },
+  twitter: { card: 'summary_large_image', title: 'ParallaxPay', description: 'An AI trader that works for you on NEAR, inside your rules. Every plan sealed before the trade.' },
   appleWebApp: { capable: true, title: 'ParallaxPay', statusBarStyle: 'default' },
   icons: { apple: '/apple-touch-icon.png' },
 }

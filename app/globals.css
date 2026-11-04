@@ -51,6 +51,8 @@
 
 @keyframes radar-sweep { to { transform: rotate(360deg); } }
 @keyframes soft-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+/* Entrances move, they never fade from nothing, so content is readable even if animation never runs. */
+@keyframes rise { from { transform: translateY(8px); } to { transform: none; } }
 
 @layer components {
   .tight { letter-spacing: -0.022em; }

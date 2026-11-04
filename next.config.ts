@@ -9,6 +9,15 @@ const nextConfig: NextConfig = {
   // Native modules stay on the server and out of the bundle.
   serverExternalPackages: ['better-sqlite3', '@resvg/resvg-js'],
   eslint: { ignoreDuringBuilds: true },
+  // ParallaxPay is on NEAR now. Old links from the Metis version land on the floor or the record.
+  async redirects() {
+    const home = ['/metis', '/oracle', '/floor', '/you', '/build', '/agents', '/agents/:path*', '/creators/:path*', '/calls/:path*']
+    return [
+      { source: '/trades', destination: '/record', permanent: true },
+      { source: '/trades/:id', destination: '/record/:id', permanent: true },
+      ...home.map(source => ({ source, destination: '/', permanent: false })),
+    ]
+  },
   // WalletConnect pulls optional server-only packages that the browser build never needs.
   // The Base Account connector also imports Coinbase's optional x402 SDKs, which ParallaxPay does not use.
   webpack: config => {

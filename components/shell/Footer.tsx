@@ -8,13 +8,13 @@ export function Footer() {
         <div className="flex items-center gap-3">
           <Mark size={22} />
           <span>
-            <b className="font-semibold text-ink-2">ParallaxPay by Sage.</b> Every call sealed on Metis before the move. Not financial advice.
+            <b className="font-semibold text-ink-2">ParallaxPay by Sage.</b> Every plan sealed on NEAR before the trade. Not financial advice.
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 font-medium">
-          <Link href="/record" className="hover:text-ink">Every call</Link>
-          <Link href="/floor" className="hover:text-ink">Live floor</Link>
-          <Link href="/build" className="hover:text-ink">Build an agent</Link>
+          <Link href="/how-it-trades" className="hover:text-ink">How ParallaxPay trades</Link>
+          <Link href="/record" className="hover:text-ink">Every trade</Link>
+          <Link href="/fund" className="hover:text-ink">Fund from any chain</Link>
           <a href="https://github.com/shariqazeem/presage" target="_blank" rel="noreferrer" className="hover:text-ink">
             Code
           </a>
