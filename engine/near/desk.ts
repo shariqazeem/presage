@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, renameSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { and, desc, eq, inArray, isNotNull } from 'drizzle-orm'
 import { getDb, schema } from '../../lib/db'
@@ -36,11 +36,24 @@ const now = () => Math.floor(Date.now() / 1000)
 const CHART_DIR = resolve(process.env.PARALLAXPAY_CHART_DIR ?? 'var/charts')
 const AGENT = { actor: 'parallaxpay' } as const
 
-/** The chart the agent just read (four timeframes, its levels, MFI), saved for the floor and for receipts. */
+/**
+ * The chart the agent just read (four timeframes, its levels, MFI), saved for the floor and for receipts.
+ * For a coin's live read it also saves the candles it read, each timeframe trimmed to the window it
+ * analyses plus money flow's warm-up, so the app draws from exactly what the agent saw and never has
+ * to fetch the same candles again (lib/near/snapshot.ts).
+ */
 function saveChart(read: Read, name: string) {
   try {
     mkdirSync(CHART_DIR, { recursive: true })
     writeFileSync(resolve(CHART_DIR, `${name}.png`), renderChart({ symbol: read.coin.symbol, frames: read.frames }))
+    if (!name.includes('pos-')) {
+      const f = read.frames
+      const keep = <T,>(c: T[] | undefined, n: number) => (c ?? []).slice(-(n + 15))
+      const body = JSON.stringify({ at: now(), frames: { '15m': keep(f.m15, 120), '1h': keep(f.h1, 130), '4h': keep(f.h4, 160), '1d': keep(f.d1, 240) } })
+      const tmp = resolve(CHART_DIR, `.${name}.json.tmp`)
+      writeFileSync(tmp, body)
+      renameSync(tmp, resolve(CHART_DIR, `${name}.json`))
+    }
   } catch (e) {
     l.warn(`chart ${name}: ${errMsg(e)}`)
   }
