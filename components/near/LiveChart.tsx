@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { cx } from '../ui'
 
 type Candle = { ts: number; o: number; h: number; l: number; c: number; v: number }
@@ -64,6 +65,7 @@ export function LiveChart({
   const [ready, setReady] = useState(false)
   const lv = JSON.stringify(levels)
   const mk = JSON.stringify(markers ?? [])
+  const qc = useQueryClient()
 
   useEffect(() => {
     if (!ref.current) return
@@ -74,11 +76,13 @@ export function LiveChart({
     ;(async () => {
       try {
         const { createChart, CandlestickSeries, LineSeries, LineStyle, createSeriesMarkers } = await import('lightweight-charts')
-        const load = async () => {
+        // The first load is usually already in the cache: the server sent it with the page.
+        const fetchCandles = async () => {
           const r = await fetch(`/api/near/candles?coin=${coin}&tf=${tf}`)
           if (!r.ok) throw new Error('Candles unavailable')
           return ((await r.json()) as { candles: Candle[] }).candles
         }
+        const load = () => qc.fetchQuery({ queryKey: ['near-candles', coin, tf], queryFn: fetchCandles, staleTime: refreshMs > 0 ? refreshMs - 2_000 : Infinity })
         const candles = await load()
         if (disposed || !ref.current) return
         const ch = createChart(ref.current, {
@@ -141,7 +145,7 @@ export function LiveChart({
       if (timer) clearInterval(timer)
       chart?.remove()
     }
-  }, [coin, tf, lv, mk, height, theme, refreshMs])
+  }, [coin, tf, lv, mk, height, theme, refreshMs, qc])
 
   return (
     <div className="relative" style={{ height }}>

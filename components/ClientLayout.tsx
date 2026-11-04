@@ -1,33 +1,17 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { AnimatePresence } from 'framer-motion'
 import { Toaster } from 'react-hot-toast'
-import { StartupScreen } from './StartupScreen'
+import { MobileTop } from './shell/MobileTop'
 import { TopNav } from './shell/TopNav'
 import { TabBar } from './shell/TabBar'
 import { Footer } from './shell/Footer'
 
-/**
- * The frame every page sits in. The intro plays once, on someone's very first visit, over a page
- * that is already there underneath; after that ParallaxPay opens straight onto what is happening.
- */
+/** The frame every page sits in. No splash: ParallaxPay opens straight onto what's happening. */
 export function ClientLayout({ children }: { children: React.ReactNode }) {
-  const [intro, setIntro] = useState(false)
-  useEffect(() => {
-    try {
-      if (!localStorage.getItem('parallaxpay_intro_seen')) setIntro(true)
-    } catch {}
-  }, [])
-  const done = () => {
-    try {
-      localStorage.setItem('parallaxpay_intro_seen', '1')
-    } catch {}
-    setIntro(false)
-  }
   return (
     <>
       <TopNav />
+      <MobileTop />
       <main className="min-h-[70vh]">{children}</main>
       <div className="pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0">
         <Footer />
@@ -42,7 +26,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
           error: { iconTheme: { primary: '#FF6B6B', secondary: '#0B0B0C' } },
         }}
       />
-      <AnimatePresence>{intro && <StartupScreen onComplete={done} />}</AnimatePresence>
     </>
   )
 }

@@ -1,15 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
-
 @import "tailwindcss";
 
 @theme inline {
   --color-border: #E6E6E3;
 
   /* Typography */
-  --font-heading: 'Inter Tight', sans-serif;
-  --font-sans: 'Inter', sans-serif;
-  --font-mono: 'IBM Plex Mono', monospace;
-  --font-data: 'IBM Plex Mono', monospace;
+  /* Self-hosted by next/font in app/layout.tsx: preloaded, no render-blocking request, no layout shift. */
+  --font-heading: var(--font-inter-tight), 'Inter Tight', sans-serif;
+  --font-sans: var(--font-inter), 'Inter', sans-serif;
+  --font-mono: var(--font-plex-mono), 'IBM Plex Mono', monospace;
+  --font-data: var(--font-plex-mono), 'IBM Plex Mono', monospace;
 
   /* ParallaxPay: paper and ink, with signal colours for right and wrong. */
   --color-ink: #0B0B0C;
@@ -53,6 +52,9 @@
 @keyframes soft-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
 /* Entrances move, they never fade from nothing, so content is readable even if animation never runs. */
 @keyframes rise { from { transform: translateY(8px); } to { transform: none; } }
+@keyframes flash-up { from { background-color: rgba(61, 220, 132, .28); } to { background-color: transparent; } }
+@keyframes flash-down { from { background-color: rgba(255, 107, 107, .28); } to { background-color: transparent; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
 
 @layer components {
   .tight { letter-spacing: -0.022em; }
@@ -60,7 +62,13 @@
   /* Numbers read like a ledger. */
   .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
   /* Small mono labels in capitals: eyebrows, statuses, receipts. */
-  .label { font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; }
+  .label { font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }
+  /* Every tappable thing answers the finger at once. */
+  .press { transition: transform .12s ease, background-color .15s ease, color .15s ease, border-color .15s ease; -webkit-tap-highlight-color: transparent; }
+  .press:active { transform: scale(.97); }
+  /* A price that just moved flashes its direction, then settles. */
+  .flash-up { animation: flash-up .6s ease-out; }
+  .flash-down { animation: flash-down .6s ease-out; }
 
   /*
    * The holographic seal. The brand colours appear only as foil, and foil only marks what is sealed,

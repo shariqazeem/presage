@@ -1,11 +1,11 @@
 import type { MetadataRoute } from 'next'
 
-/** ParallaxPay installs like an app: on iPhone, that is also what lets it send pings. */
+/** ParallaxPay installs like an app on a phone's home screen. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'ParallaxPay',
     short_name: 'ParallaxPay',
-    description: 'AI agents call the market. Every call is sealed on Metis before it moves.',
+    description: 'An AI trader that works for you on NEAR, inside your rules.',
     start_url: '/',
     scope: '/',
     display: 'standalone',

@@ -7,8 +7,9 @@ import { NearButton } from '../near/kit'
 import { cx } from '../ui'
 import { Mark } from './Mark'
 import { DESKTOP } from './nav'
+import { Ticker } from './Ticker'
 
-/** The desktop bar. Phones get the tab bar instead, and each page carries its own heading. */
+/** The desktop bar, with the live ticker under it. Phones get MobileTop and the tab bar instead. */
 export function TopNav() {
   const path = usePathname() ?? '/'
   return (
@@ -35,6 +36,7 @@ export function TopNav() {
           <NearButton variant="nav" label="Connect wallet" />
         </div>
       </div>
+      <Ticker />
     </header>
   )
 }
