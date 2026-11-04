@@ -15,9 +15,13 @@
     "engine": "tsx engine/main.ts",
     "db:generate": "drizzle-kit generate",
     "contracts:test": "cd contracts && forge test",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "tsx --test tests/*.test.ts",
+    "engine:near": "tsx engine/near/main.ts",
+    "near:test": "cd near/vault && cargo test",
+    "near:build": "cd near/vault && cargo near build non-reproducible-wasm"
   },
   "dependencies": {
+    "@hot-labs/near-connect": "0.12.0",
     "@rainbow-me/rainbowkit": "2.2.11",
     "@resvg/resvg-js": "2.6.2",
     "@tailwindcss/postcss": "^4.1.17",
@@ -28,6 +32,7 @@
     "drizzle-orm": "^0.45.2",
     "framer-motion": "^12.23.24",
     "lightweight-charts": "^5.2.1",
+    "near-api-js": "7.4.0",
     "next": "15.5.27",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

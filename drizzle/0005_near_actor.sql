@@ -1,0 +1,1 @@
+ALTER TABLE `near_feed` ADD `actor` text;

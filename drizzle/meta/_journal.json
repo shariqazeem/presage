@@ -29,6 +29,20 @@
       "when": 1792211569055,
       "tag": "0003_reengineer",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1793744098330,
+      "tag": "0004_near",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1793824888368,
+      "tag": "0005_near_actor",
+      "breakpoints": true
     }
   ]
 }

@@ -211,3 +211,73 @@ export const watches = sqliteTable(
   },
   t => [index('watches_target').on(t.target, t.targetId)],
 )
+
+// ---------- ParallaxPay on NEAR ----------
+
+/** A member of the NEAR vault, with the agent's last read of their on-chain rules and balances. */
+export const nearMembers = sqliteTable('near_members', {
+  accountId: text('account_id').primaryKey(),
+  /** JSON of the vault's `get_member`; null once they leave. */
+  member: text('member'),
+  joinedAt: integer('joined_at').notNull(),
+  syncedAt: integer('synced_at').notNull(),
+})
+
+/**
+ * One trade idea for one member, from the sealed plan to the exit. Autopilot positions are opened by
+ * the agent; "ask first" ones start as a proposal the member approves from their own wallet.
+ */
+export const nearPositions = sqliteTable(
+  'near_positions',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    accountId: text('account_id').notNull(),
+    coin: text('coin').notNull(),
+    mode: text('mode', { enum: ['autopilot', 'ask'] }).notNull(),
+    status: text('status', { enum: ['proposed', 'open', 'closed', 'not_filled', 'declined'] }).notNull(),
+    /** The vault's id for the sealed call. */
+    callId: integer('call_id'),
+    /** The exact plan JSON that was sealed, with its salt. Lose either and the call can never open. */
+    plan: text('plan').notNull(),
+    salt: text('salt').notNull(),
+    hash: text('hash').notNull(),
+    sealTx: text('seal_tx'),
+    revealTx: text('reveal_tx'),
+    stop: real('stop').notNull(),
+    target: real('target').notNull(),
+    r1: real('r1'),
+    maxHoldSec: integer('max_hold_sec').notNull(),
+    usdcIn: text('usdc_in'),
+    coinAmount: text('coin_amount'),
+    entryPrice: real('entry_price'),
+    entryTx: text('entry_tx'),
+    openedAt: integer('opened_at'),
+    usdcOut: text('usdc_out'),
+    exitPrice: real('exit_price'),
+    exitTx: text('exit_tx'),
+    exitReason: text('exit_reason'),
+    closedAt: integer('closed_at'),
+    /** An "ask first" exit the agent is waiting on the member to approve. */
+    exitProposedAt: integer('exit_proposed_at'),
+    createdAt: integer('created_at').notNull(),
+  },
+  t => [index('near_positions_account').on(t.accountId, t.createdAt), index('near_positions_status').on(t.status)],
+)
+
+/** What the agent saw and did, one plain sentence at a time. The desk's live feed. */
+export const nearFeed = sqliteTable(
+  'near_feed',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    at: integer('at').notNull(),
+    /** Null for market-wide lines everyone sees. */
+    accountId: text('account_id'),
+    coin: text('coin'),
+    kind: text('kind', { enum: ['watch', 'setup', 'pass', 'enter', 'exit', 'propose', 'seal', 'reveal', 'note', 'error', 'member'] }).notNull(),
+    /** Who is speaking: 'st-quant', 'analyst', or a member's account for their own public moves. */
+    actor: text('actor'),
+    text: text('text').notNull(),
+    tx: text('tx'),
+  },
+  t => [index('near_feed_at').on(t.at), index('near_feed_account').on(t.accountId, t.at)],
+)
