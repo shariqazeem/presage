@@ -12,7 +12,8 @@ You fund your own account in the ParallaxPay vault (a NEAR contract) and choose 
 | --- | --- | --- |
 | Vault contract | [`near/vault`](near/vault) (Rust, near-sdk 5.27, 43 unit tests) | NEAR smart contract, Rhea (Ref) exchange `v2.ref-finance.near`, NEP-141 tokens, NEP-297 events |
 | Agent | [`engine/near`](engine/near) | Function-call access key limited to the vault, NEAR RPC, NEAR AI Cloud (analyst in a TEE, signed answers) |
-| App | [`app/page.tsx`](app/page.tsx) (the floor), [`app/desk`](app/desk), [`app/start`](app/start), [`app/record`](app/record), [`app/how-it-trades`](app/how-it-trades), [`app/fund`](app/fund), [`components/near`](components/near) | NEAR Connect (HOT, Meteor, Intear, MyNearWallet, …), NEAR Intents 1-Click |
+| App | [`app/page.tsx`](app/page.tsx) (the floor), [`app/desk`](app/desk) (your agent), [`app/start`](app/start) (hiring it), [`app/record`](app/record) (its work), [`app/how-it-trades`](app/how-it-trades), [`app/fund`](app/fund), [`components/near`](components/near) | NEAR Connect (HOT, Meteor, Intear, MyNearWallet, …), NEAR Intents 1-Click |
+| The agent's drawings | [`components/near/AgentDrawing.tsx`](components/near/AgentDrawing.tsx), [`lib/near/drawing.ts`](lib/near/drawing.ts) | The agent's own support/resistance, trendline and money-flow code, run in the browser on the same candles it reads |
 | Shared code | [`lib/near`](lib/near) | Read-only RPC client, Rhea quotes, vault types, 1-Click helpers |
 | Mainnet setup | [`scripts/near/setup.ts`](scripts/near/setup.ts) | Account creation, deploy, storage registration, routes |
 
@@ -28,7 +29,7 @@ flowchart LR
   A -- chart review, signed in a TEE --> AI[NEAR AI Cloud]
   V -- ft_transfer_call, swap, withdraw\nexact amounts --> R[Rhea exchange\nv2.ref-finance.near]
   A -- candles --> C[Binance / Rhea pools]
-  W[App: floor, desk, record] -- reads --> V
+  W[App: floor, your agent, its work] -- reads --> V
   W -- reads --> A
 ```
 
@@ -36,16 +37,16 @@ The vault holds each member's coins and rules. The agent can only call `trade`, 
 
 ### Try it
 
-1. Open the app (hosted at https://parallaxpay.80.225.209.190.sslip.io) and see the agent's live read of NEAR, ZEC, RHEA and AURORA: its levels drawn on the chart, its checklist, the exact four-timeframe chart it read, and the floor where it and its members act. It re-reads the market every 15 minutes.
-2. Connect a NEAR wallet, press **Get started**, pick your rules and **Join** (0.02 NEAR for storage, returned if you leave), then see your rules on NEAR:
+1. Open the app (hosted at https://parallaxpay.80.225.209.190.sslip.io) and watch the agent read the coin closest to a trade. Its drawing plays in front of you: candles, the support and resistance it mapped (with touch counts), its trendlines and money flow, all computed with its own code. It says in one sentence what it is waiting for, its six checks tick in, and **The exact chart it read** opens the four-timeframe image it actually analysed. It re-reads NEAR, ZEC, RHEA and AURORA every 15 minutes.
+2. Press **Hire ParallaxPay**. It introduces itself on its live chart, then asks four questions (ask first or autopilot, how picky, which coins, how big) while your mandate fills in. Connect a NEAR wallet and **Sign on NEAR** (0.02 NEAR for storage, returned if you leave), then see your mandate on NEAR:
    ```bash
    near contract call-function as-read-only vault.parallaxpay.near get_member json-args '{"account_id":"YOU.near"}' network-config mainnet now
    ```
-3. Press **Add funds** to move USDC from your wallet into the vault, or open **/fund** to bring USDC from Base, Ethereum, Solana, Arbitrum, Tron or Bitcoin through NEAR Intents, and see the balance on your desk.
-4. With **Ask first**, wait for a proposal and press **Approve**, then see the trade on nearblocks: one transaction that deposits into the vault's Rhea account, swaps, and withdraws back, with the exact amounts in its `trade_end` event.
-5. On the floor, type a question into **Ask it** ("Why aren't you buying NEAR?") and see the agent answer from its live checklist, on NEAR AI Cloud.
-6. Open **/record/&lt;id&gt;** and see the chart the agent read when it sealed the plan, then your browser recompute `sha256(salt ‖ plan)` and compare it with the fingerprint the vault holds, and check the NEAR AI Cloud enclave's signature on the analyst's verdict.
-7. Press **Stop** and see autopilot off on NEAR at once; press **Withdraw** and see the coins arrive in your wallet.
+3. Add USDC from your wallet into the vault, or open **/fund** to bring USDC from Base, Ethereum, Solana, Arbitrum, Tron or Bitcoin through NEAR Intents, and see the balance on **Your agent**.
+4. With **Ask first**, wait for a proposal: the agent's message with the sealed plan drawn on its chart. Press **Approve**, then see the trade on nearblocks: one transaction that deposits into the vault's Rhea account, swaps, and withdraws back, with the exact amounts in its `trade_end` event.
+5. Ask it anything ("Why aren't you buying NEAR?") on the floor or on **Your agent**, and see it answer from its live checklist, on NEAR AI Cloud.
+6. Open **Its work** and any promise in it: the plan drawn on the chart it was sealed on with where it got in and out, the promise step by step (sealed, bought, sold, opened), then your browser recompute `sha256(salt ‖ plan)` against the fingerprint the vault holds and check the NEAR AI Cloud enclave's signature on the analyst's verdict.
+7. Turn **Autopilot** off and see it off on NEAR at once; press **Withdraw** and see the coins arrive in your wallet.
 
 ### Run it locally
 
