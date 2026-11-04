@@ -1,121 +1,70 @@
 # ParallaxPay
 
-**AI agents call the market. Every call is sealed on Metis before it moves.**
+An AI agent that trades for you on NEAR, inside rules you set.
 
-Every call an agent makes on ParallaxPay is written to Metis Andromeda before the market moves, then scored by price and opened. Right or wrong, it stays on the record for good. A call that is not opened in time can be forfeited by anyone, and it counts as a loss.
+You fund your own account in the ParallaxPay vault (a NEAR contract) and choose how the agent runs: ask first or autopilot, how picky it is, which coins, the largest buy and how many buys a day. The vault enforces those rules on every agent trade, swaps only through Rhea pools the owner has listed, and pays withdrawals to the member and nobody else. Before each trade the agent seals its plan on NEAR (a sha256 fingerprint); after the trade it opens the plan, and anyone can check it against the seal.
 
-Signal sellers show screenshots. ParallaxPay shows the chain.
+## Built for the NEAR HACKATHON (1–14 Nov 2026)
 
----
+| Piece | Where | NEAR tech used |
+| --- | --- | --- |
+| Vault contract | [`near/vault`](near/vault) (Rust, near-sdk 5.27, 43 unit tests) | NEAR smart contract, Rhea (Ref) exchange `v2.ref-finance.near`, NEP-141 tokens, NEP-297 events |
+| Agent | [`engine/near`](engine/near) | Function-call access key limited to the vault, NEAR RPC, NEAR AI Cloud (analyst in a TEE, signed answers) |
+| App | [`app/page.tsx`](app/page.tsx) (the floor), [`app/desk`](app/desk), [`app/start`](app/start), [`app/record`](app/record), [`app/how-it-trades`](app/how-it-trades), [`app/fund`](app/fund), [`components/near`](components/near) | NEAR Connect (HOT, Meteor, Intear, MyNearWallet, …), NEAR Intents 1-Click |
+| Shared code | [`lib/near`](lib/near) | Read-only RPC client, Rhea quotes, vault types, 1-Click helpers |
+| Mainnet setup | [`scripts/near/setup.ts`](scripts/near/setup.ts) | Account creation, deploy, storage registration, routes |
 
-## Using it
+**Disclosure.** ParallaxPay existed before this hackathon as a product on Metis (calls sealed on Metis, a paid oracle, an agent builder). That state is tagged `pre-hackathon`; everything after the tag is the NEAR build, and `git diff pre-hackathon..hackathon-submission` shows all of it. The chart-reading rules the agent applies ([`engine/stquant`](engine/stquant), the founder's own method, formerly run as "ST Quant") predate the hackathon; their NEAR-specific risk rules are new.
 
-ParallaxPay opens on **Today**: what of yours opened since you were last here, what opens next with a countdown, what ST Quant is close to, and the live feed of every agent's moves. On a phone it is five tabs (Today, Oracle, ST Quant, Agents, You) and installs to the home screen like an app.
+### Try it
 
-- **Ask the Oracle.** Pick a coin and a time (1 hour, 4 hours, a day), optionally make your own call first, pay $0.05, and watch four AI voters land their votes one by one. The answer comes back in one plain sentence, sealed on Metis, with a countdown to when it opens. Your own call is sealed with it, so "you vs the Oracle" is on the record too.
-- **Watch ST Quant think.** Its radar shows every market it watches, closest to a setup in the middle; tap one for its checklist in plain words.
-- **Build an agent.** Start from a style (Dip Buyer, Breakout, Trend Rider, Reversal) or your own words, see what it would be close on right now, then deploy it with two signatures.
-- **Pings.** "Ping me when it opens" uses the browser's own notifications (on iPhone, after adding ParallaxPay to the home screen) or Telegram.
+1. Open the app (hosted at https://parallaxpay.80.225.209.190.sslip.io) and see the agent's live read of NEAR, ZEC, RHEA and AURORA: its levels drawn on the chart, its checklist, the exact four-timeframe chart it read, and the floor where it and its members act. It re-reads the market every 15 minutes.
+2. Connect a NEAR wallet, press **Get started**, pick your rules and **Join** (0.02 NEAR for storage, returned if you leave), then see your rules on NEAR:
+   ```bash
+   near contract call-function as-read-only vault.parallaxpay.near get_member json-args '{"account_id":"YOU.near"}' network-config mainnet now
+   ```
+3. Press **Add funds** to move USDC from your wallet into the vault, or open **/fund** to bring USDC from Base, Ethereum, Solana, Arbitrum, Tron or Bitcoin through NEAR Intents, and see the balance on your desk.
+4. With **Ask first**, wait for a proposal and press **Approve**, then see the trade on nearblocks: one transaction that deposits into the vault's Rhea account, swaps, and withdraws back, with the exact amounts in its `trade_end` event.
+5. Open **/record/&lt;id&gt;** and see the chart the agent read when it sealed the plan, then your browser recompute `sha256(salt ‖ plan)` and compare it with the fingerprint the vault holds, and check the NEAR AI Cloud enclave's signature on the analyst's verdict.
+6. Press **Stop** and see autopilot off on NEAR at once; press **Withdraw** and see the coins arrive in your wallet.
 
-No wallet is needed to watch. The wallet appears when you want something of your own.
-
-The live floor (`/floor`) shows everything at once: the money moving through the contracts, every agent at work, every call as it happens.
-
-## What you can do
-
-| | What it is | Price |
-|---|---|---|
-| **Market Oracle** | Ask which way one of 84 coins goes over 1 hour, 4 hours or 24 hours. A quant model and three AI models vote on facts from public Binance candles. | $0.05 a call over x402, held in escrow until the call is revealed |
-| **ST Quant** | Trade setups with entry, stop and target on BSC and X Layer pools. Unproven: it has never been shown to be profitable, and its record starts on day one. | $3 per 30 days, once its record is long enough |
-| **Your own agent** | Describe a strategy in plain English. ParallaxPay turns it into rules you confirm, runs it, and seals every call it makes. | You set the price ($2 minimum) and keep 80% |
-
-No agent, ours included, can take subscribers before it has **10 scored calls over 7 days**. The contract enforces that.
-
-## How a call works
-
-```
-1. Seal      keccak256(salt ‖ payload) → ParallaxPayLedger.seal(agentId, commitment, revealBy)
-2. Score     public candles + the rulebook in lib/calls/rules.ts → win, loss, flat or no fill
-3. Reveal    ParallaxPayLedger.reveal(callId, salt, payload, outcome, result); the reveal must hash to the seal
-4. Forfeit   after revealBy, anyone can call ParallaxPayLedger.forfeit(callId); it counts against the agent
-```
-
-The payload is the full call (asset, price source, entry, stop, target or direction, horizon, the reasons) as JSON. While a call is sealed only its fingerprint is public, so subscribers get it first and nobody can copy it for free. Once revealed, the JSON is in the transaction for anyone to read.
-
-**Scoring.** Hit rate is wins over wins, losses and forfeits. A setup's result is in R (risk multiples); a forfeit counts as −1R. An Oracle call's result is the move in the called direction, in basis points. The full rules are in [`lib/calls/rules.ts`](lib/calls/rules.ts) and on every receipt page.
-
-## Check it yourself
-
-Every call has a receipt at `/calls/<id>`. Its **Check it yourself** panel runs in your browser, not on our servers:
-
-1. It recomputes `keccak256(salt ‖ payload)` and compares it with the commitment stored in ParallaxPayLedger.
-2. It fetches the public candles (Binance, or GeckoTerminal for DEX pools) and reruns the rulebook to get the outcome the reveal claims.
-
-## Contracts on Metis Andromeda (chain 1088)
-
-| Contract | Address | What it does |
-|---|---|---|
-| ParallaxPayLedger | _deploying_ | Seals, reveals and forfeits calls; keeps each agent's record |
-| ParallaxPayAgents | _deploying_ | Ties a strategy spec, by hash, to an ERC-8004 identity; a spec can never change |
-| ParallaxPayMarket | _deploying_ | x402 escrow for paid calls, subscriptions, the 80/20 split, claims |
-| ERC-8004 Identity | `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` | The canonical registry; every agent on ParallaxPay is an identity here |
-| Chainlink METIS/USD | `0xD4a5Bb03B5D66d9bf81507379302Ac2C2DFDFa6D` | Prices METIS payments |
-
-Payments are accepted in METIS, m.USDC (`0xEA32…1a21`) and m.USDT (`0xbB06…F4dC`).
-
-## Paying over x402 (for agents)
-
-Metis has no public x402 facilitator, and m.USDC supports neither EIP-3009 nor permit, so ParallaxPay settles payments itself with a scheme called `escrow`: the payer's own wallet pays the contract, and the request is retried with the transaction as proof.
-
-```
-POST /api/oracle/call  {"asset":"BTC","horizon":"4h"}
-  ← 402  {x402Version, accepts:[{scheme:"escrow", network:"eip155:1088", maxAmountRequired, payTo, asset, extra:{agentId, requestId, method}}], secret}
-ParallaxPayMarket.payForCall(agentId, requestId, token, maxAmount)        from your wallet
-POST /api/oracle/call  {"secret"}  X-PAYMENT: base64({x402Version, scheme, network, payload:{requestId, txHash}})
-  ← 200  the sealed call, and X-PAYMENT-RESPONSE
-```
-
-The money stays in escrow until the call is revealed. If it is not sealed within 15 minutes, or it is forfeited, the payer gets it back. A working client is in [`scripts/x402-client.ts`](scripts/x402-client.ts):
-
-```bash
-PAYER_KEY=0x... npx tsx scripts/x402-client.ts BTC 4h METIS
-```
-
-## ERC-8004
-
-Each agent is an identity in the canonical ERC-8004 registry on Andromeda, owned by its creator. Its registration file (`/api/agents/<slug>/card`) points to its record and to the spec hash sealed in ParallaxPayAgents, so the identity and the calls behind it can always be found from each other.
-
-## How it is built
-
-- `contracts/`: Foundry. Compiled for `shanghai`, because Andromeda accepts PUSH0 but rejects Cancun opcodes. 32 unit tests, plus fork tests against live Andromeda state.
-- `engine/`: one Node process. It indexes the contracts, answers paid Oracle calls, runs ST Quant and creator agents, resolves and reveals, settles escrow, and sends Telegram alerts. A single key seals and reveals, and its transactions are strictly serialised.
-- `engine/stquant/`: ST Quant's pure modules, ported unchanged from the original scanner. Entry, stop and target are always the rules' numbers; the AI chart read can approve or veto a setup, never set its prices.
-- `lib/spec/`: a creator's strategy is data, never code: a fixed vocabulary of ST Quant's primitives. The compiler refuses anything it cannot express, and the runner only runs a spec whose hash matches the one sealed on chain.
-- `app/`: Next.js, carried over from ParallaxPay.
-
-### Run it
+### Run it locally
 
 ```bash
 npm install
-cp .env.example .env.local            # then fill it in
-(cd contracts && forge test)
-node --import tsx --test tests/*.test.ts
-npm run dev                           # the site
-npm run engine                        # the engine
+npm run dev            # the app at http://localhost:3000
+npm run engine:near    # the agent: reads markets without keys, trades once NEAR_AGENT_KEY is set
+npm run near:test      # the vault's 43 unit tests
+npm run near:build     # near/vault/target/near/parallaxpay_vault.wasm
 ```
 
-`scripts/rehearsal/up.sh` runs the whole thing against a local fork of live Andromeda: it deploys the contracts, registers the house agents, and starts the engine and the site. Nothing in it touches mainnet.
+Environment for the agent (in `.env.local`): `NEAR_AGENT_KEY` (the function-call key from `scripts/near/setup.ts agent`), `NEAR_AI_API_KEY` (NEAR AI Cloud), optionally `NEAR_AI_MODEL` (default `z-ai/glm-5.3-flash`) and `ONECLICK_JWT`.
 
-## What we won't overstate
+### Mainnet accounts
 
-- **ST Quant is unproven.** Its record starts the day it went live, and it may lose.
-- **The chain proves when a call was made and that it was not changed.** The outcome is computed by the engine from public candles and written with the reveal. The contract does not check prices itself; anyone can recompute the outcome, and the receipt page does it for you.
-- **The Oracle is an AI forecast.** It is not advice, and its record shows how often it is wrong.
-- **ParallaxPay never holds or trades your money.** Paid calls sit in a contract escrow, and subscriptions are split on payment. Agents only publish signals.
-- **If the engine stopped past a reveal deadline,** its calls would be forfeited and count as losses, and paid calls would be refunded. That is the point: hiding a call costs as much as losing it.
+| Account | Role |
+| --- | --- |
+| `vault.parallaxpay.near` | The vault contract |
+| `agent.parallaxpay.near` | The agent. Its server key can only call `trade`, `seal`, `reveal` and `recover` on the vault, with no deposit |
+| `parallaxpay.near` | The owner: lists coins and pools, sets the agent account, pauses trading. It can't move members' coins |
 
-Not financial advice.
+### How one trade works
+
+1. The agent reads candles for each coin on four timeframes (Binance for NEAR and ZEC, the coin's own Rhea pool for RHEA and AURORA) and applies its rules: buy only at support more than one timeframe agrees on, with momentum (MFI) bottomed; sell at the pattern's resistance, at the stop, or after five days.
+2. When the rules find a setup, an open model on NEAR AI Cloud reviews the chart against the same rubric. It can pass or lower the grade, never raise it, and the enclave signs its answer.
+3. For each member whose rules fit, the agent sizes the trade (style and grade decide the share of the member's largest buy), quotes it on Rhea, and calls `vault.trade` with the plan's fingerprint. The vault checks the member's rules, then runs three steps, each confirmed by a callback with exact amounts: `ft_transfer_call` into its own Rhea account, `swap` (Rhea returns the amount out), `withdraw` back (Rhea reports what arrived). One trade runs at a time, so `recover` can always settle a trade that stopped part-way from what Rhea holds.
+4. Ask-first members get a proposal sealed with `vault.seal`; they approve it from their own wallet, and the server records it only after reading the transaction back from NEAR.
+5. On exit the agent sells back to USDC and calls `vault.reveal`, which checks the plan against its seal and logs it.
+
+### Known limits
+
+- One trade at a time across the vault; the agent queues members.
+- Coins are limited to what Rhea can swap deeply against native USDC, all through the USDC/wNEAR pool 4512: NEAR, ZEC (pool 6065), RHEA (6458) and AURORA (5469). BTC, ETH and SOL can be brought in through NEAR Intents but aren't traded by the vault.
+- The owner can upgrade this hackathon deployment with the vault account's full-access key. That key is to be removed or put behind a timelock before real money uses it.
+- Not financial advice. The agent can lose money; its record shows losses as they happen.
 
 ---
 
-**ParallaxPay by Sage.** ParallaxPay began on Solana, where it placed 2nd in Gradient's Parallax Eco Track (best agent built on Gradient Parallax) at the Solana x402 hackathon. That entry stays parked in its own repository; this is ParallaxPay rebuilt on Metis for Metis Rise. Sage, the team behind it, won 1st place at Metis's OpenClaw Summer Builder Bootcamp.
+## Before the hackathon
+
+ParallaxPay started as an x402 pay-per-call agent (2nd place, Gradient's Parallax Eco Track in the Solana x402 hackathon) and then ran on Metis as a public record of AI trading calls. That version is at the `pre-hackathon` tag. The NEAR build replaced its app: the Metis pages are gone from the site and redirect here.
