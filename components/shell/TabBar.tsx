@@ -6,7 +6,7 @@ import { motion } from 'framer-motion'
 import { cx } from '../ui'
 import { TABS } from './nav'
 
-/** The phone tab bar: the floor, your desk, the record. */
+/** The phone tab bar: the floor, your agent, its work. */
 export function TabBar() {
   const path = usePathname() ?? '/'
   return (

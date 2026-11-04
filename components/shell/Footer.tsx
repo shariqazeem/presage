@@ -13,7 +13,7 @@ export function Footer() {
         </div>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 font-medium">
           <Link href="/how-it-trades" className="hover:text-ink">How ParallaxPay trades</Link>
-          <Link href="/record" className="hover:text-ink">Every trade</Link>
+          <Link href="/record" className="hover:text-ink">Its work</Link>
           <Link href="/fund" className="hover:text-ink">Fund from any chain</Link>
           <a href="https://github.com/shariqazeem/presage" target="_blank" rel="noreferrer" className="hover:text-ink">
             Code

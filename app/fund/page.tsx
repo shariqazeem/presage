@@ -210,7 +210,7 @@ export default function Fund() {
 
       <p className="text-[13px] text-ink-3 mt-6 leading-snug">
         Quotes and delivery come from NEAR Intents' 1-Click service and its solvers. Check a swap any time on the{' '}
-        <a href="https://explorer.near-intents.org" target="_blank" rel="noreferrer" className="underline decoration-line underline-offset-2">NEAR Intents explorer</a>. Already have USDC on NEAR? <Link href="/" className="underline decoration-line underline-offset-2">Go to your desk</Link>.
+        <a href="https://explorer.near-intents.org" target="_blank" rel="noreferrer" className="underline decoration-line underline-offset-2">NEAR Intents explorer</a>. Already have USDC on NEAR? <Link href="/desk" className="underline decoration-line underline-offset-2">Go to your agent</Link>.
       </p>
       <FundSheet open={fund} onClose={() => setFund(false)} onDone={() => void refetch()} />
     </div>
