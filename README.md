@@ -1,5 +1,7 @@
 # ParallaxPay
 
+[![CI](https://github.com/shariqazeem/presage/actions/workflows/ci.yml/badge.svg)](https://github.com/shariqazeem/presage/actions/workflows/ci.yml)
+
 An AI agent that trades for you on NEAR, inside rules you set.
 
 You fund your own account in the ParallaxPay vault (a NEAR contract) and choose how the agent runs: ask first or autopilot, how picky it is, which coins, the largest buy and how many buys a day. The vault enforces those rules on every agent trade, swaps only through Rhea pools the owner has listed, and pays withdrawals to the member and nobody else. Before each trade the agent seals its plan on NEAR (a sha256 fingerprint); after the trade it opens the plan, and anyone can check it against the seal.
@@ -16,6 +18,22 @@ You fund your own account in the ParallaxPay vault (a NEAR contract) and choose 
 
 **Disclosure.** ParallaxPay existed before this hackathon as a product on Metis (calls sealed on Metis, a paid oracle, an agent builder). That state is tagged `pre-hackathon`; everything after the tag is the NEAR build, and `git diff pre-hackathon..hackathon-submission` shows all of it. The chart-reading rules the agent applies ([`engine/stquant`](engine/stquant), the founder's own method, formerly run as "ST Quant") predate the hackathon; their NEAR-specific risk rules are new.
 
+### How it fits together
+
+```mermaid
+flowchart LR
+  M[Member's NEAR wallet] -- join, deposit, rules, stop, withdraw --> V[(Vault contract\nvault.parallaxpay.near)]
+  I[NEAR Intents 1-Click] -- USDC from Base, Ethereum, Solana, Bitcoin --> M
+  A[ParallaxPay agent\nengine/near] -- trade / seal / reveal\nfunction-call key only --> V
+  A -- chart review, signed in a TEE --> AI[NEAR AI Cloud]
+  V -- ft_transfer_call, swap, withdraw\nexact amounts --> R[Rhea exchange\nv2.ref-finance.near]
+  A -- candles --> C[Binance / Rhea pools]
+  W[App: floor, desk, record] -- reads --> V
+  W -- reads --> A
+```
+
+The vault holds each member's coins and rules. The agent can only call `trade`, `seal`, `reveal` and `recover`, and the vault checks every trade against the member's rules before it touches Rhea. Withdrawals go to the member only.
+
 ### Try it
 
 1. Open the app (hosted at https://parallaxpay.80.225.209.190.sslip.io) and see the agent's live read of NEAR, ZEC, RHEA and AURORA: its levels drawn on the chart, its checklist, the exact four-timeframe chart it read, and the floor where it and its members act. It re-reads the market every 15 minutes.
@@ -25,8 +43,9 @@ You fund your own account in the ParallaxPay vault (a NEAR contract) and choose 
    ```
 3. Press **Add funds** to move USDC from your wallet into the vault, or open **/fund** to bring USDC from Base, Ethereum, Solana, Arbitrum, Tron or Bitcoin through NEAR Intents, and see the balance on your desk.
 4. With **Ask first**, wait for a proposal and press **Approve**, then see the trade on nearblocks: one transaction that deposits into the vault's Rhea account, swaps, and withdraws back, with the exact amounts in its `trade_end` event.
-5. Open **/record/&lt;id&gt;** and see the chart the agent read when it sealed the plan, then your browser recompute `sha256(salt ‖ plan)` and compare it with the fingerprint the vault holds, and check the NEAR AI Cloud enclave's signature on the analyst's verdict.
-6. Press **Stop** and see autopilot off on NEAR at once; press **Withdraw** and see the coins arrive in your wallet.
+5. On the floor, type a question into **Ask it** ("Why aren't you buying NEAR?") and see the agent answer from its live checklist, on NEAR AI Cloud.
+6. Open **/record/&lt;id&gt;** and see the chart the agent read when it sealed the plan, then your browser recompute `sha256(salt ‖ plan)` and compare it with the fingerprint the vault holds, and check the NEAR AI Cloud enclave's signature on the analyst's verdict.
+7. Press **Stop** and see autopilot off on NEAR at once; press **Withdraw** and see the coins arrive in your wallet.
 
 ### Run it locally
 
@@ -53,7 +72,7 @@ Environment for the agent (in `.env.local`): `NEAR_AGENT_KEY` (the function-call
 
 ### How one trade works
 
-1. The agent reads candles for each coin on four timeframes (Binance for NEAR and ZEC, the coin's own Rhea pool for RHEA and AURORA) and applies its rules: buy only at support more than one timeframe agrees on, with momentum (MFI) bottomed; sell at the pattern's resistance, at the stop, or after five days.
+1. The agent reads candles for each coin on four timeframes (Binance for NEAR and ZEC, the coin's own Rhea pool for RHEA and AURORA) and applies its rules: buy only at support a higher timeframe confirms, with money flow (MFI) bottomed and the daily trend not falling; stop just under the level; sell at the next resistance worth at least 2.5 times the risk, or after 72 hours.
 2. When the rules find a setup, an open model on NEAR AI Cloud reviews the chart against the same rubric. It can pass or lower the grade, never raise it, and the enclave signs its answer.
 3. For each member whose rules fit, the agent sizes the trade (style and grade decide the share of the member's largest buy), quotes it on Rhea, and calls `vault.trade` with the plan's fingerprint. The vault checks the member's rules, then runs three steps, each confirmed by a callback with exact amounts: `ft_transfer_call` into its own Rhea account, `swap` (Rhea returns the amount out), `withdraw` back (Rhea reports what arrived). One trade runs at a time, so `recover` can always settle a trade that stopped part-way from what Rhea holds.
 4. Ask-first members get a proposal sealed with `vault.seal`; they approve it from their own wallet, and the server records it only after reading the transaction back from NEAR.
