@@ -1,5 +1,6 @@
 'use client'
 
+import { usePathname } from 'next/navigation'
 import { Toaster } from 'react-hot-toast'
 import { MobileTop } from './shell/MobileTop'
 import { TopNav } from './shell/TopNav'
@@ -8,15 +9,19 @@ import { Footer } from './shell/Footer'
 
 /** The frame every page sits in. No splash: ParallaxPay opens straight onto what's happening. */
 export function ClientLayout({ children }: { children: React.ReactNode }) {
+  // Hiring the agent is a full-screen flow, like an app's onboarding: no tabs, no footer.
+  const immersive = (usePathname() ?? '').startsWith('/start')
   return (
     <>
-      <TopNav />
-      <MobileTop />
+      {!immersive && <TopNav />}
+      {!immersive && <MobileTop />}
       <main className="min-h-[70vh]">{children}</main>
-      <div className="pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0">
-        <Footer />
-      </div>
-      <TabBar />
+      {!immersive && (
+        <div className="pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0">
+          <Footer />
+        </div>
+      )}
+      {!immersive && <TabBar />}
       <Toaster
         position="top-center"
         toastOptions={{
