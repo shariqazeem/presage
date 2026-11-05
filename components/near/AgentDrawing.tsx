@@ -756,7 +756,7 @@ function Picture({
 
         <g clipPath={`url(#${clip})`}>
           {/* candles print left to right */}
-          <g className={a || lit('candles') ? 'dr-print' : undefined} key={lit('candles') ? 'spot' : 'still'} opacity={candleFade} style={soft}>
+          <g className={a || lit('candles') ? 'dr-print' : undefined} key={lit('candles') ? 'candles-spot' : 'candles'} opacity={candleFade} style={soft}>
             <rect x={0} y={f.top} width={f.plotR} height={f.priceH} fill="none" />
             <path d={upW} stroke={C.up} strokeWidth={1} opacity={0.75} fill="none" />
             <path d={dnW} stroke={C.down} strokeWidth={1} opacity={0.75} fill="none" />
@@ -846,7 +846,7 @@ function Picture({
 
           {/* the level it is trading */}
           {focus && inRange(focus.price) && (
-            <g key={lit('focus') ? 'spot' : 'still'} className={a || lit('focus') ? 'dr-print' : undefined} opacity={fade('focus')} style={{ ...soft, ...(lit('focus') ? {} : at(900)) }}>
+            <g key={lit('focus') ? 'focus-spot' : 'focus'} className={a || lit('focus') ? 'dr-print' : undefined} opacity={fade('focus')} style={{ ...soft, ...(lit('focus') ? {} : at(900)) }}>
               <rect x={0} y={y(focus.price) - 6} width={f.plotR} height={12} fill="none" />
               <line x1={0} x2={f.plotR} y1={y(focus.price)} y2={y(focus.price)} stroke={`url(#${foil}l)`} strokeWidth={thumb ? 1.5 : lit('focus') ? 3 : 2.2} />
               <title>{focus.label}</title>
@@ -918,7 +918,7 @@ function Picture({
                 <path key={k} d={p} fill={C.flow} opacity={0.28} className={a ? 'dr-pop' : undefined} style={at(1500)} />
               ))}
               <polyline
-                key={lit('flow') ? 'spot' : 'still'}
+                key={lit('flow') ? 'flow-spot' : 'flow'}
                 points={flowPts.join(' ')}
                 fill="none"
                 stroke={C.flow}

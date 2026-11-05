@@ -3,10 +3,13 @@
 import type { ReactNode } from 'react'
 import toast from 'react-hot-toast'
 import { cx } from '../ui'
-import { COINS, USDC } from '@/lib/near/config'
+import { USDC } from '@/lib/near/config'
 import { fromUnits, toUnits } from '@/lib/near/units'
 import { MAX_COINS, coinsInWords, type Rules } from '@/lib/near/vault'
 import { PerDayPicker, SizePicker } from './SizePicker'
+import { CoinChooser } from './coins'
+import { useAgentState } from '@/lib/near/hooks'
+import { ranked } from '@/lib/near/rank'
 
 export const STYLES = [
   { id: 0, name: 'Calm', line: 'Only its best setups. Fewer trades, the cleanest charts.' },
@@ -38,6 +41,8 @@ export function Section({ title, sub, children }: { title: string; sub?: string;
 export function RulesForm({ rules, onChange }: { rules: Rules; onChange: (r: Rules) => void }) {
   const set = (patch: Partial<Rules>) => onChange({ ...rules, ...patch })
   const size = fromUnits(rules.max_trade, USDC.decimals)
+  const { data: agent } = useAgentState()
+  const reads = ranked(agent?.reads ?? [])
   return (
     <div>
       <Section title="How it runs" sub="You can switch any time, and stop it with one tap.">
@@ -67,22 +72,17 @@ export function RulesForm({ rules, onChange }: { rules: Rules; onChange: (r: Rul
           <div className="font-semibold text-[15px]">Any coin it finds</div>
           <div className={cx('text-[12.5px]', rules.coins.length === 0 ? 'text-white/70' : 'text-ink-3')}>The best setup among every coin it can trade on Rhea</div>
         </Choice>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {COINS.map(c => {
-            const on = rules.coins.includes(c.id)
-            const toggle = () => {
-              if (on) set({ coins: rules.coins.filter(x => x !== c.id) })
-              else if (rules.coins.length >= MAX_COINS) toast(`Up to ${MAX_COINS} coins, or let it pick from all of them.`)
-              else set({ coins: [...rules.coins, c.id] })
-            }
-            return (
-              <Choice key={c.id} on={on} onClick={toggle} className="px-4 py-3">
-                <div className="font-semibold text-[15px]">{c.symbol}</div>
-                <div className={cx('text-[12.5px]', on ? 'text-white/70' : 'text-ink-3')}>{c.name}</div>
-              </Choice>
-            )
-          })}
-        </div>
+        <div className="text-[12.5px] text-ink-3 mt-3 mb-1">Or only these, up to {MAX_COINS}:</div>
+        <CoinChooser
+          reads={reads}
+          chosen={rules.coins}
+          max={MAX_COINS}
+          onToggle={id => {
+            if (rules.coins.includes(id)) set({ coins: rules.coins.filter(x => x !== id) })
+            else if (rules.coins.length >= MAX_COINS) toast(`Up to ${MAX_COINS} coins, or let it pick from all of them.`)
+            else set({ coins: [...rules.coins, id] })
+          }}
+        />
       </Section>
       <Section title="Largest buy" sub="The most it spends on one trade, in USDC. Any amount.">
         <SizePicker value={size} big={false} onChange={v => set({ max_trade: toUnits(v, USDC.decimals).toString() })} />

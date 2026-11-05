@@ -7,8 +7,8 @@
  *   npx tsx scripts/near/setup.ts account    create parallaxpay.near from that funded address
  *   npx tsx scripts/near/setup.ts vault      create vault.parallaxpay.near, deploy the contract, initialise it
  *   npx tsx scripts/near/setup.ts agent      create agent.parallaxpay.near with a key that can only trade/seal/reveal/recover
- *   npx tsx scripts/near/setup.ts register   register the vault with Rhea and the token contracts
- *   npx tsx scripts/near/setup.ts routes     list NEAR and ZEC in the vault
+ *   npx tsx scripts/near/setup.ts register   register the vault with Rhea and every coin's token contract
+ *   npx tsx scripts/near/setup.ts routes     list every coin in lib/near/config.ts in the vault, ten to a transaction
  */
 import '../../engine/env'
 import { createHash } from 'node:crypto'
@@ -145,18 +145,36 @@ async function register() {
   const missing: string[] = []
   for (const t of tokens) if (!(await storageRegistered(t, VAULT_ID))) missing.push(t)
   const onRhea = await storageRegistered(RHEA_ID, VAULT_ID)
-  if (!missing.length && onRhea) return console.log('The vault is registered everywhere.')
+  // Rhea takes deposits of tokens it has whitelisted; any other coin must be registered in the vault's
+  // own Rhea account, which only the owner can ask the vault to do.
+  const whitelist = new Set(await view<string[]>(RHEA_ID, 'get_whitelisted_tokens', {}))
+  const unlisted = tokens.filter(t => !whitelist.has(t))
+  if (!missing.length && onRhea && !unlisted.length) return console.log('The vault is registered everywhere.')
   await confirm([
     ...(onRhea ? [] : [`open the vault's account on Rhea (${RHEA_ID}) with 0.1 NEAR of storage`]),
     ...missing.map(t => `register the vault with ${t} (0.00125 NEAR)`),
+    ...(unlisted.length ? [`register ${unlisted.length} coins Rhea hasn't whitelisted in the vault's Rhea account: ${unlisted.join(', ')}`] : []),
   ])
   if (!onRhea) await send(owner(), RHEA_ID, [actions.functionCall('storage_deposit', { account_id: VAULT_ID, registration_only: false }, 30n * 10n ** 12n, near(0.1))])
   for (const t of missing) await send(owner(), t, [actions.functionCall('storage_deposit', { account_id: VAULT_ID, registration_only: true }, 30n * 10n ** 12n, 1_250_000_000_000_000_000_000n)])
+  if (unlisted.length) await send(owner(), VAULT_ID, [actions.functionCall('register_tokens_on_exchange', { tokens: unlisted }, 100n * 10n ** 12n, 1n)])
 }
 
 async function routes() {
-  await confirm(COINS.map(c => `list ${c.symbol}: ${c.path.map(p => (p === USDC_ID ? 'USDC' : p)).join(' → ')} through Rhea pools ${c.pools.join(', ')}`))
-  for (const c of COINS) await send(owner(), VAULT_ID, [actions.functionCall('set_route', { path: c.path, pools: c.pools }, 30n * 10n ** 12n, 1n)])
+  const config = await view<{ routes: { path: string[] }[] }>(VAULT_ID, 'get_config', {}).catch(() => null)
+  const listed = new Set((config?.routes ?? []).map(r => r.path.at(-1)))
+  const todo = COINS.filter(c => !listed.has(c.id))
+  if (!todo.length) return console.log(`All ${COINS.length} coins are listed.`)
+  await confirm(todo.map(c => `list ${c.symbol}: ${c.path.map(p => (p === USDC_ID ? 'USDC' : p)).join(' → ')} through Rhea pools ${c.pools.join(', ')}`))
+  // Ten routes to a transaction keeps each well under NEAR's 300 Tgas.
+  for (let i = 0; i < todo.length; i += 10) {
+    const batch = todo.slice(i, i + 10)
+    await send(
+      owner(),
+      VAULT_ID,
+      batch.map(c => actions.functionCall('set_route', { path: c.path, pools: c.pools }, 25n * 10n ** 12n, 1n)),
+    )
+  }
 }
 
 const steps: Record<string, () => Promise<void>> = { status, keys, account: createOwner, vault: createVault, agent: createAgent, register, routes }

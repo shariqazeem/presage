@@ -60,7 +60,9 @@ const r1d = (n: number) => Math.round(n * 10) / 10
 export function usd(n: number): string {
   if (n >= 1000) return `$${n.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
   if (n >= 10) return `$${n.toFixed(2)}`
-  return `$${n.toFixed(n >= 1 ? 3 : 4)}`
+  if (n >= 0.01 || n <= 0) return `$${n.toFixed(n >= 1 ? 3 : 4)}`
+  // Coins priced in tiny fractions keep four significant digits: $0.000000008893, not $0.0000.
+  return `$${n.toFixed(Math.min(20, 3 - Math.floor(Math.log10(n))))}`
 }
 
 export async function readCoin(coin: Coin): Promise<Read> {

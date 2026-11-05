@@ -15,6 +15,7 @@ import { quoteBuy, quoteSell } from '@/lib/near/rhea'
 import type { PositionView } from '@/lib/near/store'
 import { setRulesTx, stopTx, tradeTx } from '@/lib/near/tx'
 import { fromUnits, lessBps } from '@/lib/near/units'
+import { ranked } from '@/lib/near/rank'
 import { allowsCoin, type Member } from '@/lib/near/vault'
 import { Floor } from './agent'
 import { AgentDrawing } from './AgentDrawing'
@@ -154,8 +155,9 @@ export function Desk({ data, agent, refresh, preview = false }: { data: DeskData
   const past = data.positions.filter(p => p.status === 'closed' || p.status === 'not_filled' || p.status === 'declined')
   const usdc = BigInt(member.balances[USDC_ID] ?? '0')
   const openPnl = open.reduce((s, p) => s + (prices[p.token] != null && p.coinAmount != null ? p.coinAmount * prices[p.token] - p.usdcIn : 0), 0)
-  const mine = reads.filter(r => allowsCoin(member.rules, r.token))
-  const watching = mine.map(r => r.coin).join(' and ')
+  const ok = ranked(reads.filter(r => allowsCoin(member.rules, r.token)))
+  const mine = ok.slice(0, 4)
+  const watching = member.rules.coins.length && member.rules.coins.length <= 4 ? mine.map(r => r.coin).join(' and ') : `the ${mine.length} closest of ${ok.length} coins`
   const guard = () => {
     if (preview) toast('This is a preview with sample data.')
     return preview

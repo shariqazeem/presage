@@ -17,6 +17,9 @@ const C = {
 };
 
 const esc = (s) => String(s).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+// ParallaxPay: prices in plain decimals, never exponents. Coins priced in tiny fractions (0.0000000089)
+// printed as 8.8559e-9, which neither a person nor the analyst reads at a glance.
+const fmt = (p, sig = 5) => (!(p > 0) ? String(p) : p >= 1 ? p.toPrecision(sig) : p.toFixed(Math.min(20, sig - 1 - Math.floor(Math.log10(p)))));
 
 function panel(candles, label, x0, y0, w, h, maxBars = 120) {
   if (!candles?.length) return '';
@@ -42,7 +45,7 @@ function panel(candles, label, x0, y0, w, h, maxBars = 120) {
     const p = bot + (top - bot) * (g / 4);
     const y = yOf(p);
     s += `<line x1="${x0}" y1="${y}" x2="${x0 + w}" y2="${y}" stroke="${C.grid}" stroke-width="1"/>`;
-    s += `<text x="${x0 + w - 4}" y="${y - 2}" fill="${C.sub}" font-family="monospace" font-size="10" text-anchor="end">${p.toPrecision(5)}</text>`;
+    s += `<text x="${x0 + w - 4}" y="${y - 2}" fill="${C.sub}" font-family="monospace" font-size="10" text-anchor="end">${fmt(p)}</text>`;
   }
 
   // mapped structure: respected support / resistance zones
@@ -50,13 +53,13 @@ function panel(candles, label, x0, y0, w, h, maxBars = 120) {
     if (z.price < bot || z.price > top) continue;
     const y = yOf(z.price);
     s += `<line x1="${x0}" y1="${y}" x2="${x0 + w}" y2="${y}" stroke="${C.support}" stroke-width="1.2" stroke-dasharray="6 4" opacity="0.9"/>`;
-    s += `<text x="${x0 + 4}" y="${y - 3}" fill="${C.support}" font-family="monospace" font-size="9">S ${z.price.toPrecision(4)} (${z.touches}x)</text>`;
+    s += `<text x="${x0 + 4}" y="${y - 3}" fill="${C.support}" font-family="monospace" font-size="9">S ${fmt(z.price, 4)} (${z.touches}x)</text>`;
   }
   for (const z of resistanceZones(data).filter(z => z.touches >= 2).slice(0, 3)) {
     if (z.price < bot || z.price > top) continue;
     const y = yOf(z.price);
     s += `<line x1="${x0}" y1="${y}" x2="${x0 + w}" y2="${y}" stroke="${C.resistance}" stroke-width="1.2" stroke-dasharray="6 4" opacity="0.9"/>`;
-    s += `<text x="${x0 + 4}" y="${y - 3}" fill="${C.resistance}" font-family="monospace" font-size="9">R ${z.price.toPrecision(4)} (${z.touches}x)</text>`;
+    s += `<text x="${x0 + 4}" y="${y - 3}" fill="${C.resistance}" font-family="monospace" font-size="9">R ${fmt(z.price, 4)} (${z.touches}x)</text>`;
   }
 
   // diagonal trendlines — the channel boundaries a trader actually draws.
@@ -98,7 +101,7 @@ function panel(candles, label, x0, y0, w, h, maxBars = 120) {
   const last = last0;
   const ly = yOf(last);
   s += `<line x1="${x0}" y1="${ly}" x2="${x0 + w}" y2="${ly}" stroke="${C.level}" stroke-width="1" stroke-dasharray="2 3"/>`;
-  s += `<text x="${x0 + w - 4}" y="${ly + 11}" fill="${C.level}" font-family="monospace" font-size="10" text-anchor="end">${last.toPrecision(5)}</text>`;
+  s += `<text x="${x0 + w - 4}" y="${ly + 11}" fill="${C.level}" font-family="monospace" font-size="10" text-anchor="end">${fmt(last)}</text>`;
 
   // MFI panel
   const mv = mfi(data);

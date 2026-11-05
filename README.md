@@ -4,7 +4,7 @@
 
 An AI agent that trades for you on NEAR, inside rules you set.
 
-You fund your own account in the ParallaxPay vault (a NEAR contract) and choose how the agent runs: ask first or autopilot, how picky it is, which coins (any coin it lists, or up to eight you pick), the largest buy (any amount) and how many buys a day. The vault enforces those rules on every agent trade, swaps only through Rhea pools the owner has listed, and pays withdrawals to the member and nobody else. Before each trade the agent seals its plan on NEAR (a sha256 fingerprint); after the trade it opens the plan, and anyone can check it against the seal.
+You fund your own account in the ParallaxPay vault (a NEAR contract) and choose how the agent runs: ask first or autopilot, how picky it is, which coins (any coin it lists, or up to eight you pick), the largest buy (any amount) and how many buys a day. The vault enforces those rules on every agent trade, swaps only through Rhea pools the owner has listed (every coin with a classic Rhea pool against wNEAR or USDC that is deep enough and trades: 25 today), and pays withdrawals to the member and nobody else. Before each trade the agent seals its plan on NEAR (a sha256 fingerprint); after the trade it opens the plan, and anyone can check it against the seal.
 
 ## Built for the NEAR HACKATHON (1–14 Nov 2026)
 
@@ -13,7 +13,8 @@ You fund your own account in the ParallaxPay vault (a NEAR contract) and choose 
 | Vault contract | [`near/vault`](near/vault) (Rust, near-sdk 5.27, 45 unit tests) | NEAR smart contract, Rhea (Ref) exchange `v2.ref-finance.near`, NEP-141 tokens, NEP-297 events |
 | Agent | [`engine/near`](engine/near) | Function-call access key limited to the vault, NEAR RPC, NEAR AI Cloud (analyst in a TEE, signed answers) |
 | App | [`app/page.tsx`](app/page.tsx) (the floor), [`app/desk`](app/desk) (your agent), [`app/start`](app/start) (hiring it), [`app/record`](app/record) (its work), [`app/how-it-trades`](app/how-it-trades), [`app/fund`](app/fund), [`components/near`](components/near) | NEAR Connect (HOT, Meteor, Intear, MyNearWallet, …), NEAR Intents 1-Click |
-| The agent's drawings | [`components/near/AgentDrawing.tsx`](components/near/AgentDrawing.tsx), [`lib/near/drawing.ts`](lib/near/drawing.ts) | The agent's own support/resistance, trendline and money-flow code, run in the browser on the same candles it reads |
+| The agent's drawings | [`components/near/AgentDrawing.tsx`](components/near/AgentDrawing.tsx), [`lib/near/drawing.ts`](lib/near/drawing.ts) | The agent's own support/resistance, trendline and money-flow code, run in the browser on the same candles it reads; the newest candle moves with live prices read from Rhea's pools on NEAR (`get_pool_by_ids`) |
+| Every coin it trades | [`scripts/near/discover.ts`](scripts/near/discover.ts), [`lib/near/coins.json`](lib/near/coins.json) | Rhea's pools: each token with a classic pool against wNEAR or USDC, $5k+ of liquidity and trades in the last day, routed through the vault |
 | Shared code | [`lib/near`](lib/near) | Read-only RPC client, Rhea quotes, vault types, 1-Click helpers |
 | Mainnet setup | [`scripts/near/setup.ts`](scripts/near/setup.ts) | Account creation, deploy, storage registration, routes |
 
@@ -37,7 +38,7 @@ The vault holds each member's coins and rules. The agent can only call `trade`, 
 
 ### Try it
 
-1. Open the app (hosted at https://parallaxpay.80.225.209.190.sslip.io) and watch the agent read the coin closest to a trade. Its drawing plays in front of you: candles, the support and resistance it mapped (with touch counts), its trendlines and money flow, all computed with its own code. It says in one sentence what it is waiting for, its six checks tick in, and **The exact chart it read** opens the four-timeframe image it actually analysed. It re-reads NEAR, ZEC, RHEA and AURORA every 15 minutes.
+1. Open the app (hosted at https://parallaxpay.80.225.209.190.sslip.io) and watch the agent read the coin closest to a trade. Its drawing plays in front of you: candles, the support and resistance it mapped (with touch counts), its trendlines and money flow, all computed with its own code. It says in one sentence what it is waiting for, its six checks tick in, and **The exact chart it read** opens the four-timeframe image it actually analysed. It watches every coin it can trade on Rhea (25 at the last discovery): the ones closest to a trade are re-read every 15 minutes, the rest at least about hourly. Pinch or ctrl-scroll the chart to zoom, drag to pan, hold for a candle's numbers, and press **Watch it read the chart** to have it talk you through its own lines.
 2. Press **Hire ParallaxPay**. It introduces itself on its live chart, then asks four questions (ask first or autopilot, how picky, any coin or only some, how big: any amount) while your mandate fills in. Connect a NEAR wallet and **Sign on NEAR** (0.02 NEAR for storage, returned if you leave), then see your mandate on NEAR:
    ```bash
    near contract call-function as-read-only vault.parallaxpay.near get_member json-args '{"account_id":"YOU.near"}' network-config mainnet now
@@ -73,16 +74,16 @@ Environment for the agent (in `.env.local`): `NEAR_AGENT_KEY` (the function-call
 
 ### How one trade works
 
-1. The agent reads candles for each coin on four timeframes (Binance for NEAR and ZEC, the coin's own Rhea pool for RHEA and AURORA) and applies its rules: buy only at support a higher timeframe confirms, with money flow (MFI) bottomed and the daily trend not falling; stop just under the level; sell at the next resistance worth at least 2.5 times the risk, or after 72 hours.
+1. The agent reads candles for each coin on four timeframes (Binance where a coin has a deep market, such as NEAR, ZEC, BTC and SOL, otherwise the coin's own Rhea pool) and applies its rules: buy only at support a higher timeframe confirms, with money flow (MFI) bottomed and the daily trend not falling; stop just under the level; sell at the next resistance worth at least 2.5 times the risk, or after 72 hours.
 2. When the rules find a setup, an open model on NEAR AI Cloud reviews the chart against the same rubric. It can pass or lower the grade, never raise it, and the enclave signs its answer.
-3. For each member whose rules fit, the agent sizes the trade (style and grade decide the share of the member's largest buy), quotes it on Rhea, and calls `vault.trade` with the plan's fingerprint. The vault checks the member's rules, then runs three steps, each confirmed by a callback with exact amounts: `ft_transfer_call` into its own Rhea account, `swap` (Rhea returns the amount out), `withdraw` back (Rhea reports what arrived). One trade runs at a time, so `recover` can always settle a trade that stopped part-way from what Rhea holds.
+3. For each member whose rules fit, the agent sizes the trade (style and grade decide the share of the member's largest buy), quotes it on Rhea and cuts it down until it moves the coin's pool less than 1%, and calls `vault.trade` with the plan's fingerprint. The vault checks the member's rules, then runs three steps, each confirmed by a callback with exact amounts: `ft_transfer_call` into its own Rhea account, `swap` (Rhea returns the amount out), `withdraw` back (Rhea reports what arrived). One trade runs at a time, so `recover` can always settle a trade that stopped part-way from what Rhea holds.
 4. Ask-first members get a proposal sealed with `vault.seal`; they approve it from their own wallet, and the server records it only after reading the transaction back from NEAR.
 5. On exit the agent sells back to USDC and calls `vault.reveal`, which checks the plan against its seal and logs it.
 
 ### Known limits
 
 - One trade at a time across the vault; the agent queues members.
-- Coins are limited to what Rhea can swap deeply against native USDC, all through the USDC/wNEAR pool 4512: NEAR, ZEC (pool 6065), RHEA (6458) and AURORA (5469). BTC, ETH and SOL can be brought in through NEAR Intents but aren't traded by the vault.
+- Coins are those with a classic Rhea pool against wNEAR (through the USDC/wNEAR pool 4512) or native USDC, at least $5k of liquidity, a fee under 1% and trades in the last day: 25 at the last discovery. Another 42 tokens have a pool but barely trade; discovery picks them up when they do. Tokens whose liquidity sits only in Rhea's concentrated-liquidity (DCL) pools aren't traded yet: that needs a second swap path in the vault.
 - The owner can upgrade this hackathon deployment with the vault account's full-access key. That key is to be removed or put behind a timelock before real money uses it.
 - Not financial advice. The agent can lose money; its record shows losses as they happen.
 

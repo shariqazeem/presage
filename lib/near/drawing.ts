@@ -128,11 +128,20 @@ export function tfForAge(sec: number): DrawTf {
   return '1d'
 }
 
-/** A price the way the drawing labels it: whole dollars above $1,000, 3 decimals above $1, 4 significant digits below. */
+const SUB = '₀₁₂₃₄₅₆₇₈₉'
+
+/**
+ * A price the way the drawing labels it: whole dollars above $1,000, 3 decimals above $1, 4 significant
+ * digits below, and for coins priced in tiny fractions the zeros counted the way DEX screens do:
+ * $0.0₈8893 is $0.000000008893.
+ */
 export function px(p: number): string {
   if (!Number.isFinite(p)) return '—'
   if (p >= 1000) return `$${Math.round(p).toLocaleString('en-US')}`
   if (p >= 100) return `$${p.toFixed(1)}`
   if (p >= 1) return `$${p.toFixed(3)}`
-  return `$${Number(p.toPrecision(4))}`
+  if (p >= 0.0001 || p <= 0) return `$${Number(p.toPrecision(4))}`
+  const zeros = -Math.floor(Math.log10(p)) - 1
+  const digits = Math.round(p * 10 ** (zeros + 4)).toString().replace(/0+$/, '') || '0'
+  return `$0.0${[...String(zeros)].map(d => SUB[Number(d)]).join('')}${digits}`
 }

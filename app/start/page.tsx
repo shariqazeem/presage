@@ -11,10 +11,12 @@ import { MandateCard } from '@/components/near/Mandate'
 import { useNear } from '@/components/near/NearWallet'
 import { sayError, tellAgent } from '@/components/near/sheets'
 import { PerDayPicker, SizePicker } from '@/components/near/SizePicker'
+import { CoinChooser } from '@/components/near/coins'
+import { ranked } from '@/lib/near/rank'
 import { focusOf, voice } from '@/components/near/Stage'
 import { Mark } from '@/components/shell/Mark'
 import { cx } from '@/components/ui'
-import { COINS, USDC, USDC_ID } from '@/lib/near/config'
+import { USDC, USDC_ID } from '@/lib/near/config'
 import { px } from '@/lib/near/drawing'
 import { useAgentState, useDesk, type CoinRead } from '@/lib/near/hooks'
 import { ftBalance } from '@/lib/near/rpc'
@@ -136,23 +138,6 @@ function Option({ on, onClick, children, className = '' }: { on: boolean; onClic
   )
 }
 
-/** A coin to trade, shown the way the agent sees it: its drawing, its checks. */
-function CoinPick({ symbol, name, r, on, onClick }: { symbol: string; name: string; r?: CoinRead; on: boolean; onClick: () => void }) {
-  const checks = r?.checks ?? []
-  return (
-    <button onClick={onClick} aria-pressed={on} className={cx('relative text-left rounded-[20px] p-3 bg-ink text-white press border-2 transition-colors', on ? 'border-[#EC4899]/70' : 'border-transparent')}>
-      <span className={cx('absolute top-3 right-3 w-6 h-6 rounded-full grid place-items-center', on ? 'foil text-white' : 'border border-white/20')}>{on && <IconCheck size={12} weight={3} />}</span>
-      <div className="font-heading text-[18px] font-black tight">{symbol}</div>
-      <div className="text-[12px] text-[#8A8A92]">{name}</div>
-      <AgentDrawing coin={symbol} tf="1h" size="thumb" focus={r ? focusOf(r) : null} className="h-[56px] mt-2" />
-      <div className="mt-2 flex items-baseline justify-between">
-        <span className="num text-[13px]">{r ? px(r.price) : '—'}</span>
-        <span className="num text-[11.5px] text-[#8A8A92]">{r ? `${checks.filter(c => c.ok).length}/${checks.length} checks` : ''}</span>
-      </div>
-    </button>
-  )
-}
-
 /* ------------------------------------------------------------------ the flow */
 
 /** Hiring ParallaxPay: meet it, write its mandate one answer at a time, sign it on NEAR, fund it. */
@@ -200,7 +185,7 @@ export default function Start() {
   const next = () => setStep(STEPS[Math.min(STEPS.length - 1, i + 1)])
   const back = () => (i === 0 ? router.push('/') : setStep(STEPS[i - 1]))
   const size = fromUnits(rules.max_trade, USDC.decimals)
-  const reads = useMemo(() => [...(agent?.reads ?? [])].sort((a, b) => COINS.findIndex(c => c.symbol === a.coin) - COINS.findIndex(c => c.symbol === b.coin)), [agent])
+  const reads = useMemo(() => ranked(agent?.reads ?? []), [agent])
   const lead = reads.find(r => r.setup) ?? [...reads].sort((a, b) => (b.checks ?? []).filter(c => c.ok).length - (a.checks ?? []).filter(c => c.ok).length)[0]
   const mine = reads.filter(r => allowsCoin(desk?.member?.rules ?? rules, r.token))
   const mineLead = mine.find(r => r.setup) ?? mine[0]
@@ -395,19 +380,14 @@ export default function Start() {
             </div>
             <div className="mt-5 mb-2.5 flex items-baseline justify-between">
               <span className="text-[13px] font-semibold text-ink-2">Or only these</span>
-              <span className="text-[12px] text-ink-3">up to {MAX_COINS}</span>
+              <span className="text-[12px] text-ink-3">{rules.coins.length ? `${rules.coins.length} of ${MAX_COINS}` : `up to ${MAX_COINS}`}</span>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              {COINS.map(c => {
-                const on = rules.coins.includes(c.id)
-                const toggle = () => {
-                  if (on) set({ coins: rules.coins.filter(x => x !== c.id) })
-                  else if (rules.coins.length >= MAX_COINS) toast(`Up to ${MAX_COINS} coins, or let me pick from all of them.`)
-                  else set({ coins: [...rules.coins, c.id] })
-                }
-                return <CoinPick key={c.id} symbol={c.symbol} name={c.name} r={reads.find(x => x.coin === c.symbol)} on={on} onClick={toggle} />
-              })}
-            </div>
+            <CoinChooser
+              reads={reads}
+              chosen={rules.coins}
+              max={MAX_COINS}
+              onToggle={id => set({ coins: rules.coins.includes(id) ? rules.coins.filter(x => x !== id) : rules.coins.length >= MAX_COINS ? rules.coins : [...rules.coins, id] })}
+            />
           </div>
         )}
 

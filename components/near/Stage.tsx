@@ -9,6 +9,8 @@ import { coinBySymbol } from '@/lib/near/config'
 import { px, readChart, type DrawTf, type Drawing } from '@/lib/near/drawing'
 import { useLivePrice, usePresence, type AgentState, type CoinRead } from '@/lib/near/hooks'
 import { AgentDrawing, useDrawCandles, type Spot } from './AgentDrawing'
+import { CoinIcon, CoinList } from './coins'
+import { ranked } from '@/lib/near/rank'
 import { ago } from './kit'
 import { LivePrice } from './motion'
 import { Segmented, signedPct } from './primitives'
@@ -18,8 +20,9 @@ import { Segmented, signedPct } from './primitives'
  * checks, and the four coins it watches. This is the first thing anyone sees.
  */
 
-const ORDER = ['NEAR', 'ZEC', 'RHEA', 'AURORA']
 const READ_EVERY = 15 * 60
+/** Coins shown as tiles under the stage; the rest are a tap away in the list. */
+const EYES = 6
 
 export type Status = { word: string; tone: 'live' | 'close' | 'quiet' }
 
@@ -194,8 +197,15 @@ function Eye({ r, on, onPick }: { r: CoinRead; on: boolean; onPick: () => void }
       className={cx('shrink-0 snap-start w-[168px] lg:w-auto rounded-[18px] p-3 text-left press border transition-colors', on ? 'bg-white/[0.09] border-white/25' : 'bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.06]')}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="font-heading text-[15px] font-black tight text-white">{r.coin}</span>
-        {s.tone === 'live' ? <span className="w-2 h-2 rounded-full foil" /> : <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#8A8A92]">{s.word}</span>}
+        <span className="flex items-center gap-1.5 min-w-0">
+          <CoinIcon coin={{ symbol: r.coin, icon: coinBySymbol(r.coin)?.icon }} size={18} />
+          <span className="font-heading text-[15px] font-black tight text-white truncate">{r.coin}</span>
+        </span>
+        {s.tone === 'live' ? (
+          <span className="w-2 h-2 rounded-full foil shrink-0" title="Setup" />
+        ) : s.tone === 'close' ? (
+          <span className="text-[10.5px] font-semibold uppercase tracking-[0.06em] text-white shrink-0">{s.word}</span>
+        ) : null}
       </div>
       <AgentDrawing coin={r.coin} tf="1h" size="thumb" focus={focusOf(r)} className="h-[54px] mt-2" label={`ParallaxPay's drawing of ${r.coin}`} />
       <div className="mt-2 flex items-baseline justify-between gap-2">
@@ -209,8 +219,9 @@ function Eye({ r, on, onPick }: { r: CoinRead; on: boolean; onPick: () => void }
 }
 
 export function Stage({ agent }: { agent: AgentState | undefined }) {
-  const reads = [...(agent?.reads ?? [])].sort((a, b) => ORDER.indexOf(a.coin) - ORDER.indexOf(b.coin))
+  const reads = ranked(agent?.reads ?? [])
   const [pick, setPick] = useState<string | null>(null)
+  const [listOpen, setListOpen] = useState(false)
   const [tf, setTf] = useState<DrawTf>('1h')
   const [shot, setShot] = useState(false)
   const [allLevels, setAllLevels] = useState(false)
@@ -221,11 +232,13 @@ export function Stage({ agent }: { agent: AgentState | undefined }) {
     if (c) setPick(c.toUpperCase())
   }, [])
   // With nothing picked, it looks at the coin closest to a trade.
-  const closest = [...reads].sort((a, b) => Number(Boolean(b.setup)) - Number(Boolean(a.setup)) || (b.checks ?? []).filter(c => c.ok).length - (a.checks ?? []).filter(c => c.ok).length)[0]
-  const read = reads.find(x => x.coin === pick) ?? closest
+  const read = reads.find(x => x.coin === pick) ?? reads[0]
   const live = useLivePrice(read?.coin)
   const r = read ? withLivePrice(read, live) : undefined
   const s = r ? statusOf(r) : null
+  const top = reads.slice(0, EYES)
+  const eyes = r && !top.some(x => x.coin === r.coin) ? [...top.slice(0, EYES - 1), reads.find(x => x.coin === r.coin)!] : top
+  const others = reads.filter(x => !eyes.includes(x))
 
   // "Watch it read": the same candles the drawing uses (shared cache), read the same way, talked through.
   const { data: candles } = useDrawCandles(r?.coin ?? '', tf)
@@ -408,15 +421,48 @@ export function Stage({ agent }: { agent: AgentState | undefined }) {
         </div>
       )}
 
-      {/* its eyes: every coin it watches */}
+      {/* its eyes: the coins closest to a trade, and every other coin a tap away */}
       <div className="border-t border-white/[0.06] px-4 md:px-6 py-4">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8A8A92] mb-2.5">Watching {reads.length || 4} coins</div>
-        <div className="flex lg:grid lg:grid-cols-4 gap-2.5 overflow-x-auto no-scrollbar snap-x -mx-4 px-4 lg:mx-0 lg:px-0">
-          {reads.map(x => (
+        <div className="flex items-baseline justify-between mb-2.5">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#8A8A92]">Closest to a trade</div>
+          <button type="button" onClick={() => setListOpen(true)} className="text-[12.5px] font-semibold text-[#C9C9CF] hover:text-white press">
+            All {reads.length || ''} coins →
+          </button>
+        </div>
+        <div className="flex lg:grid lg:grid-cols-6 gap-2.5 overflow-x-auto no-scrollbar snap-x -mx-4 px-4 lg:mx-0 lg:px-0">
+          {eyes.map(x => (
             <Eye key={x.coin} r={x} on={x.coin === r?.coin} onPick={() => setPick(x.coin)} />
           ))}
+          <button
+            type="button"
+            onClick={() => setListOpen(true)}
+            className="lg:hidden shrink-0 snap-start w-[120px] rounded-[18px] p-3 text-left press border border-dashed border-white/[0.14] text-[#C9C9CF] flex flex-col justify-between"
+          >
+            <span className="flex -space-x-2">
+              {others.slice(0, 3).map(x => (
+                <CoinIcon key={x.coin} coin={{ symbol: x.coin, icon: coinBySymbol(x.coin)?.icon }} size={24} className="ring-2 ring-ink" />
+              ))}
+            </span>
+            <span className="text-[13px] font-semibold leading-tight">
+              {others.length} more
+              <br />
+              coins →
+            </span>
+          </button>
         </div>
       </div>
+
+      <Sheet open={listOpen} onClose={() => setListOpen(false)} title={`Every coin it trades`}>
+        <CoinList
+          reads={reads}
+          current={r?.coin}
+          onPick={c => {
+            setPick(c)
+            setListOpen(false)
+            stageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }}
+        />
+      </Sheet>
 
       {r && (
         <Sheet open={shot} onClose={() => setShot(false)} title={`The chart ParallaxPay read on ${r.coin}`}>

@@ -5,6 +5,7 @@ import { useNow } from '../kit'
 import { cx } from '../ui'
 import { px } from '@/lib/near/drawing'
 import { useAgentState, useLivePrices, usePresence } from '@/lib/near/hooks'
+import { ranked } from '@/lib/near/rank'
 
 /**
  * The agent's status strip under the desktop bar: what ParallaxPay is doing, when it reads next, and
@@ -26,7 +27,9 @@ export function Ticker() {
           {setups ? `found ${setups} setup${setups === 1 ? '' : 's'}` : 'is reading the market'}
           {left != null && <span className="num text-ink-3">· {left === 0 ? 'reading now' : `next read ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`}</span>}
         </span>
-        {(data?.reads ?? []).map(r => {
+        {ranked(data?.reads ?? [])
+          .slice(0, 5)
+          .map(r => {
           const checks = r.checks ?? []
           return (
             <Link key={r.coin} href={`/?coin=${r.coin}#live`} className="flex items-center gap-2 shrink-0 press hover:text-ink" title={`${checks.filter(c => c.ok).length} of ${checks.length} checks pass`}>
@@ -40,6 +43,11 @@ export function Ticker() {
             </Link>
           )
         })}
+        {(data?.reads.length ?? 0) > 5 && (
+          <Link href="/#coins" className="shrink-0 text-ink-3 hover:text-ink press">
+            +{(data?.reads.length ?? 0) - 5} coins
+          </Link>
+        )}
         {here ? <span className="ml-auto shrink-0 text-ink-3">{here} {here === 1 ? 'person' : 'people'} here</span> : null}
       </div>
     </div>

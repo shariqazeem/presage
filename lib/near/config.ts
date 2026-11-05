@@ -1,7 +1,10 @@
+import listed from './coins.json'
+
 /**
  * ParallaxPay on NEAR mainnet: the vault, the coins it trades, and the Rhea pools between them.
  * Pool depths checked on 4 Nov 2026: USDC/wNEAR #4512 holds about $2M, wNEAR/ZEC #6065 about $250k,
- * and both price within 0.2% of Binance.
+ * and both price within 0.2% of Binance. Every other coin comes from scripts/near/discover.ts, which
+ * lists each token with a classic Rhea pool against wNEAR or USDC that is deep enough and trades.
  */
 
 // Public RPCs checked live on 4 Nov 2026.
@@ -34,13 +37,27 @@ export type Coin = Token & {
   feed: { source: 'binance'; market: string } | { source: 'geckoterminal'; network: 'near'; pool: string }
   /** For the token list: what it is, in a few words. */
   blurb: string
+  /** Its icon in public/tokens, when its metadata has one. */
+  icon?: string
+  /** Liquidity of the pool it trades through, and that pool's last-day volume and trades, in USD at discovery. */
+  tvl?: number
+  vol24?: number
+  tx24?: number
+}
+
+type Listed = Omit<Coin, 'blurb'> & { whitelisted?: boolean }
+const found = (listed as { coins: Listed[] }).coins
+const facts = (id: string) => {
+  const c = found.find(x => x.id === id)
+  return c ? { icon: c.icon, tvl: c.tvl, vol24: c.vol24, tx24: c.tx24 } : {}
 }
 
 export const USDC: Token = { id: USDC_ID, symbol: 'USDC', name: 'USD Coin', decimals: 6 }
 
-// Every coin is reachable from USDC through the USDC/wNEAR pool (#4512, about $2M deep). RHEA and
-// AURORA have no Binance market, so the agent reads their own Rhea pools on GeckoTerminal.
-export const COINS: Coin[] = [
+// The coins it started with, described by hand. Every coin is reachable from USDC through the
+// USDC/wNEAR pool (#4512, about $2M deep). Coins without a Binance market are read from their own Rhea
+// pool on GeckoTerminal.
+const HAND: Coin[] = [
   { id: WNEAR_ID, symbol: 'NEAR', name: 'NEAR Protocol', decimals: 24, path: [USDC_ID, WNEAR_ID], pools: [4512], feed: { source: 'binance', market: 'NEARUSDT' }, blurb: 'The chain itself' },
   {
     id: 'zec.omft.near',
@@ -73,6 +90,18 @@ export const COINS: Coin[] = [
     blurb: 'The EVM that runs on NEAR',
   },
 ]
+const CORE: Coin[] = HAND.map(c => ({ ...c, ...facts(c.id) }))
+
+/** Every coin it can trade: the four above, then every other coin discovery found, busiest first. */
+export const COINS: Coin[] = [
+  ...CORE,
+  ...found
+    .filter(c => !CORE.some(k => k.id === c.id))
+    .map(({ whitelisted: _w, ...c }): Coin => ({ ...c, blurb: '' })),
+]
+
+/** The coins the app opens on: the four it started with. */
+export const CORE_SYMBOLS = CORE.map(c => c.symbol)
 
 /** Where a coin's candles come from, as the market loaders take it. */
 export const assetOf = (c: Coin) =>

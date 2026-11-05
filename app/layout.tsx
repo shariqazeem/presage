@@ -3,7 +3,8 @@ import { IBM_Plex_Mono, Inter, Inter_Tight } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/Providers'
 import { agentSnapshot, candlesWithin } from '@/lib/near/snapshot'
-import { COINS } from '@/lib/near/config'
+import { CORE_SYMBOLS } from '@/lib/near/config'
+import { ranked } from '@/lib/near/rank'
 import { WARMUP, WINDOW } from '@/lib/near/drawing'
 import type { AgentState } from '@/lib/near/hooks'
 import type { Candle } from '@/lib/market/types'
@@ -39,13 +40,18 @@ export const viewport: Viewport = {
 
 export const dynamic = 'force-dynamic'
 
-/** Pages arrive with the agent's live state and every coin's candles for its drawings already in them. */
+/**
+ * Pages arrive with the agent's live state and, for the coins the floor opens on (the six closest to a
+ * trade), the candles for their drawings already in them. Other coins draw when someone opens them.
+ */
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [agent, ...series] = await Promise.all([agentSnapshot().catch(() => null), ...COINS.map(c => candlesWithin(c.symbol, '1h', 700))])
+  const agent = await agentSnapshot().catch(() => null)
+  const first = agent?.reads.length ? ranked(agent.reads as AgentState['reads']).slice(0, 6).map(r => r.coin) : CORE_SYMBOLS
+  const series = await Promise.all(first.map(c => candlesWithin(c, '1h', 700)))
   const draw: Record<string, Candle[]> = {}
-  COINS.forEach((c, i) => {
+  first.forEach((c, i) => {
     const s = series[i] as Candle[] | null
-    if (s?.length) draw[c.symbol] = s.slice(-(WINDOW['1h'] + WARMUP))
+    if (s?.length) draw[c] = s.slice(-(WINDOW['1h'] + WARMUP))
   })
   return (
     <html lang="en" className={`${inter.variable} ${interTight.variable} ${plexMono.variable}`}>

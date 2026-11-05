@@ -689,7 +689,7 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
       <motion.div
         role="dialog"
         aria-modal
-        className="fixed z-[61] inset-x-0 bottom-0 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[560px] bg-white rounded-t-[24px] md:rounded-[22px] max-h-[85vh] overflow-y-auto shadow-2xl"
+        className="fixed z-[61] inset-x-0 bottom-0 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[560px] bg-white text-ink rounded-t-[24px] md:rounded-[22px] max-h-[85vh] overflow-y-auto shadow-2xl"
         initial={{ y: 40, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 40, opacity: 0 }}

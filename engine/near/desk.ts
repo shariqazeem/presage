@@ -6,7 +6,7 @@ import { getDb, schema } from '../../lib/db'
 import { COINS, USDC, USDC_ID, VAULT_ID, coinById, feedName, type Coin } from '../../lib/near/config'
 import { quoteBuy, quoteSell } from '../../lib/near/rhea'
 import { fromUnits, lessBps } from '../../lib/near/units'
-import { closePosition, feed, markOpen, syncMember, type Plan, type PositionRow } from '../../lib/near/store'
+import { closePosition, feed, latestReads, markOpen, syncMember, type Plan, type PositionRow } from '../../lib/near/store'
 import { allowsCoin, tradeEnd, vault, type Member } from '../../lib/near/vault'
 import { errMsg, log } from '../log'
 import { review, type Verdict } from './analyst'
@@ -111,8 +111,37 @@ function worthSaying(r: Read): boolean {
   return shape(last.text) !== shape(r.line) || now() - last.at >= 3600
 }
 
+/** A cycle stops starting new reads after this, so it never runs into the next one. */
+const READ_BUDGET_MS = 11 * 60_000
+
+/**
+ * Which coins to read first. Coins near a trade are read every cycle; the rest wait their turn, and the
+ * longer a coin has gone unread the higher it climbs, so every coin is read at least about hourly even
+ * though candles from GeckoTerminal come a few seconds apart.
+ */
+function readOrder(): Coin[] {
+  const last = new Map(latestReads().map(r => [String(r.coin), r as { at?: number; setup?: unknown; armedAt?: unknown; checks?: { ok: boolean | null }[] }]))
+  const t = now()
+  const score = (c: Coin) => {
+    const r = last.get(c.symbol)
+    if (!r?.at) return 10_000 // never read
+    const close = (r.setup ? 400 : 0) + (r.armedAt ? 200 : 0) + (r.checks ?? []).filter(x => x.ok).length * 25
+    const waited = Math.max(0, t - r.at) / 60
+    return close + waited * 2
+  }
+  return [...COINS].sort((a, b) => score(b) - score(a))
+}
+
 export async function checkMarkets() {
-  for (const coin of COINS) {
+  const started = Date.now()
+  const order = readOrder()
+  let done = 0
+  for (const coin of order) {
+    if (Date.now() - started > READ_BUDGET_MS) {
+      l.info(`markets: read ${done} of ${order.length} coins this cycle; the rest go first next time`)
+      break
+    }
+    done++
     let read: Read
     try {
       read = await readCoin(coin)
@@ -172,6 +201,27 @@ function sizeFor(m: Known, share: number): bigint | string {
   return amount
 }
 
+/** A buy may move its pool's price at most this much; bigger buys are cut down to fit. */
+const MAX_IMPACT = 0.01
+
+/**
+ * The buy cut to what the coin's pool can take: quoted on Rhea and shrunk until the price it gets is
+ * within 1% of a $1 buy's (fees cancel out). Deep pools take the member's full size; thin ones get less,
+ * or nothing.
+ */
+async function fitToPool(coin: Coin, amount: bigint): Promise<{ amount: bigint; quote: bigint; cut: boolean } | string> {
+  const probeOut = await quoteBuy(coin, MIN_TRADE)
+  if (probeOut <= 0n) return 'Rhea has no price for it right now'
+  const spot = Number(probeOut) / Number(MIN_TRADE)
+  let a = amount
+  for (let i = 0; i < 8 && a >= MIN_TRADE; i++) {
+    const out = await quoteBuy(coin, a)
+    if (1 - Number(out) / Number(a) / spot <= MAX_IMPACT) return { amount: a, quote: out, cut: a < amount }
+    a = (a * 6n) / 10n
+  }
+  return `its Rhea pool is too thin to buy without moving the price more than ${MAX_IMPACT * 100}%`
+}
+
 function seal(plan: Plan) {
   const json = JSON.stringify(plan)
   const salt = randomBytes(32)
@@ -207,12 +257,17 @@ async function enter(m: Known, read: Read, setup: Setup, verdict: Verdict, share
     feed('pass', `Passed on ${coin.symbol}: today's ${m.member.rules.trades_per_day} buys are used.`, { accountId: m.accountId, coin: coin.id, ...AGENT })
     return false
   }
-  const amount = sizeFor(m, share)
-  if (typeof amount === 'string') {
-    feed('pass', `Passed on ${coin.symbol}: ${amount}.`, { accountId: m.accountId, coin: coin.id, ...AGENT })
+  const wanted = sizeFor(m, share)
+  if (typeof wanted === 'string') {
+    feed('pass', `Passed on ${coin.symbol}: ${wanted}.`, { accountId: m.accountId, coin: coin.id, ...AGENT })
     return false
   }
-  const quote = await quoteBuy(coin, amount)
+  const fit = await fitToPool(coin, wanted)
+  if (typeof fit === 'string') {
+    feed('pass', `Passed on ${coin.symbol}: ${fit}.`, { accountId: m.accountId, coin: coin.id, ...AGENT })
+    return false
+  }
+  const { amount, quote } = fit
   const plan = makePlan(m, read, setup, verdict, amount, quote)
   const sealed = seal(plan)
   // The plan and its salt are saved before the seal exists, so the call can always be opened.
@@ -252,7 +307,7 @@ async function enter(m: Known, read: Read, setup: Setup, verdict: Verdict, share
     const got = BigInt(end.amount_out)
     db.update(schema.nearPositions).set({ callId, sealTx: r.hash }).where(eq(schema.nearPositions.id, pos.id)).run()
     const price = markOpen(pos, coin, amount, got, r.hash)
-    feed('enter', `Bought ${fromUnits(got, coin.decimals).toPrecision(4)} ${coin.symbol} for ${usd(fromUnits(amount, USDC.decimals))} at ${usd(price)}. Stop ${usd(setup.stop)}, target ${usd(setup.target)}. The plan is sealed on NEAR as call #${callId}.`, {
+    feed('enter', `Bought ${fromUnits(got, coin.decimals).toPrecision(4)} ${coin.symbol} for ${usd(fromUnits(amount, USDC.decimals))} at ${usd(price)}${fit.cut ? ', sized down to what its pool can take' : ''}. Stop ${usd(setup.stop)}, target ${usd(setup.target)}. The plan is sealed on NEAR as call #${callId}.`, {
       accountId: m.accountId,
       coin: coin.id,
       tx: r.hash,
@@ -275,12 +330,17 @@ async function enter(m: Known, read: Read, setup: Setup, verdict: Verdict, share
 async function propose(m: Known, read: Read, setup: Setup, verdict: Verdict, share: number): Promise<boolean> {
   const coin = read.coin
   if (!agentConfigured()) return false
-  const amount = sizeFor(m, share)
-  if (typeof amount === 'string') {
-    feed('pass', `Passed on ${coin.symbol}: ${amount}.`, { accountId: m.accountId, coin: coin.id, ...AGENT })
+  const wanted = sizeFor(m, share)
+  if (typeof wanted === 'string') {
+    feed('pass', `Passed on ${coin.symbol}: ${wanted}.`, { accountId: m.accountId, coin: coin.id, ...AGENT })
     return false
   }
-  const quote = await quoteBuy(coin, amount)
+  const fit = await fitToPool(coin, wanted)
+  if (typeof fit === 'string') {
+    feed('pass', `Passed on ${coin.symbol}: ${fit}.`, { accountId: m.accountId, coin: coin.id, ...AGENT })
+    return false
+  }
+  const { amount, quote } = fit
   const sealed = seal(makePlan(m, read, setup, verdict, amount, quote))
   const pos = getDb()
     .insert(schema.nearPositions)

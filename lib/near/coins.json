@@ -1,0 +1,626 @@
+{
+ "at": "2026-11-05",
+ "minTvl": 5000,
+ "quiet": 42,
+ "coins": [
+  {
+   "id": "zec.omft.near",
+   "symbol": "ZEC",
+   "name": "Zcash",
+   "decimals": 8,
+   "path": [
+    "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+    "wrap.near",
+    "zec.omft.near"
+   ],
+   "pools": [
+    4512,
+    6065
+   ],
+   "feed": {
+    "source": "binance",
+    "market": "ZECUSDT"
+   },
+   "tvl": 270851,
+   "vol24": 242740,
+   "tx24": 6239,
+   "fee": 0,
+   "whitelisted": true,
+   "icon": "/tokens/zec-317444.png"
+  },
+  {
+   "id": "token.rhealab.near",
+   "symbol": "RHEA",
+   "name": "Rhea",
+   "decimals": 18,
+   "path": [
+    "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+    "wrap.near",
+    "token.rhealab.near"
+   ],
+   "pools": [
+    4512,
+    6458
+   ],
+   "feed": {
+    "source": "geckoterminal",
+    "network": "near",
+    "pool": "refv1-6458"
+   },
+   "tvl": 1011283,
+   "vol24": 169565,
+   "tx24": 995,
+   "fee": 30,
+   "whitelisted": true,
+   "icon": "/tokens/rhea-8e4cb3.png"
+  },
+  {
+   "id": "aaaaaa20d9e0e2461697782ef11675f668207961.factory.bridge.near",
+   "symbol": "AURORA",
+   "name": "Aurora",
+   "decimals": 18,
+   "path": [
+    "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+    "wrap.near",
+    "aaaaaa20d9e0e2461697782ef11675f668207961.factory.bridge.near"
+   ],
+   "pools": [
+    4512,
+    5469
+   ],
+   "feed": {
+    "source": "geckoterminal",
+    "network": "near",
+    "pool": "refv1-5469"
+   },
+   "tvl": 241579,
+   "vol24": 17294,
+   "tx24": 209,
+   "fee": 30,
+   "whitelisted": true,
+   "icon": "/tokens/aurora-0a223c.png"
+  },
+  {
+   "id": "blackdragon.tkn.near",
+   "symbol": "BLACKDRAGON",
+   "name": "Black Dragon",
+   "decimals": 24,
+   "path": [
+    "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+    "wrap.near",
+    "blackdragon.tkn.near"
+   ],
+   "pools": [
+    4512,
+    4276
+   ],
+   "feed": {
+    "source": "geckoterminal",
+    "network": "near",
+    "pool": "refv1-4276"
+   },
+   "tvl": 49679,
+   "vol24": 6026,
+   "tx24": 308,
+   "fee": 30,
+   "whitelisted": true,
+   "icon": "/tokens/blackdragon-b7bbd5.jpg"
+  },
+  {
+   "id": "token.0xshitzu.near",
+   "symbol": "SHITZU",
+   "name": "SHITZU",
+   "decimals": 18,
+   "path": [
+    "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+    "wrap.near",
+    "token.0xshitzu.near"
+   ],
+   "pools": [
+    4512,
+    4369
+   ],
+   "feed": {
+    "source": "geckoterminal",
+    "network": "near",
+    "pool": "refv1-4369"
+   },
+   "tvl": 55885,
+   "vol24": 2999,
+   "tx24": 113,
+   "fee": 30,
+   "whitelisted": true,
+   "icon": "/tokens/shitzu-7cfae1.webp"
+  },
+  {
+   "id": "token.publicailab.near",
+   "symbol": "PUBLIC",
+   "name": "PublicAI",
+   "decimals": 18,
+   "path": [
+    "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+    "wrap.near",
+    "token.publicailab.near"
+   ],
+   "pools": [
+    4512,
+    6503
+   ],
+   "feed": {
+    "source": "geckoterminal",
+    "network": "near",
+    "pool": "refv1-6503"
+   },
+   "tvl": 55343,
+   "vol24": 2476,
+   "tx24": 141,
+   "fee": 30,
+   "whitelisted": true,
+   "icon": "/tokens/public-0c8bd9.png"
+  },
+  {
+   "id": "npro.nearmobile.near",
+   "symbol": "NPRO",
+   "name": "NPRO",
+   "decimals": 24,
+   "path": [
+    "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+    "wrap.near",
+    "npro.nearmobile.near"
+   ],
+   "pools": [
+    4512,
+    6724
+   ],
+   "feed": {
+    "source": "geckoterminal",
+    "network": "near",
+    "pool": "refv1-6724"
+   },
+   "tvl": 410580,
+   "vol24": 2428,
+   "tx24": 66,
+   "fee": 30,
+   "whitelisted": true,
+   "icon": "/tokens/npro-946380.png"
+  },
+  {
+   "id": "2260fac5e5542a773aa44fbcfedf7c193bc2c599.factory.bridge.near",
+   "symbol": "WBTC",
+   "name": "Wrapped BTC",
+   "decimals": 8,
+   "path": [
+    "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+    "wrap.near",
+    "2260fac5e5542a773aa44fbcfedf7c193bc2c599.factory.bridge.near"
+   ],
+   "pools": [
+    4512,
+    974
+   ],
+   "feed": {
+    "source": "binance",
+    "market": "BTCUSDT"
+   },
+   "tvl": 38158,
+   "vol24": 1141,
+   "tx24": 27,
+   "fee": 30,
+   "whitelisted": true,
+   "icon": "/tokens/wbtc-d3b91f.png"
+  },
+  {
+   "id": "itlx.intellex_xyz.near",
+   "symbol": "ITLX",
+   "name": "Intellex AI Protocol Token",
+   "decimals": 24,
+   "path": [
+    "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+    "wrap.near",
+    "itlx.intellex_xyz.near"
+   ],
+   "pools": [
+    4512,
+    6679
+   ],
+   "feed": {
+    "source": "geckoterminal",
+    "network": "near",
+    "pool": "refv1-6679"
+   },
+   "tvl": 132479,
+   "vol24": 990,
+   "tx24": 1,
+   "fee": 30,
+   "whitelisted": true,
+   "icon": "/tokens/itlx-660d0d.png"
+  },
+  {
+   "id": "52a047ee205701895ee06a375492490ec9c597ce.factory.bridge.near",
+   "symbol": "PULSE",
+   "name": "Pulse",
+   "decimals": 18,
+   "path": [
+    "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+    "wrap.near",
+    "52a047ee205701895ee06a375492490ec9c597ce.factory.bridge.near"
+   ],
+   "pools": [
+    4512,
+    852
+   ],
+   "feed": {
+    "source": "geckoterminal",
+    "network": "near",
+    "pool": "refv1-852"
+   },
+   "tvl": 91044,
+   "vol24": 872,
+   "tx24": 11,
+   "fee": 30,
+   "whitelisted": true,
+   "icon": "/tokens/pulse-2afbe5.png"
+  },
+  {
+   "id": "cfi.consumer-fi.near",
+   "symbol": "CFI",
+   "name": "ConsumerFi Protocol",
+   "decimals": 18,
+   "path": [
+    "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+    "wrap.near",
+    "cfi.consumer-fi.near"
+   ],
+   "pools": [
+    4512,
+    6716
+   ],
+   "feed": {
+    "source": "geckoterminal",
+    "network": "near",
+    "pool": "refv1-6716"
+   },
+   "tvl": 20211,
+   "vol24": 669,
+   "tx24": 12,
+   "fee": 30,
+   "whitelisted": true,
+   "icon": "/tokens/cfi-f1ee6b.png"
+  },
+  {
+   "id": "jambo-1679.meme-cooking.near",
+   "symbol": "JAMBO",
+   "name": "JAMBO",
+   "decimals": 18,
+   "path": [
+    "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+    "wrap.near",
+    "jambo-1679.meme-cooking.near"
+   ],
+   "pools": [
+    4512,
+    6518
+   ],
+   "feed": {
+    "source": "geckoterminal",
+    "network": "near",
+    "pool": "refv1-6518"
+   },
+   "tvl": 55290,
+   "vol24": 555,
+   "tx24": 176,
+   "fee": 10,
+   "whitelisted": true,
+   "icon": "/tokens/jambo-2ddf64.png"
+  },
+  {
+   "id": "ftv2.nekotoken.near",
+   "symbol": "NEKO",
+   "name": "NEKO",
+   "decimals": 24,
+   "path": [
+    "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+    "wrap.near",
+    "ftv2.nekotoken.near"
+   ],
+   "pools": [
+    4512,
+    3807
+   ],
+   "feed": {
+    "source": "geckoterminal",
+    "network": "near",
+    "pool": "refv1-3807"
+   },
+   "tvl": 9840,
+   "vol24": 352,
+   "tx24": 61,
+   "fee": 60,
+   "whitelisted": true,
+   "icon": "/tokens/neko-cf48bd.png"
+  },
+  {
+   "id": "22.contract.portalbridge.near",
+   "symbol": "SOL",
+   "name": "Wrapped SOL",
+   "decimals": 8,
+   "path": [
+    "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+    "wrap.near",
+    "22.contract.portalbridge.near"
+   ],
+   "pools": [
+    4512,
+    4729
+   ],
+   "feed": {
+    "source": "binance",
+    "market": "SOLUSDT"
+   },
+   "tvl": 9850,
+   "vol24": 308,
+   "tx24": 73,
+   "fee": 30,
+   "whitelisted": true
+  },
+  {
+   "id": "vote-1737.meme-cooking.near",
+   "symbol": "VOTE",
+   "name": "Conclave",
+   "decimals": 18,
+   "path": [
+    "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+    "wrap.near",
+    "vote-1737.meme-cooking.near"
+   ],
+   "pools": [
+    4512,
+    6618
+   ],
+   "feed": {
+    "source": "geckoterminal",
+    "network": "near",
+    "pool": "refv1-6618"
+   },
+   "tvl": 7572,
+   "vol24": 144,
+   "tx24": 26,
+   "fee": 10,
+   "whitelisted": true,
+   "icon": "/tokens/vote-0f698f.png"
+  },
+  {
+   "id": "zolanear-1726.meme-cooking.near",
+   "symbol": "ZOLANEAR",
+   "name": "ZEC ON SOL VIA NEAR",
+   "decimals": 18,
+   "path": [
+    "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+    "wrap.near",
+    "zolanear-1726.meme-cooking.near"
+   ],
+   "pools": [
+    4512,
+    6594
+   ],
+   "feed": {
+    "source": "geckoterminal",
+    "network": "near",
+    "pool": "refv1-6594"
+   },
+   "tvl": 6593,
+   "vol24": 102,
+   "tx24": 24,
+   "fee": 10,
+   "whitelisted": true,
+   "icon": "/tokens/zolanear-e1451a.png"
+  },
+  {
+   "id": "dogshit-1408.meme-cooking.near",
+   "symbol": "DOGSHIT",
+   "name": "Dog Shit Coin",
+   "decimals": 18,
+   "path": [
+    "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+    "wrap.near",
+    "dogshit-1408.meme-cooking.near"
+   ],
+   "pools": [
+    4512,
+    5858
+   ],
+   "feed": {
+    "source": "geckoterminal",
+    "network": "near",
+    "pool": "refv1-5858"
+   },
+   "tvl": 9676,
+   "vol24": 47,
+   "tx24": 6,
+   "fee": 10,
+   "whitelisted": false,
+   "icon": "/tokens/dogshit-0d1ada.png"
+  },
+  {
+   "id": "438e48ed4ce6beecf503d43b9dbd3c30d516e7fd.factory.bridge.near",
+   "symbol": "UWON",
+   "name": "UWON",
+   "decimals": 18,
+   "path": [
+    "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+    "wrap.near",
+    "438e48ed4ce6beecf503d43b9dbd3c30d516e7fd.factory.bridge.near"
+   ],
+   "pools": [
+    4512,
+    4528
+   ],
+   "feed": {
+    "source": "geckoterminal",
+    "network": "near",
+    "pool": "refv1-4528"
+   },
+   "tvl": 25851,
+   "vol24": 44,
+   "tx24": 75,
+   "fee": 30,
+   "whitelisted": true,
+   "icon": "/tokens/uwon-ae28af.png"
+  },
+  {
+   "id": "purge-558.meme-cooking.near",
+   "symbol": "PURGE",
+   "name": "Forgive Me Father",
+   "decimals": 18,
+   "path": [
+    "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+    "wrap.near",
+    "purge-558.meme-cooking.near"
+   ],
+   "pools": [
+    4512,
+    5650
+   ],
+   "feed": {
+    "source": "geckoterminal",
+    "network": "near",
+    "pool": "refv1-5650"
+   },
+   "tvl": 129838,
+   "vol24": 41,
+   "tx24": 8,
+   "fee": 10,
+   "whitelisted": true,
+   "icon": "/tokens/purge-152fd3.png"
+  },
+  {
+   "id": "kat.token0.near",
+   "symbol": "KAT",
+   "name": "NearKat",
+   "decimals": 18,
+   "path": [
+    "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+    "wrap.near",
+    "kat.token0.near"
+   ],
+   "pools": [
+    4512,
+    5391
+   ],
+   "feed": {
+    "source": "geckoterminal",
+    "network": "near",
+    "pool": "refv1-5391"
+   },
+   "tvl": 19929,
+   "vol24": 35,
+   "tx24": 9,
+   "fee": 30,
+   "whitelisted": true
+  },
+  {
+   "id": "duct-1078.meme-cooking.near",
+   "symbol": "DUCT",
+   "name": "DUCT",
+   "decimals": 18,
+   "path": [
+    "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+    "wrap.near",
+    "duct-1078.meme-cooking.near"
+   ],
+   "pools": [
+    4512,
+    5741
+   ],
+   "feed": {
+    "source": "geckoterminal",
+    "network": "near",
+    "pool": "refv1-5741"
+   },
+   "tvl": 7476,
+   "vol24": 33,
+   "tx24": 10,
+   "fee": 10,
+   "whitelisted": true,
+   "icon": "/tokens/duct-d4cd0e.png"
+  },
+  {
+   "id": "token.v2.ref-finance.near",
+   "symbol": "REF",
+   "name": "Ref Finance Token",
+   "decimals": 18,
+   "path": [
+    "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+    "wrap.near",
+    "token.v2.ref-finance.near"
+   ],
+   "pools": [
+    4512,
+    79
+   ],
+   "feed": {
+    "source": "geckoterminal",
+    "network": "near",
+    "pool": "refv1-79"
+   },
+   "tvl": 211373,
+   "vol24": 31,
+   "tx24": 21,
+   "fee": 40,
+   "whitelisted": true,
+   "icon": "/tokens/ref-2e5e8b.png"
+  },
+  {
+   "id": "token.lonkingnearbackto2024.near",
+   "symbol": "LONK",
+   "name": "LONK fungible token",
+   "decimals": 8,
+   "path": [
+    "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+    "wrap.near",
+    "token.lonkingnearbackto2024.near"
+   ],
+   "pools": [
+    4512,
+    4314
+   ],
+   "feed": {
+    "source": "geckoterminal",
+    "network": "near",
+    "pool": "refv1-4314"
+   },
+   "tvl": 25009,
+   "vol24": 19,
+   "tx24": 10,
+   "fee": 30,
+   "whitelisted": true,
+   "icon": "/tokens/lonk-2e48d3.png"
+  },
+  {
+   "id": "nearnvidia.near",
+   "symbol": "NEARVIDIA",
+   "name": "NearVidia",
+   "decimals": 8,
+   "path": [
+    "17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1",
+    "wrap.near",
+    "nearnvidia.near"
+   ],
+   "pools": [
+    4512,
+    4547
+   ],
+   "feed": {
+    "source": "geckoterminal",
+    "network": "near",
+    "pool": "refv1-4547"
+   },
+   "tvl": 6661,
+   "vol24": 13,
+   "tx24": 11,
+   "fee": 20,
+   "whitelisted": true,
+   "icon": "/tokens/nearvidia-60aadf.png"
+  }
+ ]
+}
