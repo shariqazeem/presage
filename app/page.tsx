@@ -16,7 +16,7 @@ import { cx } from '@/components/ui'
 import { COINS, USDC, USDC_ID, tokenById } from '@/lib/near/config'
 import { useAgentState, useDesk, usePresence } from '@/lib/near/hooks'
 import { fromUnits, toUnits } from '@/lib/near/units'
-import type { Rules } from '@/lib/near/vault'
+import { coinsInWords, type Rules } from '@/lib/near/vault'
 
 const TRUST = [
   { icon: IconLock, title: 'Your mandate lives on NEAR', text: 'The vault refuses any trade outside it.' },
@@ -42,7 +42,7 @@ export default function Home() {
       }, 0)
     : 0
   const waiting = desk?.positions.filter(p => p.status === 'proposed' || p.exitProposed).length ?? 0
-  const watching = member ? member.rules.coins.map(id => COINS.find(c => c.id === id)?.symbol ?? id).join(' and ') : ''
+  const watching = member ? coinsInWords(member.rules.coins, 'every coin it trades') : ''
   const cta = member ? (
     <ActionButton href="/desk">Your agent</ActionButton>
   ) : accountId ? (

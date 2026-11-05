@@ -1,10 +1,12 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import toast from 'react-hot-toast'
 import { cx } from '../ui'
 import { COINS, USDC } from '@/lib/near/config'
 import { fromUnits, toUnits } from '@/lib/near/units'
-import type { Rules } from '@/lib/near/vault'
+import { MAX_COINS, coinsInWords, type Rules } from '@/lib/near/vault'
+import { PerDayPicker, SizePicker } from './SizePicker'
 
 export const STYLES = [
   { id: 0, name: 'Calm', line: 'Only its best setups. Fewer trades, the cleanest charts.' },
@@ -12,10 +14,7 @@ export const STYLES = [
   { id: 2, name: 'Bold', line: 'Takes good setups too, at half size. More trades, more noise.' },
 ] as const
 
-const SIZES = [5, 10, 25, 50, 100]
-const PER_DAY = [1, 2, 3, 5]
-
-export const defaultRules = (): Rules => ({ autopilot: false, max_trade: toUnits(10, USDC.decimals).toString(), trades_per_day: 2, coins: [COINS[0].id], style: 1 })
+export const defaultRules = (): Rules => ({ autopilot: false, max_trade: toUnits(10, USDC.decimals).toString(), trades_per_day: 2, coins: [], style: 1 })
 
 function Choice({ on, onClick, children, className = '' }: { on: boolean; onClick: () => void; children: ReactNode; className?: string }) {
   return (
@@ -64,11 +63,20 @@ export function RulesForm({ rules, onChange }: { rules: Rules; onChange: (r: Rul
         </div>
       </Section>
       <Section title="Coins" sub="What it may buy for you. It always comes back to USDC.">
+        <Choice on={rules.coins.length === 0} onClick={() => set({ coins: [] })} className="w-full px-4 py-3 mb-2">
+          <div className="font-semibold text-[15px]">Any coin it finds</div>
+          <div className={cx('text-[12.5px]', rules.coins.length === 0 ? 'text-white/70' : 'text-ink-3')}>The best setup among every coin it can trade on Rhea</div>
+        </Choice>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {COINS.map(c => {
             const on = rules.coins.includes(c.id)
+            const toggle = () => {
+              if (on) set({ coins: rules.coins.filter(x => x !== c.id) })
+              else if (rules.coins.length >= MAX_COINS) toast(`Up to ${MAX_COINS} coins, or let it pick from all of them.`)
+              else set({ coins: [...rules.coins, c.id] })
+            }
             return (
-              <Choice key={c.id} on={on} onClick={() => set({ coins: on ? rules.coins.filter(x => x !== c.id) : [...rules.coins, c.id] })} className="px-4 py-3">
+              <Choice key={c.id} on={on} onClick={toggle} className="px-4 py-3">
                 <div className="font-semibold text-[15px]">{c.symbol}</div>
                 <div className={cx('text-[12.5px]', on ? 'text-white/70' : 'text-ink-3')}>{c.name}</div>
               </Choice>
@@ -76,29 +84,22 @@ export function RulesForm({ rules, onChange }: { rules: Rules; onChange: (r: Rul
           })}
         </div>
       </Section>
-      <Section title="Largest buy" sub="The most it spends on one trade, in USDC.">
-        <div className="flex flex-wrap gap-2">
-          {SIZES.map(v => (
-            <Choice key={v} on={size === v} onClick={() => set({ max_trade: toUnits(v, USDC.decimals).toString() })} className="px-4 h-11 num text-[15px] grid place-items-center">
-              ${v}
-            </Choice>
-          ))}
-        </div>
+      <Section title="Largest buy" sub="The most it spends on one trade, in USDC. Any amount.">
+        <SizePicker value={size} big={false} onChange={v => set({ max_trade: toUnits(v, USDC.decimals).toString() })} />
       </Section>
       <Section title="Buys a day" sub="Selling back to USDC is never limited, so it can always get out.">
-        <div className="flex flex-wrap gap-2">
-          {PER_DAY.map(v => (
-            <Choice key={v} on={rules.trades_per_day === v} onClick={() => set({ trades_per_day: v })} className="px-4 h-11 num text-[15px] grid place-items-center">
-              {v}
-            </Choice>
-          ))}
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-[14px] text-ink-2">At most {usdText(size * rules.trades_per_day)} a day into new trades</span>
+          <PerDayPicker value={rules.trades_per_day} onChange={n => set({ trades_per_day: n })} />
         </div>
       </Section>
     </div>
   )
 }
 
+const usdText = (n: number) => `$${n.toLocaleString('en-US', { maximumFractionDigits: 2 })}`
+
 export function rulesSummary(r: Rules): string {
-  const coins = r.coins.map(id => COINS.find(c => c.id === id)?.symbol ?? id).join(' and ') || 'no coins'
+  const coins = coinsInWords(r.coins)
   return `${r.autopilot ? 'Autopilot' : 'Ask first'} · ${STYLES[r.style]?.name ?? 'Balanced'} · ${coins} · up to $${fromUnits(r.max_trade, USDC.decimals)} a buy, ${r.trades_per_day} a day`
 }

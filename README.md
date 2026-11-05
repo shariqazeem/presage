@@ -4,13 +4,13 @@
 
 An AI agent that trades for you on NEAR, inside rules you set.
 
-You fund your own account in the ParallaxPay vault (a NEAR contract) and choose how the agent runs: ask first or autopilot, how picky it is, which coins, the largest buy and how many buys a day. The vault enforces those rules on every agent trade, swaps only through Rhea pools the owner has listed, and pays withdrawals to the member and nobody else. Before each trade the agent seals its plan on NEAR (a sha256 fingerprint); after the trade it opens the plan, and anyone can check it against the seal.
+You fund your own account in the ParallaxPay vault (a NEAR contract) and choose how the agent runs: ask first or autopilot, how picky it is, which coins (any coin it lists, or up to eight you pick), the largest buy (any amount) and how many buys a day. The vault enforces those rules on every agent trade, swaps only through Rhea pools the owner has listed, and pays withdrawals to the member and nobody else. Before each trade the agent seals its plan on NEAR (a sha256 fingerprint); after the trade it opens the plan, and anyone can check it against the seal.
 
 ## Built for the NEAR HACKATHON (1–14 Nov 2026)
 
 | Piece | Where | NEAR tech used |
 | --- | --- | --- |
-| Vault contract | [`near/vault`](near/vault) (Rust, near-sdk 5.27, 43 unit tests) | NEAR smart contract, Rhea (Ref) exchange `v2.ref-finance.near`, NEP-141 tokens, NEP-297 events |
+| Vault contract | [`near/vault`](near/vault) (Rust, near-sdk 5.27, 45 unit tests) | NEAR smart contract, Rhea (Ref) exchange `v2.ref-finance.near`, NEP-141 tokens, NEP-297 events |
 | Agent | [`engine/near`](engine/near) | Function-call access key limited to the vault, NEAR RPC, NEAR AI Cloud (analyst in a TEE, signed answers) |
 | App | [`app/page.tsx`](app/page.tsx) (the floor), [`app/desk`](app/desk) (your agent), [`app/start`](app/start) (hiring it), [`app/record`](app/record) (its work), [`app/how-it-trades`](app/how-it-trades), [`app/fund`](app/fund), [`components/near`](components/near) | NEAR Connect (HOT, Meteor, Intear, MyNearWallet, …), NEAR Intents 1-Click |
 | The agent's drawings | [`components/near/AgentDrawing.tsx`](components/near/AgentDrawing.tsx), [`lib/near/drawing.ts`](lib/near/drawing.ts) | The agent's own support/resistance, trendline and money-flow code, run in the browser on the same candles it reads |
@@ -38,7 +38,7 @@ The vault holds each member's coins and rules. The agent can only call `trade`, 
 ### Try it
 
 1. Open the app (hosted at https://parallaxpay.80.225.209.190.sslip.io) and watch the agent read the coin closest to a trade. Its drawing plays in front of you: candles, the support and resistance it mapped (with touch counts), its trendlines and money flow, all computed with its own code. It says in one sentence what it is waiting for, its six checks tick in, and **The exact chart it read** opens the four-timeframe image it actually analysed. It re-reads NEAR, ZEC, RHEA and AURORA every 15 minutes.
-2. Press **Hire ParallaxPay**. It introduces itself on its live chart, then asks four questions (ask first or autopilot, how picky, which coins, how big) while your mandate fills in. Connect a NEAR wallet and **Sign on NEAR** (0.02 NEAR for storage, returned if you leave), then see your mandate on NEAR:
+2. Press **Hire ParallaxPay**. It introduces itself on its live chart, then asks four questions (ask first or autopilot, how picky, any coin or only some, how big: any amount) while your mandate fills in. Connect a NEAR wallet and **Sign on NEAR** (0.02 NEAR for storage, returned if you leave), then see your mandate on NEAR:
    ```bash
    near contract call-function as-read-only vault.parallaxpay.near get_member json-args '{"account_id":"YOU.near"}' network-config mainnet now
    ```
@@ -54,7 +54,7 @@ The vault holds each member's coins and rules. The agent can only call `trade`, 
 npm install
 npm run dev            # the app at http://localhost:3000
 npm run engine:near    # the agent: reads markets without keys, trades once NEAR_AGENT_KEY is set
-npm run near:test      # the vault's 43 unit tests
+npm run near:test      # the vault's 45 unit tests
 npm run near:build     # near/vault/target/near/parallaxpay_vault.wasm
 npm run near:e2e       # the vault's whole life on NEAR testnet against Rhea's real exchange (27 checks)
 ```

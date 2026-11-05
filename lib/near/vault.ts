@@ -1,4 +1,4 @@
-import { VAULT_ID } from './config'
+import { VAULT_ID, tokenById } from './config'
 import { view } from './rpc'
 
 /** Types and reads for the ParallaxPay vault contract (near/vault). Amounts are base-unit strings. */
@@ -8,9 +8,24 @@ export type Rules = {
   /** Largest buy, USDC base units. */
   max_trade: string
   trades_per_day: number
+  /** The coins it may buy. Empty means any coin the vault lists. */
   coins: string[]
   /** 0 calm (only the best setups), 1 balanced, 2 bold. */
   style: number
+}
+
+/** The vault's own limits on a member's rules. */
+export const MAX_COINS = 8
+export const MAX_BUYS_PER_DAY = 48
+
+/** Whether a member's rules let the agent buy this coin: any listed coin when their list is empty. */
+export const allowsCoin = (rules: Pick<Rules, 'coins'>, coinId: string) => rules.coins.length === 0 || rules.coins.includes(coinId)
+
+/** A member's coins in words: "NEAR, ZEC and RHEA", or "any coin it finds". */
+export function coinsInWords(ids: string[], any = 'any coin it finds'): string {
+  if (!ids.length) return any
+  const names = ids.map(id => tokenById(id)?.symbol ?? id)
+  return names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`
 }
 
 export type Member = {

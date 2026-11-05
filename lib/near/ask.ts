@@ -3,7 +3,7 @@ import { nearAiChat, nearAiConfigured } from './ai'
 import { USDC, tokenById } from './config'
 import { latestReads, money, positionsFor } from './store'
 import { fromUnits } from './units'
-import { vault } from './vault'
+import { coinsInWords, vault } from './vault'
 
 /**
  * Ask ParallaxPay: questions answered in the agent's own voice from what it is reading right now, its
@@ -39,7 +39,7 @@ function context(account: { id: string; member: Awaited<ReturnType<typeof vault.
       .join(', ')
     const open = positionsFor(account.id).filter(p => p.status === 'open')
     lines.push(
-      `The person asking is the member ${account.id}: ${m.rules.autopilot ? 'autopilot' : 'ask first'}, coins ${m.rules.coins.map(c => tokenById(c)?.symbol ?? c).join(', ')}, up to ${money(fromUnits(m.rules.max_trade, USDC.decimals))} a buy, ${m.rules.trades_per_day} buys a day (${m.buys_today} used today). Holding ${held || 'nothing'}. Open trades: ${open.map(p => `${p.coin} bought at ${money(p.entryPrice ?? 0)}, stop ${money(p.stop)}, target ${money(p.target)}`).join('; ') || 'none'}.`,
+      `The person asking is the member ${account.id}: ${m.rules.autopilot ? 'autopilot' : 'ask first'}, coins: ${coinsInWords(m.rules.coins, 'any coin it lists')}, up to ${money(fromUnits(m.rules.max_trade, USDC.decimals))} a buy, ${m.rules.trades_per_day} buys a day (${m.buys_today} used today). Holding ${held || 'nothing'}. Open trades: ${open.map(p => `${p.coin} bought at ${money(p.entryPrice ?? 0)}, stop ${money(p.stop)}, target ${money(p.target)}`).join('; ') || 'none'}.`,
     )
   }
   return lines.join('\n')

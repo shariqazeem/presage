@@ -151,7 +151,7 @@ export function RulesSheet({ open, onClose, current, onDone }: { open: boolean; 
   useEffect(() => {
     if (open) setRules(current)
   }, [open, current])
-  const valid = !rules.autopilot || rules.coins.length > 0
+  const valid = !rules.autopilot || (BigInt(rules.max_trade || '0') > 0n && rules.trades_per_day > 0)
   const go = async () => {
     if (!accountId) return
     setBusy(true)

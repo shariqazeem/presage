@@ -344,7 +344,8 @@ impl Vault {
         if !buying {
             return;
         }
-        require!(m.rules.coins.contains(coin), "This coin isn't on the member's list");
+        // An empty list lets it buy any coin the owner lists; the route check has already passed.
+        require!(m.rules.coins.is_empty() || m.rules.coins.contains(coin), "This coin isn't on the member's list");
         require!(amount_in <= m.rules.max_trade.0, "Bigger than the member's largest trade");
         if m.day != today {
             m.day = today;

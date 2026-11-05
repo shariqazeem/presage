@@ -1,7 +1,8 @@
 //! ParallaxPay vault: the account people fund on NEAR so the ParallaxPay agent can trade for them.
 //!
 //! - A member joins, deposits USDC and sets their rules: autopilot on or off, which coins the agent
-//!   may buy, the largest buy, and how many buys a day. `stop` turns autopilot off in one call.
+//!   may buy (any coin the owner lists, or up to eight of them), the largest buy, and how many buys a
+//!   day. `stop` turns autopilot off in one call.
 //! - The agent may only swap a member's coins between USDC and those coins, through Rhea pools the
 //!   owner has listed, inside the member's rules. Withdrawals pay the member and nobody else, and
 //!   never wait on the agent or the exchange.
@@ -48,7 +49,7 @@ pub struct Rules {
     pub max_trade: U128,
     /// Buys the agent may make per UTC day. Sells are never limited, so it can always get out.
     pub trades_per_day: u32,
-    /// The coins the agent may buy.
+    /// The coins the agent may buy. Empty means any coin the owner lists.
     pub coins: Vec<AccountId>,
     /// How picky the agent is about entries: 0 calm (only its best setups), 1 balanced, 2 bold.
     pub style: u8,

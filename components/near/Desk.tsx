@@ -15,7 +15,7 @@ import { quoteBuy, quoteSell } from '@/lib/near/rhea'
 import type { PositionView } from '@/lib/near/store'
 import { setRulesTx, stopTx, tradeTx } from '@/lib/near/tx'
 import { fromUnits, lessBps } from '@/lib/near/units'
-import type { Member } from '@/lib/near/vault'
+import { allowsCoin, type Member } from '@/lib/near/vault'
 import { Floor } from './agent'
 import { AgentDrawing } from './AgentDrawing'
 import { Ask } from './Ask'
@@ -154,7 +154,7 @@ export function Desk({ data, agent, refresh, preview = false }: { data: DeskData
   const past = data.positions.filter(p => p.status === 'closed' || p.status === 'not_filled' || p.status === 'declined')
   const usdc = BigInt(member.balances[USDC_ID] ?? '0')
   const openPnl = open.reduce((s, p) => s + (prices[p.token] != null && p.coinAmount != null ? p.coinAmount * prices[p.token] - p.usdcIn : 0), 0)
-  const mine = reads.filter(r => member.rules.coins.includes(r.token))
+  const mine = reads.filter(r => allowsCoin(member.rules, r.token))
   const watching = mine.map(r => r.coin).join(' and ')
   const guard = () => {
     if (preview) toast('This is a preview with sample data.')
@@ -174,7 +174,6 @@ export function Desk({ data, agent, refresh, preview = false }: { data: DeskData
         await send([stopTx()])
         toast.success('Autopilot is off. ParallaxPay will ask before every trade.')
       } else {
-        if (!member.rules.coins.length) throw new Error('Pick at least one coin in your mandate first.')
         await send([setRulesTx({ ...member.rules, autopilot: true })])
         toast.success('Autopilot is on, inside your mandate.')
       }

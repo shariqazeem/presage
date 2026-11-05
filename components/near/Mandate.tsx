@@ -4,9 +4,9 @@ import type { ReactNode } from 'react'
 import { IconCheck } from '../icons'
 import { Mark } from '../shell/Mark'
 import { cx } from '../ui'
-import { COINS, USDC } from '@/lib/near/config'
+import { USDC } from '@/lib/near/config'
 import { fromUnits } from '@/lib/near/units'
-import type { Rules } from '@/lib/near/vault'
+import { coinsInWords, type Rules } from '@/lib/near/vault'
 import { STYLES } from './RulesForm'
 import { usd } from './kit'
 
@@ -19,9 +19,8 @@ import { usd } from './kit'
 export type MandateState = 'draft' | 'signed'
 
 export function mandateLines(r: Rules): { k: string; v: string }[] {
-  const coins = r.coins.map(id => COINS.find(c => c.id === id)?.symbol ?? id)
   return [
-    { k: 'Trades', v: coins.length ? coins.join(', ') : 'No coins yet' },
+    { k: 'Trades', v: r.coins.length ? coinsInWords(r.coins) : 'Any coin it finds on Rhea' },
     { k: 'Each buy', v: `Up to ${usd(fromUnits(r.max_trade, USDC.decimals), { trim: true })}` },
     { k: 'Per day', v: `At most ${r.trades_per_day} buy${r.trades_per_day === 1 ? '' : 's'}` },
     { k: 'Style', v: `${STYLES[r.style]?.name ?? 'Balanced'}: ${['only its best setups', 'its best and strong setups', 'good setups too, at half size'][r.style] ?? ''}` },

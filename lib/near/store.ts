@@ -2,7 +2,7 @@ import { and, desc, eq, inArray, isNull, or } from 'drizzle-orm'
 import { getDb, schema } from '../db'
 import { USDC, coinById, tokenById, type Coin } from './config'
 import { fromUnits } from './units'
-import { vault, type Member, type VaultEvent } from './vault'
+import { coinsInWords, vault, type Member, type VaultEvent } from './vault'
 
 /** What the agent and the web app both read and write about ParallaxPay on NEAR. */
 
@@ -72,7 +72,7 @@ export function announce(accountId: string, events: VaultEvent[]) {
   }
 }
 
-const coinList = (ids: string[]) => ids.map(id => coinById(id)?.symbol ?? id).join(' and ') || 'no coins yet'
+const coinList = (ids: string[]) => coinsInWords(ids, 'any coin')
 
 export type PositionRow = typeof schema.nearPositions.$inferSelect
 

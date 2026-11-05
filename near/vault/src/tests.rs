@@ -519,6 +519,23 @@ fn stale_callbacks_change_nothing() {
 // ---------- what the agent may and may not do ----------
 
 #[test]
+fn an_empty_coin_list_means_any_listed_coin() {
+    let mut v = vault();
+    member(&mut v, ALICE, 100, autopilot(25, 2, &[]));
+    agent_buys_near(&mut v, 10);
+    assert_eq!(v.get_member(acc(ALICE)).unwrap().buys_today, 1);
+}
+
+#[test]
+#[should_panic(expected = "doesn't trade this coin")]
+fn any_coin_still_means_only_listed_coins() {
+    let mut v = vault();
+    member(&mut v, ALICE, 100, autopilot(25, 2, &[]));
+    call_as(AGENT, 0);
+    let _ = v.trade(acc(ALICE), acc(USDC), acc("scam.near"), U128(10 * USD), U128(1), None, None);
+}
+
+#[test]
 #[should_panic(expected = "Autopilot is off")]
 fn the_agent_cant_trade_without_autopilot() {
     let mut v = vault();

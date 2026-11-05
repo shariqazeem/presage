@@ -7,7 +7,7 @@ import { COINS, USDC, USDC_ID, VAULT_ID, coinById, feedName, type Coin } from '.
 import { quoteBuy, quoteSell } from '../../lib/near/rhea'
 import { fromUnits, lessBps } from '../../lib/near/units'
 import { closePosition, feed, markOpen, syncMember, type Plan, type PositionRow } from '../../lib/near/store'
-import { tradeEnd, vault, type Member } from '../../lib/near/vault'
+import { allowsCoin, tradeEnd, vault, type Member } from '../../lib/near/vault'
 import { errMsg, log } from '../log'
 import { review, type Verdict } from './analyst'
 import { exitReason, readCoin, usd, type Read, type Setup } from './brain'
@@ -129,7 +129,7 @@ export async function checkMarkets() {
 
 async function onSetup(read: Read, setup: Setup) {
   const coin = read.coin
-  const room = knownMembers().filter(m => m.member.rules.coins.includes(coin.id) && !hasLiveIdea(m.accountId, coin.id))
+  const room = knownMembers().filter(m => allowsCoin(m.member.rules, coin.id) && !hasLiveIdea(m.accountId, coin.id))
   if (!room.length) {
     feed('setup', `${read.line} Every member who trades ${coin.symbol} is already in it.`, { coin: coin.id, ...AGENT })
     return

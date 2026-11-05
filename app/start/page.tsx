@@ -10,6 +10,7 @@ import { NearButton, qty, usd } from '@/components/near/kit'
 import { MandateCard } from '@/components/near/Mandate'
 import { useNear } from '@/components/near/NearWallet'
 import { sayError, tellAgent } from '@/components/near/sheets'
+import { PerDayPicker, SizePicker } from '@/components/near/SizePicker'
 import { focusOf, voice } from '@/components/near/Stage'
 import { Mark } from '@/components/shell/Mark'
 import { cx } from '@/components/ui'
@@ -19,7 +20,7 @@ import { useAgentState, useDesk, type CoinRead } from '@/lib/near/hooks'
 import { ftBalance } from '@/lib/near/rpc'
 import { depositTx, joinTx } from '@/lib/near/tx'
 import { fromUnits, toUnits } from '@/lib/near/units'
-import type { Rules } from '@/lib/near/vault'
+import { MAX_COINS, allowsCoin, coinsInWords, type Rules } from '@/lib/near/vault'
 
 const SAVED = 'parallaxpay_rules'
 const STEPS = ['meet', 'mode', 'style', 'coins', 'size', 'sign', 'fund', 'done'] as const
@@ -32,13 +33,8 @@ const STYLES = [
   { id: 1, name: 'Balanced', line: 'My best setups, and strong ones sized down a little.', level: 2 },
   { id: 2, name: 'Bold', line: 'Good setups too, at half size. More trades, more noise.', level: 3 },
 ]
-const SIZES = [10, 25, 50, 100]
-
-const listOf = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}`)
-const coinsOf = (r: Rules) => listOf(r.coins.map(id => COINS.find(c => c.id === id)?.symbol ?? '').filter(Boolean))
-
 function defaults(): Rules {
-  return { autopilot: false, max_trade: toUnits(25, USDC.decimals).toString(), trades_per_day: 2, coins: [COINS[0].id], style: 1 }
+  return { autopilot: false, max_trade: toUnits(25, USDC.decimals).toString(), trades_per_day: 2, coins: [], style: 1 }
 }
 
 /* ------------------------------------------------------------------ the agent talking */
@@ -98,7 +94,7 @@ function MandateStrip({ rules, step }: { rules: Rules; step: Step }) {
   const parts = [
     { key: 'mode', text: rules.autopilot ? 'Autopilot' : 'Asks first' },
     { key: 'style', text: STYLES[rules.style]?.name ?? 'Balanced' },
-    { key: 'coins', text: rules.coins.length ? coinsOf(rules).replace(' and ', ', ') : 'No coins' },
+    { key: 'coins', text: rules.coins.length ? coinsInWords(rules.coins).replace(' and ', ', ') : 'Any coin' },
     { key: 'size', text: `${usd(fromUnits(rules.max_trade, USDC.decimals), { trim: true })} × ${rules.trades_per_day}/day` },
   ]
   return (
@@ -206,7 +202,7 @@ export default function Start() {
   const size = fromUnits(rules.max_trade, USDC.decimals)
   const reads = useMemo(() => [...(agent?.reads ?? [])].sort((a, b) => COINS.findIndex(c => c.symbol === a.coin) - COINS.findIndex(c => c.symbol === b.coin)), [agent])
   const lead = reads.find(r => r.setup) ?? [...reads].sort((a, b) => (b.checks ?? []).filter(c => c.ok).length - (a.checks ?? []).filter(c => c.ok).length)[0]
-  const mine = reads.filter(r => (desk?.member?.rules ?? rules).coins.includes(r.token))
+  const mine = reads.filter(r => allowsCoin(desk?.member?.rules ?? rules, r.token))
   const mineLead = mine.find(r => r.setup) ?? mine[0]
 
   const join = async () => {
@@ -240,7 +236,6 @@ export default function Start() {
   // The pinned button at the bottom: what it says and does depends on the step.
   let primary: { label: string; onClick?: () => void; disabled?: boolean; node?: ReactNode } = { label: 'Continue', onClick: next }
   if (step === 'meet') primary = { label: 'Write my mandate', onClick: next }
-  if (step === 'coins') primary = { label: rules.coins.length ? 'Continue' : 'Pick at least one coin', onClick: next, disabled: !rules.coins.length }
   if (step === 'size') primary = { label: 'See my mandate', onClick: next }
   if (step === 'sign') {
     if (!vaultLive)
@@ -389,11 +384,28 @@ export default function Start() {
 
         {step === 'coins' && (
           <div>
-            <Question sub="These are my live drawings of each one. I always come back to USDC.">What should I trade for you?</Question>
-            <div className="grid grid-cols-2 gap-3 mt-6">
+            <Question sub="I always come back to USDC.">What should I trade for you?</Question>
+            <div className="mt-6">
+              <Option on={rules.coins.length === 0} onClick={() => set({ coins: [] })}>
+                <div className="font-heading text-[20px] font-black tight">Any coin I find</div>
+                <p className={cx('text-[14px] leading-snug mt-1 pr-8', rules.coins.length === 0 ? 'text-white/75' : 'text-ink-2')}>
+                  I watch every coin I can trade on Rhea and take the best setup among them.
+                </p>
+              </Option>
+            </div>
+            <div className="mt-5 mb-2.5 flex items-baseline justify-between">
+              <span className="text-[13px] font-semibold text-ink-2">Or only these</span>
+              <span className="text-[12px] text-ink-3">up to {MAX_COINS}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               {COINS.map(c => {
                 const on = rules.coins.includes(c.id)
-                return <CoinPick key={c.id} symbol={c.symbol} name={c.name} r={reads.find(x => x.coin === c.symbol)} on={on} onClick={() => set({ coins: on ? rules.coins.filter(x => x !== c.id) : [...rules.coins, c.id] })} />
+                const toggle = () => {
+                  if (on) set({ coins: rules.coins.filter(x => x !== c.id) })
+                  else if (rules.coins.length >= MAX_COINS) toast(`Up to ${MAX_COINS} coins, or let me pick from all of them.`)
+                  else set({ coins: [...rules.coins, c.id] })
+                }
+                return <CoinPick key={c.id} symbol={c.symbol} name={c.name} r={reads.find(x => x.coin === c.symbol)} on={on} onClick={toggle} />
               })}
             </div>
           </div>
@@ -402,31 +414,15 @@ export default function Start() {
         {step === 'size' && (
           <div>
             <Question sub="The most I put into one trade, and how many new trades a day.">How big should I go?</Question>
-            <div className="mt-8 text-center">
-              <div className="num text-[64px] font-semibold leading-none tracking-[-0.03em]">${size}</div>
-              <div className="text-[13.5px] text-ink-3 mt-2">largest buy</div>
-            </div>
-            <div className="mt-6 grid grid-cols-4 gap-2">
-              {SIZES.map(v => (
-                <button key={v} onClick={() => set({ max_trade: toUnits(v, USDC.decimals).toString() })} className={cx('h-12 rounded-[14px] num text-[15px] font-semibold press', size === v ? 'bg-ink text-white' : 'bg-paper-2 text-ink')}>
-                  ${v}
-                </button>
-              ))}
+            <div className="mt-8">
+              <SizePicker value={size} onChange={v => set({ max_trade: toUnits(v, USDC.decimals).toString() })} />
             </div>
             <div className="mt-6 rounded-[22px] border border-line p-4 flex items-center justify-between gap-3">
               <div>
                 <div className="font-semibold text-[15px]">Buys a day</div>
                 <div className="text-[13px] text-ink-3">Selling back to USDC is never limited</div>
               </div>
-              <div className="flex items-center gap-3 shrink-0">
-                <button onClick={() => set({ trades_per_day: Math.max(1, rules.trades_per_day - 1) })} className="w-10 h-10 rounded-full bg-paper-2 text-[20px] font-semibold press" aria-label="Fewer">
-                  −
-                </button>
-                <span className="num text-[22px] font-semibold w-6 text-center">{rules.trades_per_day}</span>
-                <button onClick={() => set({ trades_per_day: Math.min(10, rules.trades_per_day + 1) })} className="w-10 h-10 rounded-full bg-paper-2 text-[20px] font-semibold press" aria-label="More">
-                  +
-                </button>
-              </div>
+              <PerDayPicker value={rules.trades_per_day} onChange={n => set({ trades_per_day: n })} />
             </div>
             <p className="text-[14px] text-ink-2 leading-snug mt-4 text-center">
               At most <b className="text-ink">{usd(size * rules.trades_per_day, { trim: true })}</b> a day goes into new trades.
@@ -512,7 +508,7 @@ export default function Start() {
             <div className="mt-6">
               <Sequence
                 items={[
-                  { node: <Bubble>I&rsquo;m watching {coinsOf(desk?.member?.rules ?? rules) || 'the market'} for you now.</Bubble>, wait: 1000 },
+                  { node: <Bubble>I&rsquo;m watching {coinsInWords((desk?.member?.rules ?? rules).coins, 'every coin I can trade')} for you now.</Bubble>, wait: 1000 },
                   ...(mineLead
                     ? [
                         {

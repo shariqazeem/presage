@@ -139,7 +139,7 @@ impl Vault {
             require!(!rules.coins[..i].contains(coin), "A coin is listed twice");
         }
         if rules.autopilot {
-            require!(rules.max_trade.0 > 0 && rules.trades_per_day > 0 && !rules.coins.is_empty(), "Autopilot needs a trade size, a daily limit and at least one coin");
+            require!(rules.max_trade.0 > 0 && rules.trades_per_day > 0, "Autopilot needs a trade size and a daily limit");
         }
     }
 }
