@@ -68,12 +68,13 @@ export function actorName(actor: string | null): string {
 export function Floor({ lines, max = 20, dark = false, showMine = true, empty = 'Quiet for now. ParallaxPay re-reads the market every 15 minutes.' }: { lines: FeedLine[]; max?: number; dark?: boolean; showMine?: boolean; empty?: string }) {
   const now = useNow(30_000)
   if (!lines.length) return <p className={cx('text-[14px] py-6', dark ? 'text-[#8A8A92]' : 'text-ink-3')}>{empty}</p>
-  // It re-reads every coin every 15 minutes; only its latest read of each coin stays on the floor.
+  // It re-reads every coin it trades; only its latest read of a coin stays on the floor, and only a few
+  // of those, so setups, trades and people aren't buried under routine reads.
   const seen = new Set<string>()
   const shown = lines.filter(l => {
     if (l.kind !== 'watch') return true
     const k = l.coin ?? ''
-    if (seen.has(k)) return false
+    if (seen.has(k) || seen.size >= 3) return false
     seen.add(k)
     return true
   })

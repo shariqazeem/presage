@@ -70,7 +70,7 @@ export default function Home() {
             <h1 className="font-heading text-[27px] md:text-[44px] leading-[1.04] font-black tight">
               ParallaxPay trades for you, inside your <Sealed>rules</Sealed>.
             </h1>
-            <p className="hidden sm:block mt-3 text-[15px] md:text-[17px] text-ink-2 leading-snug max-w-[680px]">An AI trader that works in the open. Watch it read the market below; it seals every plan on NEAR before it trades, and only ever trades your account inside the mandate you sign.</p>
+            <p className="hidden sm:block mt-3 text-[15px] md:text-[17px] text-ink-2 leading-snug max-w-[680px]">Watch it read the market below, then hire it. Every plan is sealed on NEAR before it trades.</p>
           </div>
           <div className="hidden md:grid grid-cols-2 gap-2.5 w-[420px] shrink-0">
             {cta}

@@ -285,7 +285,7 @@ export default function Start() {
               <Sequence
                 items={[
                   { node: <Bubble>Hi, I&rsquo;m ParallaxPay. I trade crypto for you on NEAR, from your own account.</Bubble>, wait: 1200 },
-                  { node: <Bubble>{lead ? `Every 15 minutes I read four coins. Here's ${lead.coin}, right now:` : 'Every 15 minutes I read four coins and draw what I see.'}</Bubble>, wait: 900 },
+                  { node: <Bubble>{lead ? `I read every coin on Rhea that trades, all day. Here's ${lead.coin}, right now:` : 'I read every coin on Rhea that trades, all day, and draw what I see.'}</Bubble>, wait: 900 },
                   ...(lead
                     ? [
                         {

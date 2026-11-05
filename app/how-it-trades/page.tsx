@@ -12,6 +12,9 @@ import { Mark } from '@/components/shell/Mark'
 import { cx } from '@/components/ui'
 import type { DrawTf } from '@/lib/near/drawing'
 import { useAgentState } from '@/lib/near/hooks'
+import { ranked } from '@/lib/near/rank'
+import { COINS, coinBySymbol } from '@/lib/near/config'
+import { CoinIcon } from '@/components/near/coins'
 
 const METHOD: { title: string; text: string; tf: DrawTf; look: string }[] = [
   {
@@ -60,8 +63,10 @@ export default function HowItTrades() {
   const { data: agent } = useAgentState()
   const [step, setStep] = useState(0)
   const [shot, setShot] = useState<string | null>(null)
-  const reads = agent?.reads ?? []
-  const lead = reads.find(r => r.setup) ?? [...reads].sort((a, b) => (b.checks ?? []).filter(c => c.ok).length - (a.checks ?? []).filter(c => c.ok).length)[0]
+  const reads = ranked(agent?.reads ?? [])
+  const lead = reads[0]
+  const [pick, setPick] = useState<string | null>(null)
+  const now = reads.find(r => r.coin === pick) ?? lead
   const m = METHOD[step]
   const cta = accountId ? <ActionButton href="/start">Hire ParallaxPay</ActionButton> : <NearButton variant="full" label="Hire ParallaxPay" />
 
@@ -83,13 +88,13 @@ export default function HowItTrades() {
             </div>
             <h1 className="font-heading text-[34px] md:text-[52px] leading-[1.02] font-black tight mt-1.5">It reads the chart like a trader</h1>
             <p className="text-[15.5px] md:text-[17px] text-[#C9C9CF] leading-snug mt-3 max-w-[680px]">
-              Its method comes from its creator&rsquo;s own trading rules: buy where support is real and money flow is spent, put the stop right under it, sell where the pattern says the move should end. It runs the same six checks on NEAR, ZEC, RHEA and AURORA every 15 minutes.
+              Its creator&rsquo;s own trading rules: buy where support is real and money flow is spent, stop right under it, sell where the pattern says the move ends. Six checks on every coin it trades on Rhea.
             </p>
           </div>
         </div>
         <div className="mt-6 grid grid-cols-3 gap-2 max-w-[560px]">
           {[
-            ['4', 'coins it watches'],
+            [String(COINS.length), 'coins it watches'],
             ['15 min', 'between reads'],
             ['6', 'checks before a trade'],
           ].map(([v, k]) => (
@@ -163,27 +168,45 @@ export default function HowItTrades() {
       {/* right now */}
       <section className="mt-8 md:mt-12">
         <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3">Right now</div>
-        <h2 className="font-heading text-[26px] md:text-[32px] font-black tight mt-1">Its live checks on every coin</h2>
-        <p className="text-[14px] text-ink-3 mt-1">All six have to pass before it trades.</p>
-        <div className="grid md:grid-cols-2 gap-3 mt-4">
-          {reads.map(r => (
-            <div key={r.coin} className="rounded-[22px] border border-line p-4 md:p-5">
-              <div className="flex items-baseline justify-between">
-                <span className="font-heading text-[22px] font-black tight">{r.coin}</span>
-                <button onClick={() => setShot(shot === r.coin ? null : r.coin)} className="text-[12.5px] font-semibold text-ink-3 hover:text-ink">
-                  {shot === r.coin ? 'Hide the chart' : 'The exact chart it read'}
-                </button>
-              </div>
-              <p className="text-[14px] text-ink-2 leading-snug mt-1 mb-4">{voice(r)}</p>
-              <Checklist r={r} dark={false} />
-              {shot === r.coin && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={`/api/near/chart/${r.coin}`} alt={`ParallaxPay's ${r.coin} chart`} className="mt-4 w-full rounded-[14px]" />
-              )}
-            </div>
-          ))}
-          {!agent && [0, 1].map(i => <div key={i} className="h-[360px] rounded-[22px] bg-paper-2 animate-pulse" />)}
+        <h2 className="font-heading text-[26px] md:text-[32px] font-black tight mt-1">Its live checks, coin by coin</h2>
+        <p className="text-[14px] text-ink-3 mt-1">All six have to pass before it trades. Closest to a trade first.</p>
+        <div className="mt-4 flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 md:mx-0 md:px-0 pb-1">
+          {reads.map(r => {
+            const on = r.coin === now?.coin
+            const passed = (r.checks ?? []).filter(c => c.ok).length
+            return (
+              <button
+                key={r.coin}
+                type="button"
+                onClick={() => setPick(r.coin)}
+                aria-pressed={on}
+                className={cx('shrink-0 h-10 pl-1.5 pr-3 rounded-full flex items-center gap-2 text-[13.5px] font-semibold press border', on ? 'bg-ink text-white border-ink' : 'bg-white text-ink border-line hover:border-ink-3')}
+              >
+                <CoinIcon coin={{ symbol: r.coin, icon: coinBySymbol(r.coin)?.icon }} size={26} />
+                {r.coin}
+                <span className={cx('num text-[11.5px]', on ? 'text-white/60' : 'text-ink-3')}>{passed}/6</span>
+              </button>
+            )
+          })}
         </div>
+        {now ? (
+          <div key={now.coin} className="mt-3 rounded-[22px] border border-line p-4 md:p-5 animate-[rise_.3s_ease-out]">
+            <div className="flex items-baseline justify-between">
+              <span className="font-heading text-[22px] font-black tight">{now.coin}</span>
+              <button onClick={() => setShot(shot === now.coin ? null : now.coin)} className="text-[12.5px] font-semibold text-ink-3 hover:text-ink">
+                {shot === now.coin ? 'Hide the chart' : 'The exact chart it read'}
+              </button>
+            </div>
+            <p className="text-[14px] text-ink-2 leading-snug mt-1 mb-4">{voice(now)}</p>
+            <Checklist r={now} dark={false} />
+            {shot === now.coin && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={`/api/near/chart/${now.coin}`} alt={`ParallaxPay's ${now.coin} chart`} className="mt-4 w-full rounded-[14px]" />
+            )}
+          </div>
+        ) : (
+          <div className="mt-3 h-[360px] rounded-[22px] bg-paper-2 animate-pulse" />
+        )}
       </section>
 
       {/* risk */}

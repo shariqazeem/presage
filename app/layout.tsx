@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(site),
   title: 'ParallaxPay: an AI trader that works for you on NEAR, inside your rules',
   description:
-    'ParallaxPay trades NEAR, ZEC, RHEA and AURORA for you from your own account in its vault on NEAR, inside the rules you set. Every plan is sealed on NEAR before the trade and opened after it.',
+    'ParallaxPay trades the coins on Rhea for you, NEAR, ZEC, RHEA, AURORA and more, from your own account in its vault on NEAR, inside the rules you set. Every plan is sealed on NEAR before the trade and opened after it.',
   openGraph: {
     title: 'ParallaxPay',
     description: 'An AI trader that works for you on NEAR, inside your rules. Every plan sealed before the trade.',

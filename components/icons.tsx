@@ -164,6 +164,13 @@ export const IconWallet = (p: P) => (
     <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
   </Svg>
 )
+export const IconImage = (p: P) => (
+  <Svg {...p}>
+    <rect x="3" y="4" width="18" height="16" rx="3" />
+    <circle cx="9" cy="10" r="1.6" />
+    <path d="m21 16-5-5-9 9" />
+  </Svg>
+)
 export const IconChart = (p: P) => (
   <Svg {...p}>
     <path d="M3 3v18h18" />

@@ -3,7 +3,7 @@ import { mkdirSync, renameSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { and, desc, eq, inArray, isNotNull } from 'drizzle-orm'
 import { getDb, schema } from '../../lib/db'
-import { COINS, USDC, USDC_ID, VAULT_ID, coinById, feedName, type Coin } from '../../lib/near/config'
+import { COINS, CORE_SYMBOLS, USDC, USDC_ID, VAULT_ID, coinById, feedName, type Coin } from '../../lib/near/config'
 import { quoteBuy, quoteSell } from '../../lib/near/rhea'
 import { fromUnits, lessBps } from '../../lib/near/units'
 import { closePosition, feed, latestReads, markOpen, syncMember, type Plan, type PositionRow } from '../../lib/near/store'
@@ -98,7 +98,11 @@ function saveRead(r: Read) {
   getDb().insert(schema.kv).values({ key: `near:read:${coin.symbol}`, value }).onConflictDoUpdate({ target: schema.kv.key, set: { value } }).run()
 }
 
-/** Only say "watching" again when the picture changed or an hour has passed, so the feed stays worth reading. */
+/**
+ * When a read is worth a line on the floor. Coins near a trade (armed, or four checks passing) are said
+ * when the picture changes or hourly; the rest only when it changes, and at most every four hours, so
+ * twenty-five coins don't bury the setups and trades under routine reads.
+ */
 function worthSaying(r: Read): boolean {
   const last = getDb()
     .select()
@@ -106,9 +110,12 @@ function worthSaying(r: Read): boolean {
     .where(and(eq(schema.nearFeed.coin, r.coin.id), eq(schema.nearFeed.kind, 'watch')))
     .orderBy(desc(schema.nearFeed.id))
     .get()
-  if (!last) return true
+  const close = r.armedAt != null || r.checks.filter(c => c.ok).length >= 4
+  if (!last) return close || CORE_SYMBOLS.includes(r.coin.symbol)
   const shape = (s: string) => s.replace(/\$[\d,.]+/g, '$').replace(/\d+(\.\d+)?%/g, '%')
-  return shape(last.text) !== shape(r.line) || now() - last.at >= 3600
+  const changed = shape(last.text) !== shape(r.line)
+  const waited = now() - last.at
+  return close ? changed || waited >= 3600 : changed && waited >= 4 * 3600
 }
 
 /** A cycle stops starting new reads after this, so it never runs into the next one. */

@@ -105,7 +105,7 @@ export function Promises({ max = 3 }: { max?: number }) {
             <IconLock size={15} />
           </span>
           <p className="text-[13.5px] text-ink-2 leading-snug">
-            When ParallaxPay finds a setup, it seals the plan on NEAR first: a fingerprint of the entry, stop and target that can't be changed. After the trade it opens the plan here, win or loss.
+            Each plan is sealed on NEAR before the trade and opened here after it, win or loss.
           </p>
         </div>
       )}

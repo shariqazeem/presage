@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { IconCheck, IconX } from '../icons'
+import { IconCheck, IconImage, IconX } from '../icons'
 import { Ring, Sheet, useNow } from '../kit'
 import { Mark } from '../shell/Mark'
 import { cx } from '../ui'
@@ -17,7 +17,7 @@ import { Segmented, signedPct } from './primitives'
 
 /**
  * The stage: ParallaxPay at work. Its drawing of the coin it is reading, what it says about it, its
- * checks, and the four coins it watches. This is the first thing anyone sees.
+ * checks, and the coins closest to a trade, with every other coin a tap away. This is the first thing anyone sees.
  */
 
 const READ_EVERY = 15 * 60
@@ -148,10 +148,11 @@ function StatusChip({ s }: { s: Status }) {
   )
 }
 
-/** Its six checks: how close this coin is to a trade, ticking in one after another. */
+/** Its six checks: how close this coin is to a trade, ticking in one after another. Tap one for its numbers. */
 function Thinking({ r }: { r: CoinRead }) {
   const checks = r.checks ?? []
   const passed = checks.filter(c => c.ok).length
+  const [open, setOpen] = useState<string | null>(null)
   return (
     <div>
       <div className="flex items-baseline justify-between">
@@ -165,21 +166,29 @@ function Thinking({ r }: { r: CoinRead }) {
           <span key={c.key} className={cx('h-1.5 rounded-full tick-in', c.ok ? 'bg-up-d' : c.ok === false ? 'bg-white/[0.12]' : 'bg-white/[0.06]')} style={{ animationDelay: `${300 + i * 90}ms` }} />
         ))}
       </div>
-      <ul className="mt-3.5 grid gap-3">
-        {checks.map((c, i) => (
-          <li key={c.key} className="flex items-start gap-2.5">
-            <span
-              className={cx('mt-[1px] w-5 h-5 rounded-full grid place-items-center shrink-0 tick-in', c.ok == null ? 'bg-white/[0.06] text-[#6B6B72]' : c.ok ? 'bg-up-d text-ink' : 'bg-white/[0.08] text-down-d')}
-              style={{ animationDelay: `${300 + i * 90}ms` }}
-            >
-              {c.ok == null ? <span className="w-1 h-1 rounded-full bg-current" /> : c.ok ? <IconCheck size={12} weight={3} /> : <IconX size={11} weight={3} />}
-            </span>
-            <div className="min-w-0">
-              <div className={cx('text-[13.5px] leading-tight', c.ok ? 'text-white' : 'text-[#C9C9CF]')}>{c.label}</div>
-              <div className="text-[12px] text-[#8A8A92] leading-snug mt-0.5">{c.note}</div>
-            </div>
-          </li>
-        ))}
+      <ul className="mt-3 grid">
+        {checks.map((c, i) => {
+          const shown = open === c.key
+          return (
+            <li key={c.key}>
+              <button type="button" onClick={() => setOpen(shown ? null : c.key)} aria-expanded={shown} className="w-full flex items-start gap-2.5 py-[7px] text-left press group">
+                <span
+                  className={cx('mt-[1px] w-5 h-5 rounded-full grid place-items-center shrink-0 tick-in', c.ok == null ? 'bg-white/[0.06] text-[#6B6B72]' : c.ok ? 'bg-up-d text-ink' : 'bg-white/[0.08] text-down-d')}
+                  style={{ animationDelay: `${300 + i * 90}ms` }}
+                >
+                  {c.ok == null ? <span className="w-1 h-1 rounded-full bg-current" /> : c.ok ? <IconCheck size={12} weight={3} /> : <IconX size={11} weight={3} />}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className={cx('block text-[13.5px] leading-tight', c.ok ? 'text-white' : 'text-[#C9C9CF]')}>{c.label}</span>
+                  {shown && <span className="block text-[12px] text-[#8A8A92] leading-snug mt-1 animate-[rise_.25s_ease-out]">{c.note}</span>}
+                </span>
+                <span className={cx('text-[#6B6B72] text-[11px] mt-[3px] transition-transform group-hover:text-[#C9C9CF]', shown && 'rotate-90')} aria-hidden>
+                  ›
+                </span>
+              </button>
+            </li>
+          )
+        })}
       </ul>
     </div>
   )
@@ -400,8 +409,10 @@ export function Stage({ agent }: { agent: AgentState | undefined }) {
                   >
                     All
                   </button>
-                  <button onClick={() => setShot(true)} className="font-semibold text-[#C9C9CF] hover:text-white press text-right">
-                    <span className="sm:hidden">Exact chart →</span>
+                  <button onClick={() => setShot(true)} aria-label="The exact chart it read" className="font-semibold text-[#C9C9CF] hover:text-white press text-right">
+                    <span className="sm:hidden h-7 w-9 rounded-full bg-white/[0.07] grid place-items-center">
+                      <IconImage size={15} />
+                    </span>
                     <span className="hidden sm:inline">The exact chart it read →</span>
                   </button>
                 </div>
