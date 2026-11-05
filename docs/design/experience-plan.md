@@ -158,6 +158,8 @@ The founder reviewed the reset and asked for seven things, to be built on it, no
 | P5 every token | 8–9 Nov |
 | P6 works, not information | 10 Nov |
 
+**Status, 6 Nov:** P1–P5 shipped and deployed. P6 has started: the stage checks open on tap, routine reads are trimmed on the floor, How it trades shows one coin at a time, and copy no longer says four coins. Still to do: the Your agent, Its work, receipt, Hire and Fund audit, with phone and desktop screenshots.
+
 - Then M0: mainnet once the founder's NEAR arrives. With P5's storage, plan on about 6 NEAR rather than 5.
 - Then the demo video and the submission (13 Nov).
 - Each phase ends with phone and desktop screenshots, a commit, a push and a deploy.
