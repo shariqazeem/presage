@@ -64,6 +64,8 @@
 @keyframes dr-pop { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
 @keyframes dr-breathe { 0%, 100% { transform: scale(1); opacity: .35; } 50% { transform: scale(1.7); opacity: .12; } }
 @keyframes tick-in { from { transform: scale(.4); } to { transform: none; } }
+/* "Watch it read": the bar under what it is saying fills while it says it. */
+@keyframes walk-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 /* The seal landing on a signed mandate. */
 @keyframes stamp { from { transform: scale(1.9) rotate(-28deg); opacity: 0; } to { transform: rotate(-12deg); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
@@ -87,6 +89,7 @@
   .dr-lv:hover .dr-ln { stroke-width: 2.4; opacity: 1; }
   /* A check that passes lands with a small pop, one after another. */
   .tick-in { animation: tick-in .32s cubic-bezier(.2, 1.4, .4, 1) backwards; }
+  .walk-fill { width: 100%; transform-origin: left; animation: walk-fill linear both; }
   .flash-up { animation: flash-up .6s ease-out; }
   .flash-down { animation: flash-down .6s ease-out; }
 

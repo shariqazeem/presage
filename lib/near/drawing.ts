@@ -99,6 +99,28 @@ export function readChart(all: Candle[], tf: DrawTf): Drawing | null {
   return { candles, levels, trends, flow, last, bar: tolerances(candles).bar }
 }
 
+const TF_MS: Record<DrawTf, number> = { '15m': 900_000, '1h': 3_600_000, '4h': 14_400_000, '1d': 86_400_000 }
+
+/**
+ * The drawing with the live price on its newest candle: it moves the candle that is still forming, or
+ * starts the next one once that candle has closed. Only the candles change. The levels and trendlines
+ * stay the ones the agent read, so they don't twitch with every tick.
+ */
+export function withLive(d: Drawing, live: number | null | undefined, tf: DrawTf, now = Date.now()): Drawing {
+  if (!live || !(live > 0)) return d
+  const last = d.candles[d.candles.length - 1]
+  // A price far from the drawn candles is a bad quote, not a move.
+  if (Math.abs(live / last.c - 1) > 0.15) return d
+  const step = TF_MS[tf]
+  if (now < last.ts + step) {
+    const k = { ...last, c: live, h: Math.max(last.h, live), l: Math.min(last.l, live) }
+    return { ...d, candles: [...d.candles.slice(0, -1), k], last: live }
+  }
+  const ts = Math.floor(now / step) * step
+  const k = { ts, o: last.c, h: Math.max(last.c, live), l: Math.min(last.c, live), c: live, v: 0 }
+  return { ...d, candles: [...d.candles, k], flow: [...d.flow, null], last: live }
+}
+
 /** The shortest timeframe whose window still reaches back to a moment `sec` seconds ago. */
 export function tfForAge(sec: number): DrawTf {
   if (sec < 4.5 * 86_400) return '1h'

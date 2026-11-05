@@ -52,6 +52,22 @@ export const useTrades = () => useQuery({ queryKey: ['near-trades'], queryFn: ()
 
 export const useTrade = (id: number) => useQuery({ queryKey: ['near-trade', id], queryFn: () => json<{ trade: PositionView }>(`/api/near/trades/${id}`), refetchInterval: 30_000 })
 
+/** Live prices from the Rhea pools it trades, every few seconds while the page is in front of someone. */
+export const useLivePrices = () =>
+  useQuery({
+    queryKey: ['near-live'],
+    queryFn: () => json<{ at: number; prices: Record<string, number> }>('/api/near/live'),
+    refetchInterval: 5_000,
+    refetchIntervalInBackground: false,
+    staleTime: 4_000,
+  })
+
+/** One coin's live price, or null until the first one arrives. */
+export function useLivePrice(symbol: string | undefined | null): number | null {
+  const { data } = useLivePrices()
+  return (symbol && data?.prices?.[symbol]) || null
+}
+
 let tabId: string | null = null
 
 /** How many people have ParallaxPay open right now (this tab included). */

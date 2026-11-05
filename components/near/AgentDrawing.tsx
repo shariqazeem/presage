@@ -4,7 +4,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, type PointerE
 import { useQuery } from '@tanstack/react-query'
 import { mfi } from '@/engine/stquant/indicators'
 import type { Candle } from '@/lib/market/types'
-import { WARMUP, WINDOW, px, readChart, trendAt, type DrawTf, type Drawing, type Level, type Trend } from '@/lib/near/drawing'
+import { WARMUP, WINDOW, px, readChart, trendAt, withLive, type DrawTf, type Drawing, type Level } from '@/lib/near/drawing'
 import { cx } from '../ui'
 
 /**
@@ -25,6 +25,8 @@ import { cx } from '../ui'
 export type DrawPlan = { entry?: number | null; stop?: number | null; target?: number | null; from?: number | null }
 export type DrawMarker = { at: number; price: number; label: string; tone: 'in' | 'out' }
 export type DrawFocus = { price: number; label: string }
+/** One part of the drawing to show on its own, while the agent talks through it. */
+export type Spot = 'candles' | 'support' | 'resistance' | 'trend-support' | 'trend-resistance' | 'flow' | 'focus'
 type Size = 'stage' | 'card' | 'thumb'
 /** The candle slot at the right edge of the plot (may run past the last candle) and how many slots fit. */
 type View = { end: number; count: number }
@@ -73,6 +75,8 @@ export function AgentDrawing({
   label,
   allLevels = false,
   holdable,
+  live,
+  spotlight = null,
 }: {
   coin: string
   tf?: DrawTf
@@ -88,22 +92,25 @@ export function AgentDrawing({
   allLevels?: boolean
   /** Zoom, pan and the crosshair. On by default for the stage. */
   holdable?: boolean
+  /** The live price, put on the newest candle. */
+  live?: number | null
+  spotlight?: Spot | null
 }) {
   const box = useRef<HTMLDivElement>(null)
   const [dim, setDim] = useState<{ w: number; h: number } | null>(null)
   useEffect(() => {
     const el = box.current
     if (!el) return
-    const ro = new ResizeObserver(([e]) => {
-      const w = Math.round(e.contentRect.width)
-      const h = Math.round(e.contentRect.height)
-      setDim(d => (d && d.w === w && d.h === h ? d : w > 40 && h > 30 ? { w, h } : null))
-    })
+    const measure = (w: number, h: number) => setDim(d => (d && d.w === w && d.h === h ? d : w > 40 && h > 30 ? { w, h } : null))
+    // Measure now rather than waiting for the observer's first report on the next frame.
+    measure(el.clientWidth, el.clientHeight)
+    const ro = new ResizeObserver(([e]) => measure(Math.round(e.contentRect.width), Math.round(e.contentRect.height)))
     ro.observe(el)
     return () => ro.disconnect()
   }, [])
   const { data: candles } = useDrawCandles(coin, tf, size === 'thumb' ? 300_000 : 60_000)
-  const drawing = useMemo(() => (candles ? readChart(candles, tf) : null), [candles, tf])
+  const read = useMemo(() => (candles ? readChart(candles, tf) : null), [candles, tf])
+  const drawing = useMemo(() => (read ? withLive(read, live, tf) : null), [read, live, tf])
   const canHold = holdable ?? size === 'stage'
   const [wantOlder, setWantOlder] = useState(false)
   const { data: all } = useOlderCandles(coin, tf, canHold && wantOlder)
@@ -131,6 +138,7 @@ export function AgentDrawing({
           allLevels={allLevels}
           canHold={canHold}
           onNeedOlder={needOlder}
+          spotlight={spotlight}
           label={label ?? `ParallaxPay's ${tf.toUpperCase()} drawing of ${coin}`}
         />
       ) : (
@@ -191,6 +199,15 @@ function fitView(n: number, f: Frame): View {
 }
 
 type Tag = { y: number; text: string; tone: Tone; key: string }
+
+/** The part of the drawing a label belongs to, so it fades with it. */
+function partOf(t: Tag): Spot[] {
+  if (t.key === 'focus') return ['focus']
+  if (t.key === 'tsupport') return ['trend-support']
+  if (t.key === 'tresistance') return ['trend-resistance']
+  if (t.key.startsWith('l')) return [t.tone === 'up' ? 'support' : 'resistance']
+  return ['candles']
+}
 type Tone = 'up' | 'down' | 'flow' | 'foil' | 'now' | 'white'
 
 /** Keeps labels in one column from sitting on top of each other. */
@@ -259,6 +276,7 @@ function Picture({
   allLevels,
   canHold,
   onNeedOlder,
+  spotlight = null,
   label,
 }: {
   d: Drawing
@@ -274,6 +292,7 @@ function Picture({
   allLevels: boolean
   canHold: boolean
   onNeedOlder: () => void
+  spotlight?: Spot | null
   label: string
 }) {
   const uid = useId().replace(/:/g, '')
@@ -288,6 +307,11 @@ function Picture({
   const view = held ?? fit
   const [cross, setCross] = useState<{ x: number; y: number } | null>(null)
   const a = animate
+  // While the agent talks through one part of its drawing, the rest steps back and that part draws again.
+  const fade = (...parts: Spot[]) => (!spotlight || spotlight === 'focus' || parts.includes(spotlight) ? 1 : 0.13)
+  const candleFade = !spotlight || spotlight === 'candles' || spotlight === 'focus' ? 1 : spotlight === 'flow' ? 0.3 : 0.45
+  const lit = (part: Spot) => spotlight === part
+  const soft = { transition: 'opacity .4s ease' }
   const at = (ms: number) => (a ? { animationDelay: `${ms}ms` } : undefined)
   const stage = f.stage
   const thumb = f.thumb
@@ -486,10 +510,17 @@ function Picture({
   const svgRef = useRef<SVGSVGElement>(null)
   const viewRef = useRef(view)
   viewRef.current = view
+  /** The latest view asked for; it reaches the screen on the next frame. */
   const pending = useRef<View | null>(null)
   const raf = useRef(0)
+  const late = useRef(0)
   const limits = useRef({ first, lastIdx, fit, plotR: f.plotR })
   limits.current = { first, lastIdx, fit, plotR: f.plotR }
+  // A new size starts from the fitted view again. (A new candle doesn't: the view keeps following.)
+  useEffect(() => {
+    pending.current = null
+    setHeld(null)
+  }, [f.plotR, f.minBar, f.future])
 
   const commit = useCallback(
     (next: View) => {
@@ -497,18 +528,30 @@ function Picture({
       const ahead = L.fit.end - L.lastIdx
       const total = L.lastIdx - L.first + 1
       const count = Math.min(Math.max(next.count, 20), Math.max(L.fit.count, (total + ahead) * 1.1))
-      const end = Math.min(Math.max(next.end, L.first + count * 0.35), L.lastIdx + count * 0.6)
+      // Never more than a fifth of the view empty after the last candle, or past the oldest.
+      const end = Math.min(Math.max(next.end, L.first + count * 0.35), L.lastIdx + Math.max(ahead, count * 0.2))
       if (end - count < L.first + 5) onNeedOlder()
       pending.current = { end, count }
-      if (!raf.current)
-        raf.current = requestAnimationFrame(() => {
-          raf.current = 0
-          if (pending.current) setHeld(pending.current)
-        })
+      if (raf.current) return
+      // One render per frame however fast the gesture reports; the timer covers a frame that never comes.
+      const flush = () => {
+        cancelAnimationFrame(raf.current)
+        window.clearTimeout(late.current)
+        raf.current = 0
+        if (pending.current) setHeld(pending.current)
+      }
+      raf.current = requestAnimationFrame(flush)
+      late.current = window.setTimeout(flush, 40)
     },
     [onNeedOlder],
   )
-  useEffect(() => () => cancelAnimationFrame(raf.current), [])
+  useEffect(
+    () => () => {
+      cancelAnimationFrame(raf.current)
+      window.clearTimeout(late.current)
+    },
+    [],
+  )
 
   /** Zoom by `factor` (>1 zooms out) keeping the candle under `atX` where it is. */
   const zoom = useCallback(
@@ -516,6 +559,9 @@ function Picture({
       if (factor > 1) onNeedOlder()
       const v = pending.current ?? viewRef.current
       const L = limits.current
+      // Zooming out with the newest candle on screen keeps it where it is, so history fills in from the left.
+      const lastX = L.plotR - (v.end - L.lastIdx + 0.5) * (L.plotR / v.count)
+      if (factor > 1 && lastX >= 0 && lastX <= L.plotR) atX = lastX
       const slot = v.end + 0.5 - (L.plotR - atX) / (L.plotR / v.count)
       const count = v.count * factor
       const end = slot - 0.5 + (L.plotR - atX) / (L.plotR / count)
@@ -710,7 +756,7 @@ function Picture({
 
         <g clipPath={`url(#${clip})`}>
           {/* candles print left to right */}
-          <g className={a ? 'dr-print' : undefined}>
+          <g className={a || lit('candles') ? 'dr-print' : undefined} key={lit('candles') ? 'spot' : 'still'} opacity={candleFade} style={soft}>
             <rect x={0} y={f.top} width={f.plotR} height={f.priceH} fill="none" />
             <path d={upW} stroke={C.up} strokeWidth={1} opacity={0.75} fill="none" />
             <path d={dnW} stroke={C.down} strokeWidth={1} opacity={0.75} fill="none" />
@@ -725,16 +771,29 @@ function Picture({
             const x0 = Math.max(0, x(l.first) - cw / 2)
             const band = Math.max(2, Math.abs(y(l.lo) - y(l.hi)))
             const strong = l.key || !allLevels
+            const on = lit(l.role) && l.key
             return (
-              <g key={`${l.role}${l.price}`} className={cx('dr-lv', a && 'dr-print')} style={at(520 + k * 110)}>
+              <g key={`${l.role}${l.price}${on ? '-spot' : ''}`} className={cx('dr-lv', (a || on) && 'dr-print')} opacity={fade(l.role)} style={{ ...soft, ...(on ? { animationDelay: '0ms' } : at(520 + k * 110)) }}>
                 <rect x={0} y={yy - 7} width={f.plotR} height={14} fill="none" />
                 {!thumb && <rect x={x0} y={yy - band / 2} width={f.plotR - x0} height={band} fill={col} opacity={strong ? 0.09 : 0.05} />}
-                <line x1={x0} x2={f.plotR} y1={yy} y2={yy} stroke={col} strokeWidth={stage ? 1.3 : 1} strokeDasharray={thumb ? '3 3' : '6 4'} opacity={thumb ? 0.7 : strong ? 0.95 : 0.55} className="dr-ln" />
+                <line x1={x0} x2={f.plotR} y1={yy} y2={yy} stroke={col} strokeWidth={on ? 2.2 : stage ? 1.3 : 1} strokeDasharray={thumb ? '3 3' : '6 4'} opacity={thumb ? 0.7 : strong ? 0.95 : 0.55} className="dr-ln" />
                 {stage &&
                   strong &&
                   l.points
                     .filter(p => seen(p.i))
-                    .map(p => <circle key={p.i} cx={x(p.i)} cy={y(p.price)} r={3.2} fill={C.ink} stroke={col} strokeWidth={1.4} />)}
+                    .map((p, j) => (
+                      <circle
+                        key={p.i}
+                        cx={x(p.i)}
+                        cy={y(p.price)}
+                        r={on ? 4.4 : 3.2}
+                        fill={C.ink}
+                        stroke={col}
+                        strokeWidth={on ? 2 : 1.4}
+                        className={on ? 'dr-pop' : undefined}
+                        style={on ? { animationDelay: `${450 + j * 160}ms` } : undefined}
+                      />
+                    ))}
                 {!thumb && <line x1={x0} x2={f.plotR} y1={yy} y2={yy} stroke="transparent" strokeWidth={12} style={{ pointerEvents: 'stroke' }} />}
                 <title>{`${l.role === 'support' ? 'Support' : 'Resistance'} at ${px(l.price)}: price turned here ${l.touches} times${l.flipped ? ', from above and below' : ''}`}</title>
               </g>
@@ -746,26 +805,38 @@ function Picture({
             const col = t.side === 'support' ? C.up : C.down
             const i0 = t.from
             const i1 = iAt(f.plotR) + 1
+            const part: Spot = t.side === 'support' ? 'trend-support' : 'trend-resistance'
+            const on = lit(part)
             return (
-              <g key={t.side}>
+              <g key={`${t.side}${on ? '-spot' : ''}`} opacity={fade(part)} style={soft}>
                 <line
                   x1={x(i0)}
                   y1={y(trendAt(t, i0))}
                   x2={x(i1)}
                   y2={y(trendAt(t, i1))}
                   stroke={col}
-                  strokeWidth={thumb ? 1.2 : 2}
+                  strokeWidth={thumb ? 1.2 : on ? 3 : 2}
                   strokeLinecap="round"
                   pathLength={1}
-                  className={a ? 'dr-draw' : undefined}
-                  style={a ? { ...at(760 + k * 160), strokeDasharray: '1 1' } : undefined}
+                  className={a || on ? 'dr-draw' : undefined}
+                  style={on ? { animationDelay: '150ms', animationDuration: '1100ms', strokeDasharray: '1 1' } : a ? { ...at(760 + k * 160), strokeDasharray: '1 1' } : undefined}
                 >
                   <title>{`${t.direction === 'rising' ? 'Rising' : t.direction === 'falling' ? 'Falling' : 'Flat'} ${t.side} line, touched ${t.touches} times`}</title>
                 </line>
                 {!thumb && t.touchIdx.some(seen) && (
-                  <g className={a ? 'dr-pop' : undefined} style={at(1000 + k * 160)}>
-                    {t.touchIdx.filter(seen).map(i => (
-                      <circle key={i} cx={x(i)} cy={y(trendAt(t, i))} r={stage ? (t.touches > 6 ? 2.7 : 3.2) : 2.4} fill={C.ink} stroke={col} strokeWidth={1.4} />
+                  <g className={a && !on ? 'dr-pop' : undefined} style={on ? undefined : at(1000 + k * 160)}>
+                    {t.touchIdx.filter(seen).map((i, j) => (
+                      <circle
+                        key={i}
+                        cx={x(i)}
+                        cy={y(trendAt(t, i))}
+                        r={on ? 4.2 : stage ? (t.touches > 6 ? 2.7 : 3.2) : 2.4}
+                        fill={C.ink}
+                        stroke={col}
+                        strokeWidth={on ? 2 : 1.4}
+                        className={on ? 'dr-pop' : undefined}
+                        style={on ? { animationDelay: `${300 + j * 130}ms` } : undefined}
+                      />
                     ))}
                   </g>
                 )}
@@ -775,9 +846,9 @@ function Picture({
 
           {/* the level it is trading */}
           {focus && inRange(focus.price) && (
-            <g className={a ? 'dr-print' : undefined} style={at(900)}>
+            <g key={lit('focus') ? 'spot' : 'still'} className={a || lit('focus') ? 'dr-print' : undefined} opacity={fade('focus')} style={{ ...soft, ...(lit('focus') ? {} : at(900)) }}>
               <rect x={0} y={y(focus.price) - 6} width={f.plotR} height={12} fill="none" />
-              <line x1={0} x2={f.plotR} y1={y(focus.price)} y2={y(focus.price)} stroke={`url(#${foil}l)`} strokeWidth={thumb ? 1.5 : 2.2} />
+              <line x1={0} x2={f.plotR} y1={y(focus.price)} y2={y(focus.price)} stroke={`url(#${foil}l)`} strokeWidth={thumb ? 1.5 : lit('focus') ? 3 : 2.2} />
               <title>{focus.label}</title>
             </g>
           )}
@@ -818,16 +889,20 @@ function Picture({
 
         {/* labels */}
         {plotTags.map((t, k) => (
-          <Pill key={t.key} x={endX} y={t.y} text={t.text} tone={t.tone} anchor="end" foil={foil} delay={1100 + k * 70} animate={a} />
+          <g key={t.key} opacity={fade(...partOf(t))} style={soft}>
+            <Pill x={endX} y={t.y} text={t.text} tone={t.tone} anchor="end" foil={foil} delay={1100 + k * 70} animate={a} />
+          </g>
         ))}
         {gutter.map((t, k) => (
-          <Pill key={t.key} x={gutterX} y={t.y} text={t.text} tone={t.tone} anchor="end" foil={foil} delay={1350 + k * 70} animate={a} />
+          <g key={t.key} opacity={t.key === 'now' || t.key.startsWith('p') ? 1 : fade(...partOf(t))} style={soft}>
+            <Pill x={gutterX} y={t.y} text={t.text} tone={t.tone} anchor="end" foil={foil} delay={1350 + k * 70} animate={a} />
+          </g>
         ))}
 
         {/* money flow, with the dips under 20 shaded */}
         {f.flowH > 0 && (
-          <g>
-            <rect x={0} y={f.flowTop} width={f.plotR} height={f.flowH} fill="rgba(255,255,255,0.025)" rx={4} />
+          <g opacity={!spotlight || spotlight === 'flow' || spotlight === 'focus' || spotlight === 'candles' ? 1 : 0.35} style={soft}>
+            <rect x={0} y={f.flowTop} width={f.plotR} height={f.flowH} fill={lit('flow') ? 'rgba(167,139,250,0.08)' : 'rgba(255,255,255,0.025)'} rx={4} />
             {[20, 80].map(v => (
               <g key={v}>
                 <line x1={0} x2={f.plotR} y1={fy(v)} y2={fy(v)} stroke="rgba(255,255,255,0.1)" strokeDasharray="3 3" />
@@ -842,7 +917,17 @@ function Picture({
               {oversold.map((p, k) => (
                 <path key={k} d={p} fill={C.flow} opacity={0.28} className={a ? 'dr-pop' : undefined} style={at(1500)} />
               ))}
-              <polyline points={flowPts.join(' ')} fill="none" stroke={C.flow} strokeWidth={stage ? 1.6 : 1.3} strokeLinejoin="round" pathLength={1} className={a ? 'dr-draw' : undefined} style={a ? { ...at(380), animationDuration: '1100ms', strokeDasharray: '1 1' } : undefined} />
+              <polyline
+                key={lit('flow') ? 'spot' : 'still'}
+                points={flowPts.join(' ')}
+                fill="none"
+                stroke={C.flow}
+                strokeWidth={lit('flow') ? 2.4 : stage ? 1.6 : 1.3}
+                strokeLinejoin="round"
+                pathLength={1}
+                className={a || lit('flow') ? 'dr-draw' : undefined}
+                style={lit('flow') ? { animationDuration: '1300ms', strokeDasharray: '1 1' } : a ? { ...at(380), animationDuration: '1100ms', strokeDasharray: '1 1' } : undefined}
+              />
             </g>
             {stage && (
               <text x={4} y={f.flowTop + 10} dominantBaseline="central" fill={C.axis} fontSize={11}>

@@ -1,14 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { IconCheck, IconX } from '../icons'
 import { Ring, Sheet, useNow } from '../kit'
 import { Mark } from '../shell/Mark'
 import { cx } from '../ui'
 import { coinBySymbol } from '@/lib/near/config'
-import { px, type DrawTf } from '@/lib/near/drawing'
-import { usePresence, type AgentState, type CoinRead } from '@/lib/near/hooks'
-import { AgentDrawing } from './AgentDrawing'
+import { px, readChart, type DrawTf, type Drawing } from '@/lib/near/drawing'
+import { useLivePrice, usePresence, type AgentState, type CoinRead } from '@/lib/near/hooks'
+import { AgentDrawing, useDrawCandles, type Spot } from './AgentDrawing'
 import { ago } from './kit'
 import { LivePrice } from './motion'
 import { Segmented, signedPct } from './primitives'
@@ -58,6 +58,60 @@ export function voice(r: CoinRead): string {
 export function focusOf(r: CoinRead) {
   if (!r.support) return null
   return { price: r.support.price, label: `Its level ${px(r.support.price)}` }
+}
+
+/** A read with the live price in it, so what it says about distance to its level stays true between reads. */
+export function withLivePrice(r: CoinRead, live: number | null): CoinRead {
+  if (!live) return r
+  return { ...r, price: live, supportDistPct: r.support ? ((live - r.support.price) / live) * 100 : r.supportDistPct }
+}
+
+type Beat = { spot: Spot; say: string; ms: number }
+
+const times = (n: number) => (n === 1 ? 'once' : n === 2 ? 'twice' : `${n} times`)
+
+/** "Watch it read": the agent talking through its own drawing, one part at a time. */
+function beatsOf(r: CoinRead, d: Drawing | null, tf: DrawTf): Beat[] {
+  const out: Beat[] = [{ spot: 'candles', say: `${r.coin} on the ${tf.toUpperCase()}. Here's how I read it.`, ms: 2300 }]
+  if (d) {
+    const sup = d.levels.find(l => l.key && l.role === 'support')
+    const res = d.levels.find(l => l.key && l.role === 'resistance')
+    if (sup)
+      out.push({
+        spot: 'support',
+        say: sup.flipped ? `Price has turned at ${px(sup.price)} ${times(sup.touches)}, from above and below. Now it's support.` : `Buyers stepped in at ${px(sup.price)} ${times(sup.touches)}. That's support.`,
+        ms: 3200,
+      })
+    if (res)
+      out.push({
+        spot: 'resistance',
+        say: res.flipped ? `Price has turned at ${px(res.price)} ${times(res.touches)}, from both sides. Now it's resistance.` : `Sellers turned it back at ${px(res.price)} ${times(res.touches)}. That's resistance.`,
+        ms: 3200,
+      })
+    const low = d.trends.find(t => t.side === 'support')
+    const high = d.trends.find(t => t.side === 'resistance')
+    if (low)
+      out.push({
+        spot: 'trend-support',
+        say: low.direction === 'rising' ? `Higher lows on a rising line, ${low.touches} touches. It holds this move up.` : `Lower lows on a falling line, ${low.touches} touches. Buyers keep stepping in lower.`,
+        ms: 3300,
+      })
+    if (high)
+      out.push({
+        spot: 'trend-resistance',
+        say: high.direction === 'falling' ? `Lower highs on a falling line, ${high.touches} touches. Sellers lead until it breaks.` : `The highs ride a rising line, ${high.touches} touches. That's the ceiling of this move.`,
+        ms: 3300,
+      })
+    const m = [...d.flow].reverse().find(v => v != null)
+    if (m != null)
+      out.push({
+        spot: 'flow',
+        say: m <= 20 ? `Money flow is ${Math.round(m)}: washed out. That's the bottom I wait for.` : m >= 80 ? `Money flow is ${Math.round(m)}: stretched. I don't chase that.` : `Money flow is ${Math.round(m)}, mid-range. I want it near its low before I buy.`,
+        ms: 3200,
+      })
+  }
+  out.push({ spot: 'focus', say: voice(r), ms: 5600 })
+  return out
 }
 
 function Heartbeat({ at }: { at: number }) {
@@ -129,6 +183,7 @@ function Thinking({ r }: { r: CoinRead }) {
 }
 
 function Eye({ r, on, onPick }: { r: CoinRead; on: boolean; onPick: () => void }) {
+  const live = useLivePrice(r.coin)
   const s = statusOf(r)
   const checks = r.checks ?? []
   const passed = checks.filter(c => c.ok).length
@@ -144,7 +199,7 @@ function Eye({ r, on, onPick }: { r: CoinRead; on: boolean; onPick: () => void }
       </div>
       <AgentDrawing coin={r.coin} tf="1h" size="thumb" focus={focusOf(r)} className="h-[54px] mt-2" label={`ParallaxPay's drawing of ${r.coin}`} />
       <div className="mt-2 flex items-baseline justify-between gap-2">
-        <LivePrice value={r.price} format={px} className="text-[13px] text-white" />
+        <LivePrice value={live ?? r.price} format={px} className="text-[13px] text-white" />
         <span className="num text-[11.5px] text-[#8A8A92]">
           {passed}/{checks.length} checks
         </span>
@@ -167,11 +222,58 @@ export function Stage({ agent }: { agent: AgentState | undefined }) {
   }, [])
   // With nothing picked, it looks at the coin closest to a trade.
   const closest = [...reads].sort((a, b) => Number(Boolean(b.setup)) - Number(Boolean(a.setup)) || (b.checks ?? []).filter(c => c.ok).length - (a.checks ?? []).filter(c => c.ok).length)[0]
-  const r = reads.find(x => x.coin === pick) ?? closest
+  const read = reads.find(x => x.coin === pick) ?? closest
+  const live = useLivePrice(read?.coin)
+  const r = read ? withLivePrice(read, live) : undefined
   const s = r ? statusOf(r) : null
 
+  // "Watch it read": the same candles the drawing uses (shared cache), read the same way, talked through.
+  const { data: candles } = useDrawCandles(r?.coin ?? '', tf)
+  const drawing = useMemo(() => (candles && r ? readChart(candles, tf) : null), [candles, tf, r?.coin]) // eslint-disable-line react-hooks/exhaustive-deps
+  const beats = useMemo(() => (r ? beatsOf(r, drawing, tf) : []), [r, drawing, tf])
+  const [walk, setWalk] = useState<{ i: number; key: number } | null>(null)
+  const beat = walk ? beats[walk.i] : null
+  useEffect(() => setWalk(null), [r?.coin, tf])
+  useEffect(() => {
+    if (!walk || !beat) return
+    const t = window.setTimeout(() => setWalk(w => (w && w.i + 1 < beats.length ? { ...w, i: w.i + 1 } : null)), beat.ms)
+    return () => window.clearTimeout(t)
+  }, [walk, beat, beats.length])
+  const play = () => setWalk({ i: 0, key: Date.now() })
+  const step = () => setWalk(w => (w && w.i + 1 < beats.length ? { ...w, i: w.i + 1 } : null))
+  // It talks through its chart once per visit, the first time the stage is properly in view.
+  const stageRef = useRef<HTMLDivElement>(null)
+  const ready = beats.length > 2
+  useEffect(() => {
+    const el = stageRef.current
+    if (!el || !ready) return
+    try {
+      if (sessionStorage.getItem('pp_walked')) return
+    } catch {}
+    let timer = 0
+    const io = new IntersectionObserver(
+      ([e]) => {
+        window.clearTimeout(timer)
+        if (e.intersectionRatio >= 0.55)
+          timer = window.setTimeout(() => {
+            try {
+              sessionStorage.setItem('pp_walked', '1')
+            } catch {}
+            io.disconnect()
+            setWalk({ i: 0, key: Date.now() })
+          }, 1400)
+      },
+      { threshold: [0, 0.55, 1] },
+    )
+    io.observe(el)
+    return () => {
+      window.clearTimeout(timer)
+      io.disconnect()
+    }
+  }, [ready])
+
   return (
-    <div className="rounded-[28px] bg-ink text-white overflow-hidden relative shadow-[0_40px_90px_-40px_rgba(11,11,12,0.55)]">
+    <div ref={stageRef} className="rounded-[28px] bg-ink text-white overflow-hidden relative shadow-[0_40px_90px_-40px_rgba(11,11,12,0.55)]">
       <span className="absolute top-0 inset-x-0 h-[3px] foil-line" />
 
       {/* the agent */}
@@ -197,7 +299,39 @@ export function Stage({ agent }: { agent: AgentState | undefined }) {
           {/* Phones show the coin and its drawing first, then what it says; wide screens lead with its words. */}
           <div className="min-w-0 flex flex-col">
             <div key={r.coin} className="order-3 lg:order-1 mt-3 lg:mt-0 flex gap-2.5 animate-[rise_.4s_ease-out]">
-              <div className="rounded-[18px] rounded-tl-[6px] bg-white/[0.07] px-4 py-3 text-[15px] md:text-[16px] leading-snug text-[#F4F4F2] max-w-[720px]">{voice(r)}</div>
+              <div className={cx('rounded-[18px] rounded-tl-[6px] px-4 py-3 text-[15px] md:text-[16px] leading-snug text-[#F4F4F2] max-w-[720px] w-full transition-colors', walk ? 'bg-white/[0.11]' : 'bg-white/[0.07]')}>
+                {walk && beat ? (
+                  <button type="button" onClick={step} className="block w-full text-left" aria-live="polite">
+                    <span key={walk.i} className="block animate-[rise_.35s_ease-out]">
+                      {beat.say}
+                    </span>
+                    <span className="mt-3 flex items-center gap-1" aria-hidden>
+                      {beats.map((b, j) => (
+                        <span key={j} className="h-[3px] flex-1 rounded-full bg-white/15 overflow-hidden">
+                          <span
+                            key={`${walk.key}-${j}-${j === walk.i}`}
+                            className={cx('block h-full bg-white', j < walk.i ? 'w-full' : j === walk.i ? 'walk-fill' : 'w-0')}
+                            style={j === walk.i ? { animationDuration: `${b.ms}ms` } : undefined}
+                          />
+                        </span>
+                      ))}
+                    </span>
+                  </button>
+                ) : (
+                  <>
+                    {voice(r)}
+                    <button type="button" onClick={play} className="mt-2.5 flex items-center gap-1.5 text-[12.5px] font-semibold text-[#C9C9CF] hover:text-white press">
+                      <span className="w-5 h-5 rounded-full bg-white/[0.1] grid place-items-center text-[9px]">▶</span>
+                      Watch it read the chart
+                    </button>
+                  </>
+                )}
+              </div>
+              {walk && (
+                <button type="button" onClick={() => setWalk(null)} className="self-start shrink-0 w-8 h-8 rounded-full bg-white/[0.08] text-[#C9C9CF] hover:text-white press grid place-items-center" aria-label="Stop">
+                  <IconX size={12} weight={2.5} />
+                </button>
+              )}
             </div>
 
             <div className="order-1 lg:order-2 lg:mt-4 flex items-end justify-between gap-3">
@@ -226,6 +360,8 @@ export function Stage({ agent }: { agent: AgentState | undefined }) {
                   focus={focusOf(r)}
                   plan={r.setup ? { entry: r.price, stop: r.setup.stop, target: r.setup.target } : null}
                   allLevels={allLevels}
+                  live={live}
+                  spotlight={beat?.spot ?? null}
                   className="aspect-[1/1] sm:aspect-[16/10] lg:aspect-[16/9]"
                 />
               </div>

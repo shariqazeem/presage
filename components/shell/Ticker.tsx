@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useNow } from '../kit'
 import { cx } from '../ui'
 import { px } from '@/lib/near/drawing'
-import { useAgentState, usePresence } from '@/lib/near/hooks'
+import { useAgentState, useLivePrices, usePresence } from '@/lib/near/hooks'
 
 /**
  * The agent's status strip under the desktop bar: what ParallaxPay is doing, when it reads next, and
@@ -13,6 +13,7 @@ import { useAgentState, usePresence } from '@/lib/near/hooks'
 export function Ticker() {
   const { data } = useAgentState()
   const { data: here } = usePresence()
+  const { data: live } = useLivePrices()
   const now = useNow(1000)
   const left = data ? Math.max(0, data.nextCheckAt - now) : null
   const setups = data?.reads.filter(r => r.setup).length ?? 0
@@ -35,7 +36,7 @@ export function Ticker() {
                   <span key={c.key} className={cx('w-[5px] h-[9px] rounded-[1.5px]', c.ok ? (r.setup ? 'foil' : 'bg-up') : 'bg-ink/[0.12]')} />
                 ))}
               </span>
-              <span className="num text-ink-3">{px(r.price)}</span>
+              <span className="num text-ink-3">{px(live?.prices?.[r.coin] ?? r.price)}</span>
             </Link>
           )
         })}
