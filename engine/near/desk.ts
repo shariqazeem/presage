@@ -38,9 +38,9 @@ const AGENT = { actor: 'parallaxpay' } as const
 
 /**
  * The chart the agent just read (four timeframes, its levels, MFI), saved for the floor and for receipts.
- * For a coin's live read it also saves the candles it read, each timeframe trimmed to the window it
- * analyses plus money flow's warm-up, so the app draws from exactly what the agent saw and never has
- * to fetch the same candles again (lib/near/snapshot.ts).
+ * For a coin's live read it also saves the candles it read, up to 500 per timeframe: the app draws its
+ * window from them, and older ones when someone zooms out, so it shows exactly what the agent saw and
+ * never has to fetch the same candles again (lib/near/snapshot.ts).
  */
 function saveChart(read: Read, name: string) {
   try {
@@ -48,8 +48,8 @@ function saveChart(read: Read, name: string) {
     writeFileSync(resolve(CHART_DIR, `${name}.png`), renderChart({ symbol: read.coin.symbol, frames: read.frames }))
     if (!name.includes('pos-')) {
       const f = read.frames
-      const keep = <T,>(c: T[] | undefined, n: number) => (c ?? []).slice(-(n + 15))
-      const body = JSON.stringify({ at: now(), frames: { '15m': keep(f.m15, 120), '1h': keep(f.h1, 130), '4h': keep(f.h4, 160), '1d': keep(f.d1, 240) } })
+      const keep = <T,>(c: T[] | undefined) => (c ?? []).slice(-500)
+      const body = JSON.stringify({ at: now(), frames: { '15m': keep(f.m15), '1h': keep(f.h1), '4h': keep(f.h4), '1d': keep(f.d1) } })
       const tmp = resolve(CHART_DIR, `.${name}.json.tmp`)
       writeFileSync(tmp, body)
       renameSync(tmp, resolve(CHART_DIR, `${name}.json`))

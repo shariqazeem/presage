@@ -158,6 +158,7 @@ export function Stage({ agent }: { agent: AgentState | undefined }) {
   const [pick, setPick] = useState<string | null>(null)
   const [tf, setTf] = useState<DrawTf>('1h')
   const [shot, setShot] = useState(false)
+  const [allLevels, setAllLevels] = useState(false)
   const now = useNow(30_000)
   const { data: here } = usePresence()
   useEffect(() => {
@@ -224,6 +225,7 @@ export function Stage({ agent }: { agent: AgentState | undefined }) {
                   size="stage"
                   focus={focusOf(r)}
                   plan={r.setup ? { entry: r.price, stop: r.setup.stop, target: r.setup.target } : null}
+                  allLevels={allLevels}
                   className="aspect-[1/1] sm:aspect-[16/10] lg:aspect-[16/9]"
                 />
               </div>
@@ -231,11 +233,29 @@ export function Stage({ agent }: { agent: AgentState | undefined }) {
                 <div className="sm:hidden">
                   <Segmented night size="sm" layoutId="stage-tf-phone" value={tf} onChange={setTf} options={(['1d', '4h', '1h', '15m'] as DrawTf[]).map(t => ({ value: t, label: t.toUpperCase() }))} />
                 </div>
-                <span className="hidden sm:inline">Drawn with its own code · read {ago(r.at, now)}</span>
-                <button onClick={() => setShot(true)} className="font-semibold text-[#C9C9CF] hover:text-white press text-right">
-                  <span className="sm:hidden">Exact chart →</span>
-                  <span className="hidden sm:inline">The exact chart it read →</span>
-                </button>
+                <div className="hidden sm:flex items-center gap-3 min-w-0">
+                  <button
+                    onClick={() => setAllLevels(v => !v)}
+                    aria-pressed={allLevels}
+                    className={cx('h-7 px-2.5 rounded-full text-[12px] font-semibold press transition-colors', allLevels ? 'bg-white text-ink' : 'bg-white/[0.07] text-[#C9C9CF] hover:bg-white/[0.12]')}
+                  >
+                    All levels
+                  </button>
+                  <span className="truncate">Drawn with its own code · read {ago(r.at, now)}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setAllLevels(v => !v)}
+                    aria-pressed={allLevels}
+                    className={cx('sm:hidden h-7 px-2.5 rounded-full text-[12px] font-semibold press transition-colors', allLevels ? 'bg-white text-ink' : 'bg-white/[0.07] text-[#C9C9CF]')}
+                  >
+                    All
+                  </button>
+                  <button onClick={() => setShot(true)} className="font-semibold text-[#C9C9CF] hover:text-white press text-right">
+                    <span className="sm:hidden">Exact chart →</span>
+                    <span className="hidden sm:inline">The exact chart it read →</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
