@@ -4,11 +4,33 @@ export type Frames = { d1: Candle[]; h4: Candle[]; h1: Candle[]; m15: Candle[]; 
 export type Line = {
   slope: number
   touches: number
+  /** Indexes of the swing points that sit on the line, oldest first. */
+  touchIdx: number[]
   startIdx: number
   valueAt: (i: number) => number
   direction: 'rising' | 'falling' | 'flat'
 }
-export type Zone = { price: number; touches: number; lastTouch: number }
+export type Level = {
+  price: number
+  /** The lowest and highest swing in the level: its thickness. */
+  lo: number
+  hi: number
+  touches: number
+  highs: number
+  lows: number
+  /** Touched from above and below: support that was resistance, or the reverse. */
+  flipped: boolean
+  /** Index of its first and last touch. */
+  first: number
+  last: number
+  lastTouch: number
+  points: { i: number; price: number; side: 'high' | 'low' }[]
+  /** Where it is relative to the last close. */
+  role: 'support' | 'resistance'
+  /** The last close is inside the level. */
+  at: boolean
+}
+export type Zone = Level
 export type MfiExtreme = { value: number; percentile: number; isExtreme: boolean; min: number; turningUp: boolean }
 export type KeySupport = {
   type: 'horizontal' | 'trendline-rising' | 'trendline-falling' | 'trendline-flat' | 'pattern-apex'

@@ -53,13 +53,15 @@ export function sma(values, period) {
 }
 
 // Swing highs/lows with a lookback wing (fractal pivots).
+// ParallaxPay: a run of equal highs (or lows) is one swing, taken at its first bar. Quiet pools print
+// flat candles, and counting every bar of a plateau as its own pivot inflated touch counts.
 export function swings(candles, wing = 3) {
   const highs = [], lows = [];
   for (let i = wing; i < candles.length - wing; i++) {
     let isHigh = true, isLow = true;
     for (let w = 1; w <= wing; w++) {
-      if (candles[i].h < candles[i - w].h || candles[i].h < candles[i + w].h) isHigh = false;
-      if (candles[i].l > candles[i - w].l || candles[i].l > candles[i + w].l) isLow = false;
+      if (candles[i].h <= candles[i - w].h || candles[i].h < candles[i + w].h) isHigh = false;
+      if (candles[i].l >= candles[i - w].l || candles[i].l > candles[i + w].l) isLow = false;
     }
     if (isHigh) highs.push({ i, ts: candles[i].ts, price: candles[i].h });
     if (isLow) lows.push({ i, ts: candles[i].ts, price: candles[i].l });

@@ -4,6 +4,164 @@ Written 5 Nov 2026 for the NEAR HACKATHON build (deadline 14 Nov) and reset the 
 founder's review. This is the reference every screen is built and checked against, so the whole app
 feels like one product.
 
+## From here (6 Nov): the agent's eye, a chart you can hold, every token
+
+The founder reviewed the reset and asked for seven things, to be built on it, not instead of it:
+
+1. **Any mandate size.** More than $100, any amount the member wants it to trade with.
+2. **Fix the agent's TA first.** The lines must sit on the candles the way the founder draws them: trendlines through swing points that price respects, levels price has respected more than once.
+3. **Zoom in and out** on the chart.
+4. **Live TA by the agent.**
+5. **Works, not information.** Premium, less noise, more doing. The desktop should feel as smooth as the phone app, with everything aligned.
+6. **Every token it can trade.** Not just four, and deep liquidity isn't required.
+7. **Don't remove what should stay.** Improve from here.
+
+### What stays (do not remove)
+
+- **The agent-native direction:**
+  - The drawings are the hero.
+  - Night is the agent's mind, paper is people, and foil is its signature.
+  - Its voice is in the first person.
+- **The floor:**
+  - The stage: voice, drawing, checks, and the exact chart it read.
+  - Its eyes, the floor stream, Ask, and Promises.
+  - The hire section with the mandate card, the trust rows, and NEAR Intents.
+- **Your agent:** proposals and missions on drawings, the mandate card with autopilot, talk to it, and kept promises.
+- **Its work and receipts:** the timeline, the plan on its chart, the analyst's signed note, and in-browser verification.
+- **Hiring:** meet, then the mandate strip, then the seal. The mandate is saved while the vault isn't live.
+- **The rest:**
+  - The How it trades profile and the share cards.
+  - The performance work: server-seeded pages, the agent's saved candles, and a matching hydration.
+
+### Why the lines looked wrong (found 6 Nov)
+
+- **The trendline tolerance is a flat 2%, for touches and violations alike.**
+  - On a 1H chart that moves about 1% an hour, a "resistance" line can sit 2% inside the candles.
+  - Every high within 2% of it then counts as a touch. That is AURORA's "resistance 12×" cutting through the candles.
+- **Levels were labelled by where they came from, not by where price is.**
+  - A cluster of old highs below price was drawn as "R".
+  - Below price it is support: resistance that flipped.
+- **Clustering was greedy and fixed-width (1.5%),** so neighbouring levels merged or split depending on the order the swings came in.
+- **Too many lines at once:** six levels, two trendlines and their labels covered the candles.
+- **The same code feeds three things:** the agent's decisions, the chart image the NEAR AI analyst reads, and the drawing on the site. So the fix goes in `engine/stquant` once, and all three stay one brain.
+
+### P1. The agent's eye: lines that sit on the candles
+
+- **Tolerances scale with each coin's own volatility (ATR):**
+  - A touch is a swing point within about 0.3 ATR of the line.
+  - A wick may pierce about 0.6 ATR.
+  - A candle body that closes through the line breaks it.
+- **Trendlines:**
+  - They join swing points at least two touches apart.
+  - Bodies stay on the right side from the first touch to now.
+  - Ranked by: unbroken and near price first, then touches, then span.
+  - The touch points come back with the line and are drawn as dots, so anyone can see it sits on the wicks.
+- **Levels:**
+  - Swing highs and lows are clustered together, using the volatility tolerance.
+  - Each level has its touches (distinct swings) and a role taken from price: support below, resistance above.
+  - Levels touched from both sides are marked as flipped.
+  - The zone's thickness is the spread of its touches.
+- **A real chart layout:**
+  - Empty space to the right of the last candle, as on every trading terminal.
+  - Lines project into that space, and their labels sit there instead of on the candles.
+  - The plan's target and stop boxes extend into it, which is where a plan belongs.
+  - Price tags sit on the axis.
+- **Less on screen:**
+  - By default: the nearest support and resistance, the level it is trading, and its best trendlines.
+  - The rest appear on request.
+- **Checked:**
+  - The history test re-runs before and after. The numbers stay off the site.
+  - Screenshots of every coin on every timeframe.
+- **Done when:** on every coin and timeframe, trendline dots sit on the wicks, no body crosses a live line, and every label matches where price is.
+
+### P2. The mandate: any amount, any coin
+
+- **Size:**
+  - Presets plus a custom amount: any amount from $1, with no ceiling in the app.
+  - The vault already has no ceiling.
+  - Buys a day: presets plus custom, up to the vault's 48.
+  - The same in the hiring flow and in the edit sheet.
+- **Coins:**
+  - "Any coin it finds" becomes the default. In the vault, an empty coin list means any coin the owner lists.
+  - Members can still pick up to 8.
+  - Vault tests and the testnet run are updated to cover it.
+
+### P3. A chart you can hold
+
+- **Zoom:**
+  - Pinch on phones.
+  - Pinch or ctrl/⌘-scroll on a trackpad or mouse. A plain scroll still scrolls the page.
+  - Plus and minus buttons, and a double-tap to fit.
+- **Pan:**
+  - Drag sideways. Vertical swipes still scroll the page on phones.
+- **Crosshair:**
+  - Hover on desktop, press and hold on phones.
+  - Shows the candle's time, open, high, low, close and money flow.
+- **The lines stay where the agent drew them.**
+  - They are computed once on its window, and zooming only changes the view.
+  - Zooming out past its window loads older candles.
+- **Smoothness:** gestures render once per frame, and nothing is recomputed while you move.
+
+### P4. Live TA
+
+- **Live price, straight from NEAR:**
+  - While the page is open, the last candle and the price move every few seconds.
+  - Prices come from the coin's own Rhea pool, or from Binance for coins whose candles come from Binance.
+  - The distance to its level updates live.
+  - The lines stay computed on the agent's own read, so they don't jitter.
+- **"Watch it read":** the agent walks through its drawing step by step.
+  - A pen draws each line while it says why: "Price turned up at $1,301 three times. That's my support."
+  - It plays the first time the stage comes into view and can be replayed or stepped through.
+- **When a new read lands** (every 15 minutes), the stage redraws and says so.
+
+### P5. Every token it can trade
+
+- **Which tokens:**
+  - Every token with a classic Rhea pool against wNEAR or USDC: about 9,000 pools, and roughly 80 tokens with $5k or more of liquidity.
+  - Excluded: stablecoins, staked-NEAR wrappers, and pools charging 1% or more.
+  - Deep liquidity isn't required.
+  - Tokens with no trades are listed as too quiet to read, because a chart nobody trades has nothing to read.
+- **Candles:** from the coin's own Rhea pool, or from Binance where the coin has a deep market (NEAR, ZEC, BTC, ETH, SOL).
+- **The agent's loop:**
+  - Every 15 minutes it screens every coin's price against the levels it has mapped.
+  - The coins near a level get the full four-timeframe read, the chart image and the analyst.
+  - Slow timeframes refresh in rotation, within GeckoTerminal's rate limit.
+- **Liquidity-aware sizing:** every buy is quoted on Rhea and shrunk until its price impact is under 1%.
+- **Vault setup:**
+  - The owner lists the routes in batches and registers the vault on each token.
+  - The agent still can't trade anything the owner hasn't listed.
+- **App:**
+  - A coin list with search: price, 24h change, liquidity, and its status on each coin.
+  - The stage picks the closest setup across all coins.
+  - The mandate's coin step becomes "Any coin it finds", plus search.
+- **Later:** Rhea's concentrated-liquidity (DCL) pools, where some newer tokens trade. They need a second swap path in the vault.
+
+### P6. Works, not information
+
+- **The desktop is the phone app, larger:**
+  - The same components, sheets, segmented controls and order of things.
+  - Content sits in a centred frame on a 4/8 spacing grid, and every edge lines up.
+- **Show, don't explain:**
+  - A paragraph that explains what the interface could show becomes a control or a chip, or goes.
+  - Long text moves behind a tap.
+- **The stage:** the chart, one sentence and the check pills. Details open on tap.
+- **A screen-by-screen audit:** Floor, Your agent, Its work, the receipt, Hire, How it trades and Fund. Each gets phone and desktop screenshots before and after.
+
+### Order from here
+
+| Phase | Target |
+| --- | --- |
+| P1 the agent's eye | 6 Nov |
+| P2 any amount, any coin | 6 Nov |
+| P3 zoom, pan, crosshair | 7 Nov |
+| P4 live TA | 7 Nov |
+| P5 every token | 8–9 Nov |
+| P6 works, not information | 10 Nov |
+
+- Then M0: mainnet once the founder's NEAR arrives. With P5's storage, plan on about 6 NEAR rather than 5.
+- Then the demo video and the submission (13 Nov).
+- Each phase ends with phone and desktop screenshots, a commit, a push and a deploy.
+
 ## The reset (5 Nov, evening)
 
 The first pass borrowed from exchanges: a watchlist, a ticker, a big balance, quick-action circles.

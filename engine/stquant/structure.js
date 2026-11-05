@@ -7,37 +7,104 @@
 
 import { swings, trendline } from './indicators.js';
 
-// Cluster swing lows into horizontal support zones (within tol %).
-export function supportZones(candles, tol = 0.015) {
-  const { lows } = swings(candles, 3);
-  const zones = [];
-  for (const lo of lows) {
-    const zone = zones.find(z => Math.abs(z.price - lo.price) / z.price <= tol);
-    if (zone) {
-      zone.touches++;
-      zone.price = (zone.price * (zone.touches - 1) + lo.price) / zone.touches;
-      zone.lastTouch = lo.ts;
-    } else {
-      zones.push({ price: lo.price, touches: 1, lastTouch: lo.ts });
-    }
+// ParallaxPay, 6 Nov 2026: tolerances follow the coin's own volatility.
+//
+// Every tolerance used to be a flat percentage: 1.5% to group a level, 2% for a
+// trendline touch AND for how far price may poke through it. On a 1H chart that
+// moves ~1% a bar, a "resistance" line could sit 2% inside the candles and count
+// every high within 2% as a touch (AURORA, "resistance 12x", drawn through the
+// bodies). A trader judges "on the line" against how much the chart normally
+// moves, so these do too: the median bar range as a share of price.
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+export function tolerances(candles, cap = 0.02) {
+  const pcts = [];
+  for (let i = 1; i < candles.length; i++) {
+    const k = candles[i], prev = candles[i - 1].c;
+    const tr = Math.max(k.h - k.l, Math.abs(k.h - prev), Math.abs(k.l - prev));
+    if (k.c > 0 && Number.isFinite(tr)) pcts.push(tr / k.c);
   }
-  // Respected zones (2+ touches) rank higher.
-  return zones.sort((a, b) => b.touches - a.touches);
+  pcts.sort((a, b) => a - b);
+  const bar = pcts.length ? pcts[Math.floor(pcts.length / 2)] : 0.01;
+  return {
+    /** The median candle range as a share of price. */
+    bar,
+    /** A swing point this close to a line or level is a touch. */
+    touch: clamp(bar * 0.35, 0.001, cap * 0.6),
+    /** A wick may poke through a line this far and the line still holds. */
+    wick: clamp(bar * 0.6, 0.0015, cap),
+    /** A candle BODY past the line by more than this breaks it. */
+    body: clamp(bar * 0.12, 0.0004, cap * 0.3),
+    /** Half the width of a horizontal level. */
+    level: clamp(bar * 0.5, 0.0015, 0.015),
+  };
 }
 
-export function resistanceZones(candles, tol = 0.015) {
-  const { highs } = swings(candles, 3);
-  const zones = [];
-  for (const hi of highs) {
-    const zone = zones.find(z => Math.abs(z.price - hi.price) / z.price <= tol);
-    if (zone) {
-      zone.touches++;
-      zone.price = (zone.price * (zone.touches - 1) + hi.price) / zone.touches;
-    } else {
-      zones.push({ price: hi.price, touches: 1 });
+// Horizontal levels: where swing highs AND swing lows gather at one price.
+//
+// The old zones grouped lows into "support" and highs into "resistance" with a
+// flat 1.5% band, greedily, so a level's name said where it came from rather
+// than where price is: a shelf of old highs under price was still "resistance".
+// A level is a level. Its role comes from price: below is support, above is
+// resistance, and one touched from both sides has flipped. Groups form densest
+// first, so the result does not depend on the order the swings came in.
+export function levels(candles, { wing = 3 } = {}) {
+  const n = candles.length;
+  if (n < wing * 2 + 3) return [];
+  const t = tolerances(candles);
+  const last = candles[n - 1].c;
+  const { highs, lows } = swings(candles, wing);
+  const pts = [...highs.map(p => ({ ...p, side: 'high' })), ...lows.map(p => ({ ...p, side: 'low' }))];
+  const free = pts.map(() => true);
+  const out = [];
+  for (;;) {
+    let best = -1, bestCount = 0;
+    for (let a = 0; a < pts.length; a++) {
+      if (!free[a]) continue;
+      const w = pts[a].price * t.level * 1.5;
+      let count = 0;
+      for (let b = 0; b < pts.length; b++) if (free[b] && Math.abs(pts[b].price - pts[a].price) <= w) count++;
+      if (count > bestCount) { bestCount = count; best = a; }
     }
+    if (best < 0) break;
+    const centre = pts[best].price;
+    const w = centre * t.level * 1.5;
+    const members = [];
+    for (let b = 0; b < pts.length; b++) {
+      if (free[b] && Math.abs(pts[b].price - centre) <= w) { members.push(pts[b]); free[b] = false; }
+    }
+    const prices = members.map(m => m.price).sort((a, b) => a - b);
+    const price = prices[Math.floor(prices.length / 2)];
+    const byTime = [...members].sort((a, b) => a.i - b.i);
+    const highsIn = members.filter(m => m.side === 'high').length;
+    out.push({
+      price,
+      lo: prices[0],
+      hi: prices[prices.length - 1],
+      touches: members.length,
+      highs: highsIn,
+      lows: members.length - highsIn,
+      flipped: highsIn > 0 && highsIn < members.length,
+      first: byTime[0].i,
+      last: byTime[byTime.length - 1].i,
+      lastTouch: byTime[byTime.length - 1].ts,
+      points: byTime.map(m => ({ i: m.i, price: m.price, side: m.side })),
+      role: price < last ? 'support' : 'resistance',
+      /** Price is inside the level right now. */
+      at: Math.abs(last - price) / price <= t.level,
+    });
   }
-  return zones.sort((a, b) => b.touches - a.touches);
+  return out.sort((a, b) => b.touches - a.touches || b.last - a.last);
+}
+
+// Levels price can fall to (at or below it), most-touched first. A level price is
+// sitting inside counts as both support and resistance; callers filter by price.
+export function supportZones(candles) {
+  return levels(candles).filter(z => z.role === 'support' || z.at);
+}
+
+export function resistanceZones(candles) {
+  return levels(candles).filter(z => z.role === 'resistance' || z.at);
 }
 
 // First rejection point: high of the largest-range bullish candle in the window.
@@ -262,65 +329,86 @@ export function patternTargets(frames, price) {
   return { r1, r2, all: pool.slice(0, 6) };
 }
 
-export function fitBoundary(candles, side = 'lower', { tol = 0.02, minTouches = 2 } = {}) {
-  const { highs, lows } = swings(candles, 3);
+// ParallaxPay, 6 Nov 2026: the line has to sit ON the candles.
+//
+// A trendline joins swing points and price respects it: from its first touch to
+// now no candle BODY closes through it, and wicks only poke through a little.
+// Both used to be a flat 2%, so a "resistance" could run through the middle of
+// the bodies and every high within 2% of it counted as a touch. Now a body past
+// the line by a sliver of a normal candle breaks it, a wick may pierce ~0.6 of
+// one, and a touch is a swing point within ~0.35 of one (see tolerances()).
+// `tol` still caps all three, for charts so wild that a candle is 5%.
+//
+// Two points make a line; the third touch makes it a trendline, so three is the
+// minimum. A touch is any candle whose wick reaches the line and holds, counted
+// at most once every three candles: a move that rides along the line (Shariq's
+// "hug", "repeated touches across many bars") is many touches, not one. Lines are
+// anchored on swing points, including the shallow pullbacks inside a strong move
+// that a three-candle swing would miss.
+//
+// The points it touched come back with the line, so a drawing can show the
+// line sitting on them.
+export function fitBoundary(candles, side = 'lower', { tol = 0.02, minTouches = 3, minGap = 4 } = {}) {
+  const n = candles.length;
+  if (n < 10) return null;
+  const t = tolerances(candles, tol);
+  const { highs, lows } = swings(candles, 2);
   const pivots = side === 'lower' ? lows : highs;
   if (pivots.length < 2) return null;
-
-  const priceAt = (a, b, i) => a.price + ((b.price - a.price) / (b.i - a.i)) * (i - a.i);
+  const lastPrice = candles[n - 1].c;
   let best = null;
 
   for (let x = 0; x < pivots.length - 1; x++) {
     for (let y = x + 1; y < pivots.length; y++) {
       const a = pivots[x], b = pivots[y];
-      if (b.i === a.i) continue;
-
-      // The line must act as a boundary: price should not sit far beyond it.
-      let violated = false;
-      for (let i = a.i; i < candles.length; i++) {
-        const line = priceAt(a, b, i);
-        if (line <= 0) { violated = true; break; }
-        const v = side === 'lower'
-          ? (line - candles[i].l) / line   // low below the support line
-          : (candles[i].h - line) / line;  // high above the resistance line
-        if (v > tol) { violated = true; break; }
-      }
-      if (violated) continue;
-
-      // Count pivots that sit ON the line (a "touch").
-      let touches = 0;
-      for (const p of pivots) {
-        if (p.i < a.i) continue;
-        const line = priceAt(a, b, p.i);
-        if (line > 0 && Math.abs(p.price - line) / line <= tol) touches++;
-      }
-      if (touches < minTouches) continue;
-
+      if (b.i - a.i < minGap) continue;
       const slope = (b.price - a.price) / (b.i - a.i);
-      const nowVal = a.price + slope * (candles.length - 1 - a.i);
-      if (!(nowVal > 0)) continue;
-      const lastPrice = candles.at(-1).c;
-      const distPct = Math.abs(lastPrice - nowVal) / lastPrice;
-      const cand = { slope, anchor: a, touches, lastIdx: b.i, distPct };
+      const at = (i) => a.price + slope * (i - a.i);
+
+      // Price respects the line from its first touch to now, and every candle
+      // that reaches it is a touch.
+      let held = true;
+      const touchIdx = [];
+      for (let i = a.i; i < n; i++) {
+        const line = at(i);
+        if (!(line > 0)) { held = false; break; }
+        const k = candles[i];
+        const body = side === 'lower' ? (line - Math.min(k.o, k.c)) / line : (Math.max(k.o, k.c) - line) / line;
+        const wick = side === 'lower' ? (line - k.l) / line : (k.h - line) / line;
+        if (body > t.body || wick > t.wick) { held = false; break; }
+        if (wick >= -t.touch && (!touchIdx.length || i - touchIdx[touchIdx.length - 1] >= 3)) touchIdx.push(i);
+      }
+      if (!held || touchIdx.length < minTouches) continue;
+
+      const nowVal = at(n - 1);
+      const cand = {
+        slope, anchor: a, touches: touchIdx.length, touchIdx,
+        lastTouch: touchIdx[touchIdx.length - 1], span: touchIdx[touchIdx.length - 1] - a.i,
+        distPct: Math.abs(lastPrice - nowVal) / lastPrice,
+      };
       // A trader draws the line price is actually INTERACTING with, not merely
       // the one with the most historical touches. Optimising touches alone
       // picked a 1D line 30% below price while the operative channel support
-      // sat just under it. Proximity gates first, touches rank within.
+      // sat just under it. Proximity gates first, touches rank within, then
+      // the more recently tested line, then the longer one.
       const near = (c) => c.distPct <= 0.15;
       const better =
         !best ? true :
         near(cand) !== near(best) ? near(cand) :
         cand.touches !== best.touches ? cand.touches > best.touches :
-        cand.lastIdx > best.lastIdx;
+        cand.lastTouch !== best.lastTouch ? cand.lastTouch > best.lastTouch :
+        cand.span > best.span;
       if (better) best = cand;
     }
   }
   if (!best) return null;
+  const { slope, anchor } = best;
   return {
-    slope: best.slope,
+    slope,
     touches: best.touches,
-    startIdx: best.anchor.i,
-    valueAt: (i) => best.anchor.price + best.slope * (i - best.anchor.i),
-    direction: best.slope > 0 ? 'rising' : best.slope < 0 ? 'falling' : 'flat',
+    touchIdx: best.touchIdx,
+    startIdx: anchor.i,
+    valueAt: (i) => anchor.price + slope * (i - anchor.i),
+    direction: slope > 0 ? 'rising' : slope < 0 ? 'falling' : 'flat',
   };
 }

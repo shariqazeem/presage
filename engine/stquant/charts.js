@@ -62,17 +62,25 @@ function panel(candles, label, x0, y0, w, h, maxBars = 120) {
   // diagonal trendlines — the channel boundaries a trader actually draws.
   // Without these the model can only infer channels from candle shapes, which
   // made it miss a rising-support hug that was obvious by eye (MOR 1H, 18 touches).
+  // ParallaxPay: a line that leaves the panel is clipped at its edge, never
+  // clamped. Clamping moved the endpoint, which changed the line's angle, so a
+  // line sitting above the candles was drawn straight through them. The candles
+  // it touched get a ring, so the model sees the line sit on them.
+  const clip = `clip${Math.round(x0)}x${Math.round(y0)}`;
+  s += `<defs><clipPath id="${clip}"><rect x="${x0}" y="${y0 + 22}" width="${w}" height="${priceH}"/></clipPath></defs>`;
   for (const [side, colr, tag] of [['lower', C.support, 'SUP'], ['upper', C.resistance, 'RES']]) {
     const b = fitBoundary(data, side);
     if (!b) continue;
     const i0 = Math.max(0, b.startIdx);
     const y1 = b.valueAt(i0), y2 = b.valueAt(n - 1);
     if (!(y1 > 0 && y2 > 0)) continue;
-    const cy1 = Math.min(Math.max(yOf(y1), y0 + 22), y0 + 22 + priceH);
-    const cy2 = Math.min(Math.max(yOf(y2), y0 + 22), y0 + 22 + priceH);
-    s += `<line x1="${xOf(i0)}" y1="${cy1}" x2="${xOf(n - 1)}" y2="${cy2}" stroke="${colr}" stroke-width="2" opacity="0.95"/>`;
+    s += `<g clip-path="url(#${clip})">`;
+    s += `<line x1="${xOf(i0)}" y1="${yOf(y1)}" x2="${xOf(n - 1)}" y2="${yOf(y2)}" stroke="${colr}" stroke-width="2" opacity="0.95"/>`;
+    for (const t of b.touchIdx ?? []) s += `<circle cx="${xOf(t)}" cy="${yOf(b.valueAt(t))}" r="3.2" fill="none" stroke="${colr}" stroke-width="1.4"/>`;
+    s += `</g>`;
+    const ly = Math.min(Math.max(yOf(y2), y0 + 34), y0 + 18 + priceH);
     const dist = ((last0 - y2) / last0) * 100;
-    s += `<text x="${xOf(n - 1) - 4}" y="${cy2 - 5}" fill="${colr}" font-family="monospace" font-size="10" text-anchor="end">${tag} ${b.direction} ${b.touches}x ${dist >= 0 ? '+' : ''}${dist.toFixed(1)}%</text>`;
+    s += `<text x="${xOf(n - 1) - 4}" y="${ly - 5}" fill="${colr}" font-family="monospace" font-size="10" text-anchor="end">${tag} ${b.direction} ${b.touches}x ${dist >= 0 ? '+' : ''}${dist.toFixed(1)}%</text>`;
   }
 
   // candles
