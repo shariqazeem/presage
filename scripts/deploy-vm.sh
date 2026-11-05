@@ -3,6 +3,7 @@
 # .next-new while the live site keeps serving .next, swap, restart, verify.
 #   scripts/deploy-vm.sh            the web app and the NEAR agent
 #   scripts/deploy-vm.sh --engine   also restart the old Metis engine
+#   scripts/deploy-vm.sh --web      only the web app (the agent keeps running)
 # Contains no secrets; the key path is the operator's. Never touches the other apps on the VM.
 set -euo pipefail
 KEY="${PARALLAXPAY_VM_KEY:-$HOME/.ssh/sage-vm.key}"
@@ -35,6 +36,8 @@ S "cd $R && export PATH=$NODE:\$PATH && rm -rf .next-new .next/types && NEXT_DIS
 echo "== swap and restart"
 APPS=parallaxpay-web,parallaxpay-near
 [ "${1:-}" = "--engine" ] && APPS=parallaxpay-web,parallaxpay-near,parallaxpay-engine
+# A web-only change leaves the agent running, so it keeps its candle caches and its place in the scan.
+[ "${1:-}" = "--web" ] && APPS=parallaxpay-web
 S "cd $R && rm -rf .next-prev && { [ -d .next ] && mv .next .next-prev || true; } && mv .next-new .next && pm2 startOrReload ecosystem.config.cjs --only $APPS --update-env >/dev/null && pm2 save >/dev/null && rm -rf .next-prev"
 sleep 6
 
