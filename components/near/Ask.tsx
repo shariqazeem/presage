@@ -5,7 +5,7 @@ import { Mark } from '../shell/Mark'
 import { cx } from '../ui'
 import { useNear } from './NearWallet'
 
-type Turn = { q: string; a?: string; by?: 'near-ai' | 'gateway'; model?: string; error?: string }
+type Turn = { q: string; a?: string; by?: 'near-ai' | 'gateway' | 'rules'; model?: string; error?: string }
 
 /** Ask the agent about what it sees, answered from its live reads (and your account, when you're a member). */
 export function Ask({ coin, dark = true }: { coin?: string; dark?: boolean }) {
@@ -26,7 +26,7 @@ export function Ask({ coin, dark = true }: { coin?: string; dark?: boolean }) {
     setTurns(t => [...t, { q: text }].slice(-4))
     try {
       const r = await fetch('/api/near/ask', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ question: text, account: accountId ?? undefined }) })
-      const body = (await r.json()) as { text?: string; by?: 'near-ai' | 'gateway'; model?: string; error?: string }
+      const body = (await r.json()) as { text?: string; by?: 'near-ai' | 'gateway' | 'rules'; model?: string; error?: string }
       setTurns(t => t.map((x, i) => (i === t.length - 1 ? { ...x, a: body.text, by: body.by, model: body.model, error: r.ok ? undefined : body.error } : x)))
     } catch {
       setTurns(t => t.map((x, i) => (i === t.length - 1 ? { ...x, error: 'Couldn’t reach the agent. Try again.' } : x)))
@@ -46,6 +46,7 @@ export function Ask({ coin, dark = true }: { coin?: string; dark?: boolean }) {
                 <div className={cx('rounded-[14px] rounded-tl-[4px] px-3.5 py-2.5 text-[13.5px] leading-snug', dark ? 'bg-white/[0.07] text-[#E6E6E3]' : 'bg-paper-2 text-ink-2')}>
                   {t.error ? <span className="text-down-d">{t.error}</span> : t.a ?? <span className={cx('animate-[soft-pulse_1.2s_ease-in-out_infinite]', sub)}>Reading the charts…</span>}
                   {t.a && t.by === 'near-ai' && <div className={cx('label !text-[8.5px] mt-1.5', sub)}>answered on NEAR AI · {t.model}</div>}
+                  {t.a && t.by === 'rules' && <div className={cx('label !text-[8.5px] mt-1.5', sub)}>from its live checks</div>}
                 </div>
               </div>
             </li>

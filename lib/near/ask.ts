@@ -3,6 +3,7 @@ import { nearAiChat, nearAiConfigured } from './ai'
 import { USDC, tokenById } from './config'
 import { latestReads, money, positionsFor } from './store'
 import { fromUnits } from './units'
+import { ranked } from './rank'
 import { coinsInWords, vault } from './vault'
 
 /**
@@ -45,20 +46,79 @@ function context(account: { id: string; member: Awaited<ReturnType<typeof vault.
   return lines.join('\n')
 }
 
-export type Answer = { text: string; by: 'near-ai' | 'gateway'; model: string; chatId: string | null }
+export type Answer = { text: string; by: 'near-ai' | 'gateway' | 'rules'; model: string; chatId: string | null }
+
+type ReadLite = {
+  coin: string
+  line: string
+  setup: { stop: number; target: number; rr: number } | null
+  armedAt?: number | null
+  checks?: { key: string; label: string; ok: boolean | null; note: string }[]
+}
+
+/** What each check needs before it passes, said as a condition. */
+const NEEDS: Record<string, string> = {
+  support: 'price comes down to a level I trust',
+  structure: 'a higher timeframe confirms that level',
+  momentum: 'money flow bottoms out',
+  htf: 'the bigger picture stops weakening',
+  trend: 'the daily trend stops falling',
+  room: 'there is at least 2.5 times the risk of room to the next resistance',
+}
+const list = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs.at(-1)}`)
+
+/**
+ * The answer when no model can give one (no credit, a timeout): its own live checks, said plainly. It
+ * covers what people ask most (why not this coin, what would make it buy, which coin is closest, how it
+ * limits a loss), so the box never comes back empty.
+ */
+function fromRules(question: string, account: { id: string; member: Awaited<ReturnType<typeof vault.member>> } | null): string {
+  const reads = ranked(latestReads() as ReadLite[])
+  const q = question.toLowerCase()
+  if (/\b(loss|losses|stop|risk|safe|lose)\b/.test(q))
+    return "Every plan gets a stop just under the level I buy on, sealed on NEAR before the trade so it can't be moved after. If price closes under it, I sell. I only buy when the next resistance is at least 2.5 times the risk away, each buy stays inside your mandate, and I cut a buy down if its pool is too thin to take it cleanly."
+  if (account?.member && /\b(my|account|balance|holding)\b/.test(q)) {
+    const open = positionsFor(account.id).filter(p => p.status === 'open')
+    return open.length
+      ? `You have ${open.length} open trade${open.length === 1 ? '' : 's'}: ${open.map(p => `${p.coin} bought at ${money(p.entryPrice ?? 0)}, stop ${money(p.stop)}, target ${money(p.target)}`).join('; ')}. I watch each stop and target every couple of minutes.`
+      : `No open trades right now. I'm watching ${coinsInWords(account.member.rules.coins, 'every coin I trade')} for you and act when a setup passes all six checks.`
+  }
+  const named = reads.find(r => new RegExp(`(^|[^a-z0-9])${r.coin.toLowerCase().replace(/[^a-z0-9]/g, '\\$&')}([^a-z0-9]|$)`).test(q))
+  const r = named ?? reads[0]
+  if (!r) return "I haven't finished my first read yet. Give me a minute."
+  const missing = (r.checks ?? []).filter(c => c.ok === false)
+  const passed = (r.checks ?? []).filter(c => c.ok).length
+  if (!named && /\b(closest|which|most|watching)\b/.test(q)) return `${r.coin} is closest, with ${passed} of my 6 checks passing. ${r.line}`
+  if (r.setup) return r.line
+  if (/(make you|would you|will you|when).*\bbuy\b/.test(q))
+    return missing.length ? `I'd buy ${r.coin} when ${list(missing.map(c => NEEDS[c.key] ?? c.label.toLowerCase()))}. Right now: ${r.line}` : `Everything lines up on ${r.coin}; I measure the risk before I commit. ${r.line}`
+  return missing.length ? `${r.line} Still missing: ${list(missing.map(c => c.label.charAt(0).toLowerCase() + c.label.slice(1)))}.` : r.line
+}
 
 export async function ask(question: string, accountId: string | null): Promise<Answer> {
   const member = accountId ? await vault.member(accountId).catch(() => null) : null
+  const asker = accountId && member ? { id: accountId, member } : null
+  const rulesAnswer = (): Answer => ({ text: fromRules(question, asker), by: 'rules', model: 'its live checks', chatId: null })
   const messages = [
     { role: 'system' as const, content: RULES },
-    { role: 'user' as const, content: `${context(accountId && member ? { id: accountId, member } : null)}\n\nQuestion: ${question}` },
+    { role: 'user' as const, content: `${context(asker)}\n\nQuestion: ${question}` },
   ]
   if (nearAiConfigured()) {
-    const a = await nearAiChat({ messages, maxTokens: 260, temperature: 0.3, timeoutMs: 45_000 })
-    return { text: a.text.trim(), by: 'near-ai', model: a.model, chatId: a.chatId }
+    try {
+      const a = await nearAiChat({ messages, maxTokens: 260, temperature: 0.3, timeoutMs: 45_000 })
+      return { text: a.text.trim(), by: 'near-ai', model: a.model, chatId: a.chatId }
+    } catch (e) {
+      // Out of credit, a timeout: the question still gets answered, by the other model or its own checks.
+      console.warn(`NEAR AI didn't answer: ${e instanceof Error ? e.message.slice(0, 160) : e}`)
+    }
   }
-  if (!llmConfigured()) throw new Error('No model is configured')
-  const model = models.oracle()[0] ?? models.vision()
-  const text = await chat({ model, messages, maxTokens: 260, temperature: 0.3, timeoutMs: 45_000 })
-  return { text: text.trim(), by: 'gateway', model, chatId: null }
+  if (!llmConfigured()) return rulesAnswer()
+  try {
+    const model = models.oracle()[0] ?? models.vision()
+    const text = await chat({ model, messages, maxTokens: 260, temperature: 0.3, timeoutMs: 45_000 })
+    return { text: text.trim(), by: 'gateway', model, chatId: null }
+  } catch (e) {
+    console.warn(`The gateway didn't answer: ${e instanceof Error ? e.message.slice(0, 160) : e}`)
+    return rulesAnswer()
+  }
 }
