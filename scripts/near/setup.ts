@@ -84,7 +84,7 @@ async function keys() {
   }
   const kp = KeyPair.fromRandom('ed25519')
   saveKey('NEAR_OWNER_KEY', kp.toString())
-  console.log(`Saved a new owner key to .env.local.\nSend about 5 NEAR to this address (it's a NEAR implicit account):\n\n  ${implicitId(kp)}\n`)
+  console.log(`Saved a new owner key to .env.local.\nSend about 4.5 NEAR to this address (it's a NEAR implicit account). About 3 of it is the vault's storage deposit, which stays in the vault's account rather than being spent:\n\n  ${implicitId(kp)}\n`)
 }
 
 async function createOwner() {
@@ -93,7 +93,7 @@ async function createOwner() {
   if (await accountExists(OWNER_ID)) return console.log(`${OWNER_ID} already exists.`)
   const balance = await nearBalance(imp)
   const keep = near(0.05)
-  if (balance <= keep + near(1)) throw new Error(`The funding address holds ${fmt(balance)}; send about 5 NEAR first.`)
+  if (balance <= keep + near(1)) throw new Error(`The funding address holds ${fmt(balance)}; send about 4.5 NEAR first.`)
   const deposit = balance - keep
   await confirm([`create ${OWNER_ID} through the "near" registrar`, `move ${fmt(deposit)} into it`, `its key is the owner key in .env.local`])
   const signer = new Account(imp, provider, kp.toString() as KeyPairString)
@@ -106,7 +106,9 @@ async function createVault() {
   if (!existsSync(WASM)) throw new Error('Build the contract first: npm run near:build')
   if (await accountExists(VAULT_ID)) return console.log(`${VAULT_ID} already exists.`)
   const code = readFileSync(WASM)
-  const funds = near(3.6)
+  // NEAR holds 1 NEAR per 100 kB an account stores. The code is most of it; 0.3 NEAR more covers the
+  // routes, sealed plans and trade records (members pay for their own records when they join).
+  const funds = near(Math.ceil((code.length / 100_000 + 0.3) * 100) / 100)
   await confirm([
     `create ${VAULT_ID} with ${fmt(funds)} (the contract's storage takes about ${(code.length / 100_000).toFixed(2)} NEAR)`,
     `deploy near/vault (${code.length} bytes, sha256 ${createHash('sha256').update(code).digest('hex').slice(0, 16)}…)`,
@@ -126,13 +128,13 @@ async function createAgent() {
   if (await accountExists(AGENT_ID)) return console.log(`${AGENT_ID} already exists.`)
   const serverKey = KeyPair.fromRandom('ed25519')
   await confirm([
-    `create ${AGENT_ID} with 0.5 NEAR for gas`,
+    `create ${AGENT_ID} with 0.3 NEAR for gas (a trade burns well under 0.01 NEAR)`,
     `give it the owner key (full access, to rotate the server key later)`,
     `and a server key that can only call trade, seal, reveal and recover on ${VAULT_ID}, with no deposits`,
   ])
   await send(owner(), AGENT_ID, [
     actions.createAccount(),
-    actions.transfer(near(0.5)),
+    actions.transfer(near(0.3)),
     actions.addFullAccessKey(ownerKey().getPublicKey()),
     actions.addFunctionCallAccessKey(serverKey.getPublicKey(), VAULT_ID, ['trade', 'seal', 'reveal', 'recover']),
   ])
