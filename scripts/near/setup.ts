@@ -9,6 +9,7 @@
  *   npx tsx scripts/near/setup.ts agent      create agent.parallaxpay.near with a key that can only trade/seal/reveal/recover
  *   npx tsx scripts/near/setup.ts register   register the vault with Rhea and every coin's token contract
  *   npx tsx scripts/near/setup.ts routes     list every coin in lib/near/config.ts in the vault, ten to a transaction
+ *   npx tsx scripts/near/setup.ts all        account, vault, agent, register and routes in order, each asking "yes"
  */
 import '../../engine/env'
 import { createHash } from 'node:crypto'
@@ -142,24 +143,42 @@ async function createAgent() {
   console.log('Saved the server key to .env.local as NEAR_AGENT_KEY. Copy it to the VM without printing it.')
 }
 
+/** What a token contract asks to hold an account (NEP-145). Most ask 0.00125 NEAR; some ask more. */
+async function storageMin(token: string): Promise<bigint> {
+  try {
+    const b = await view<{ min: string }>(token, 'storage_balance_bounds', {})
+    if (BigInt(b.min) > 0n) return BigInt(b.min)
+  } catch {
+    // A token without the standard view gets the usual amount.
+  }
+  return 1_250_000_000_000_000_000_000n
+}
+
 async function register() {
   const tokens = [USDC_ID, ...COINS.map(c => c.id)]
-  const missing: string[] = []
-  for (const t of tokens) if (!(await storageRegistered(t, VAULT_ID))) missing.push(t)
+  const missing: { token: string; deposit: bigint }[] = []
+  for (const t of tokens) if (!(await storageRegistered(t, VAULT_ID))) missing.push({ token: t, deposit: await storageMin(t) })
   const onRhea = await storageRegistered(RHEA_ID, VAULT_ID)
   // Rhea takes deposits of tokens it has whitelisted; any other coin must be registered in the vault's
   // own Rhea account, which only the owner can ask the vault to do.
   const whitelist = new Set(await view<string[]>(RHEA_ID, 'get_whitelisted_tokens', {}))
-  const unlisted = tokens.filter(t => !whitelist.has(t))
+  const inVault = onRhea ? new Set(Object.keys(await view<Record<string, string>>(RHEA_ID, 'get_deposits', { account_id: VAULT_ID }))) : new Set<string>()
+  const unlisted = tokens.filter(t => !whitelist.has(t) && !inVault.has(t))
   if (!missing.length && onRhea && !unlisted.length) return console.log('The vault is registered everywhere.')
+  const tokenTotal = missing.reduce((sum, m) => sum + m.deposit, 0n)
   await confirm([
     ...(onRhea ? [] : [`open the vault's account on Rhea (${RHEA_ID}) with 0.1 NEAR of storage`]),
-    ...missing.map(t => `register the vault with ${t} (0.00125 NEAR)`),
+    ...(missing.length ? [`register the vault with ${missing.length} token contracts, ${fmt(tokenTotal)} of storage in all, one transaction each`] : []),
     ...(unlisted.length ? [`register ${unlisted.length} coins Rhea hasn't whitelisted in the vault's Rhea account: ${unlisted.join(', ')}`] : []),
   ])
   if (!onRhea) await send(owner(), RHEA_ID, [actions.functionCall('storage_deposit', { account_id: VAULT_ID, registration_only: false }, 30n * 10n ** 12n, near(0.1))])
-  for (const t of missing) await send(owner(), t, [actions.functionCall('storage_deposit', { account_id: VAULT_ID, registration_only: true }, 30n * 10n ** 12n, 1_250_000_000_000_000_000_000n)])
-  if (unlisted.length) await send(owner(), VAULT_ID, [actions.functionCall('register_tokens_on_exchange', { tokens: unlisted }, 100n * 10n ** 12n, 1n)])
+  for (const m of missing) await send(owner(), m.token, [actions.functionCall('storage_deposit', { account_id: VAULT_ID, registration_only: true }, 30n * 10n ** 12n, m.deposit)])
+  if (unlisted.length) {
+    await send(owner(), VAULT_ID, [actions.functionCall('register_tokens_on_exchange', { tokens: unlisted }, 100n * 10n ** 12n, 1n)])
+    const now = new Set(Object.keys(await view<Record<string, string>>(RHEA_ID, 'get_deposits', { account_id: VAULT_ID })))
+    const still = unlisted.filter(t => !now.has(t))
+    if (still.length) throw new Error(`Rhea didn't register ${still.join(', ')} in the vault's account. Run "register" again.`)
+  }
 }
 
 async function routes() {
@@ -179,7 +198,19 @@ async function routes() {
   }
 }
 
-const steps: Record<string, () => Promise<void>> = { status, keys, account: createOwner, vault: createVault, agent: createAgent, register, routes }
+/** Every mainnet step in order. Each still says what it sends and waits for "yes"; anything but "yes" stops here. */
+async function all() {
+  await createOwner()
+  if (!(await accountExists(OWNER_ID))) throw new Error(`${OWNER_ID} wasn't created, so nothing else was sent. Check the transaction above.`)
+  await createVault()
+  await createAgent()
+  await register()
+  await routes()
+  console.log('\nDone. Where things stand:\n')
+  await status()
+}
+
+const steps: Record<string, () => Promise<void>> = { status, keys, account: createOwner, vault: createVault, agent: createAgent, register, routes, all }
 const step = steps[process.argv[2] ?? 'status']
 if (!step) {
   console.log(`Steps: ${Object.keys(steps).join(', ')}`)
