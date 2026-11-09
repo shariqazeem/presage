@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { NearConnector } from '@hot-labs/near-connect'
 import { NEAR_RPCS } from '@/lib/near/config'
-import { accountFor, createKey, forgetKey, importKey, sendWithKey, storedKey } from '@/lib/near/device'
+import { accountFor, createKey, forgetKey, importKey, sendWithKey, signWithKey, storedKey } from '@/lib/near/device'
 import type { WalletTx } from '@/lib/near/tx'
 
 /** A transaction's hash, from whatever shape the wallet returned. */
@@ -30,7 +30,12 @@ type NearWallet = {
   forgetDevice: () => void
   /** The built-in account's key, for backing it up. */
   deviceSecret: () => string | null
+  /** Signs a message for ParallaxPay with the account (NEP-413): proof without a transaction. */
+  signMessage: (message: string) => Promise<SignedIntent>
 }
+
+export type SignedIntent = { accountId: string; publicKey: string; signature: string; nonce: string; message: string }
+const b64 = (u: Uint8Array) => btoa(String.fromCharCode(...u))
 
 const Ctx = createContext<NearWallet>({
   accountId: null,
@@ -43,6 +48,9 @@ const Ctx = createContext<NearWallet>({
   importDevice: async () => '',
   forgetDevice: () => {},
   deviceSecret: () => null,
+  signMessage: async () => {
+    throw new Error('No account')
+  },
 })
 
 function savedKind(): AccountKind | null {
@@ -161,8 +169,21 @@ export function NearWalletProvider({ children }: { children: ReactNode }) {
 
   const deviceSecret = useCallback(() => device?.secret ?? null, [device])
 
+  const signMessage = useCallback(
+    async (message: string): Promise<SignedIntent> => {
+      const nonce = crypto.getRandomValues(new Uint8Array(32))
+      const payload = { message, recipient: 'parallaxpay', nonce }
+      if (kind === 'device' && device) return { ...(await signWithKey(device.secret, payload)), nonce: b64(nonce), message }
+      const c = await get()
+      const wallet = await c.wallet()
+      const r = await wallet.signMessage(payload)
+      return { accountId: r.accountId, publicKey: r.publicKey, signature: r.signature, nonce: b64(nonce), message }
+    },
+    [get, kind, device],
+  )
+
   const accountId = kind === 'device' ? (device?.accountId ?? null) : walletId
-  return <Ctx.Provider value={{ accountId, kind: accountId ? kind : null, ready, connect, disconnect, send, createDevice, importDevice, forgetDevice, deviceSecret }}>{children}</Ctx.Provider>
+  return <Ctx.Provider value={{ accountId, kind: accountId ? kind : null, ready, connect, disconnect, send, createDevice, importDevice, forgetDevice, deviceSecret, signMessage }}>{children}</Ctx.Provider>
 }
 
 export const useNear = () => useContext(Ctx)

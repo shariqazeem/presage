@@ -93,3 +93,11 @@ export async function sendNear(secret: string, to: string, yocto: bigint): Promi
   const r = (await acc.signAndSendTransaction({ receiverId: to, actions: [actions.transfer(yocto)], waitUntil: 'FINAL', throwOnFailure: true })) as unknown as Outcome
   return r.transaction?.hash ?? null
 }
+
+/** Signs a NEP-413 message with this device's key: proof the request comes from this account, no gas. */
+export async function signWithKey(secret: string, payload: { message: string; recipient: string; nonce: Uint8Array }): Promise<{ accountId: string; publicKey: string; signature: string }> {
+  const { signMessage } = await import('near-api-js/nep413')
+  const acc = await account(secret)
+  const r = await signMessage({ signerAccount: acc, payload })
+  return { accountId: r.accountId, publicKey: r.publicKey.toString(), signature: btoa(String.fromCharCode(...r.signature)) }
+}

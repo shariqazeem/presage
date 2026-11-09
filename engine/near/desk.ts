@@ -12,7 +12,10 @@ import { errMsg, log } from '../log'
 import { review, type Verdict } from './analyst'
 import { exitReason, readCoin, usd, type Read, type Setup } from './brain'
 import { agentCall, agentConfigured, gasShortfall } from './signer'
-import { V2_DEFAULTS } from './strategy'
+import { paramsFor } from './strategies'
+import { V2_DEFAULTS, v2Decide } from './strategy'
+import { HOUSE_ID } from '../../lib/near/strategy'
+import { strategiesInUse, strategyFor, type StrategyRow } from '../../lib/near/strategyStore'
 import { renderChart } from '../stquant/charts.js'
 
 const l = log('near')
@@ -88,7 +91,7 @@ const hasLiveIdea = (accountId: string, coin: string) =>
 
 /** The latest read of each coin, for the desk. Frames stay out; they're large and the desk doesn't need them. */
 function saveRead(r: Read) {
-  const { frames: _f, coin, ...rest } = r
+  const { frames: _f, v2: _v, coin, ...rest } = r
   const value = JSON.stringify({ ...rest, coin: coin.symbol, token: coin.id })
   getDb().insert(schema.kv).values({ key: `near:read:${coin.symbol}`, value }).onConflictDoUpdate({ target: schema.kv.key, set: { value } }).run()
 }
@@ -153,40 +156,76 @@ export async function checkMarkets() {
     }
     saveRead(read)
     saveChart(read, `near-${coin.symbol}`)
-    if (read.setup) await onSetup(read, read.setup)
+    const setups = setupsFor(read)
+    if (setups.size) await onSetups(read, setups)
     else if (worthSaying(read)) feed('watch', read.line, { coin: coin.id, ...AGENT })
   }
 }
 
-async function onSetup(read: Read, setup: Setup) {
-  const coin = read.coin
-  const room = knownMembers().filter(m => allowsCoin(m.member.rules, coin.id) && !hasLiveIdea(m.accountId, coin.id))
-  if (!room.length) {
-    feed('setup', `${read.line} Every member who trades ${coin.symbol} is already in it.`, { coin: coin.id, ...AGENT })
-    return
-  }
-  feed('setup', read.line, { coin: coin.id, ...AGENT })
-  const verdict = await review(read, setup)
-  const byAnalyst = verdict.source.provider === 'near-ai'
-  if (verdict.verdict !== 'BUY') {
-    feed('pass', byAnalyst ? `Checked the ${coin.symbol} chart and passed: ${verdict.why}` : `Passed on ${coin.symbol}: ${verdict.why}`, { coin: coin.id, actor: byAnalyst ? 'analyst' : 'parallaxpay' })
-    return
-  }
-  if (byAnalyst) feed('setup', `Checked the ${coin.symbol} chart: ${verdict.plain} Graded ${verdict.conviction}/5.`, { coin: coin.id, actor: 'analyst' })
-  let bought = 0
-  let asked = 0
-  for (const m of room) {
-    const share = SIZE[m.member.rules.style]?.[verdict.conviction]
-    if (share == null) {
-      feed('pass', `Passed on ${coin.symbol}: graded ${verdict.conviction}/5, and your ${STYLE_NAMES[m.member.rules.style] ?? 'chosen'} style waits for better.`, { accountId: m.accountId, coin: coin.id, ...AGENT })
+type StrategySetup = { strategy: StrategyRow; setup: Setup }
+
+/**
+ * Every strategy some member runs, applied to the one read of the chart: the house setup (the one the
+ * floor shows) and each member strategy's own. No extra reads, no extra model calls.
+ */
+function setupsFor(read: Read): Map<string, StrategySetup> {
+  const out = new Map<string, StrategySetup>()
+  for (const strategy of strategiesInUse()) {
+    if (strategy.id === HOUSE_ID) {
+      if (read.setup) out.set(strategy.id, { strategy, setup: read.setup })
       continue
     }
-    try {
-      if (m.member.rules.autopilot) bought += (await enter(m, read, setup, verdict, share)) ? 1 : 0
-      else asked += (await propose(m, read, setup, verdict, share)) ? 1 : 0
-    } catch (e) {
-      l.error(`${coin.symbol} for ${m.accountId}: ${errMsg(e)}`)
-      feed('error', `Couldn't act on ${coin.symbol}: ${errMsg(e)}`, { accountId: m.accountId, coin: coin.id, ...AGENT })
+    const d = v2Decide(read.v2, paramsFor(strategy.blocks))
+    if (d.setup) {
+      const s = d.setup
+      out.set(strategy.id, { strategy, setup: { route: 'v2', price: read.price, stop: s.stop, target: s.target, r1: s.r1, conviction: s.conviction, rr: s.rr, reasons: s.reasons, maxHoldSec: s.maxHoldSec } })
+    }
+  }
+  return out
+}
+
+async function onSetups(read: Read, setups: Map<string, StrategySetup>) {
+  const coin = read.coin
+  const house = setups.get(HOUSE_ID)
+  // Members whose rules take this coin, grouped by the strategy their agent runs, where it has a setup.
+  const groups = new Map<string, Known[]>()
+  for (const m of knownMembers()) {
+    if (!allowsCoin(m.member.rules, coin.id) || hasLiveIdea(m.accountId, coin.id)) continue
+    const sid = strategyFor(m.accountId).id
+    if (setups.has(sid)) groups.set(sid, [...(groups.get(sid) ?? []), m])
+  }
+  if (house) feed('setup', groups.size ? read.line : `${read.line} Every member who trades ${coin.symbol} is already in it.`, { coin: coin.id, ...AGENT })
+  if (!groups.size) return
+  // One review per distinct plan: strategies that drew the same stop and target share it.
+  const reviewed = new Map<string, Verdict>()
+  let bought = 0
+  let asked = 0
+  for (const [sid, members] of groups) {
+    const { strategy, setup } = setups.get(sid)!
+    const key = `${setup.stop}|${setup.target}`
+    let verdict = reviewed.get(key)
+    if (!verdict) {
+      verdict = await review(read, setup)
+      reviewed.set(key, verdict)
+      const byAnalyst = verdict.source.provider === 'near-ai'
+      const whose = sid === HOUSE_ID ? '' : ` for agents on ${strategy.name}`
+      if (verdict.verdict !== 'BUY') feed('pass', byAnalyst ? `Checked the ${coin.symbol} chart${whose} and passed: ${verdict.why}` : `Passed on ${coin.symbol}${whose}: ${verdict.why}`, { coin: coin.id, actor: byAnalyst ? 'analyst' : 'parallaxpay' })
+      else if (byAnalyst) feed('setup', `Checked the ${coin.symbol} chart${whose}: ${verdict.plain} Graded ${verdict.conviction}/5.`, { coin: coin.id, actor: 'analyst' })
+    }
+    if (verdict.verdict !== 'BUY') continue
+    for (const m of members) {
+      const share = SIZE[m.member.rules.style]?.[verdict.conviction]
+      if (share == null) {
+        feed('pass', `Passed on ${coin.symbol}: graded ${verdict.conviction}/5, and your ${STYLE_NAMES[m.member.rules.style] ?? 'chosen'} style waits for better.`, { accountId: m.accountId, coin: coin.id, ...AGENT })
+        continue
+      }
+      try {
+        if (m.member.rules.autopilot) bought += (await enter(m, read, setup, verdict, share, strategy)) ? 1 : 0
+        else asked += (await propose(m, read, setup, verdict, share, strategy)) ? 1 : 0
+      } catch (e) {
+        l.error(`${coin.symbol} for ${m.accountId}: ${errMsg(e)}`)
+        feed('error', `Couldn't act on ${coin.symbol}: ${errMsg(e)}`, { accountId: m.accountId, coin: coin.id, ...AGENT })
+      }
     }
   }
   const people = (n: number) => `${n} member${n === 1 ? '' : 's'}`
@@ -231,7 +270,7 @@ function seal(plan: Plan) {
   return { json, salt: salt.toString('hex'), hash }
 }
 
-function makePlan(m: Known, read: Read, setup: Setup, verdict: Verdict, usdcIn: bigint, quoteOut: bigint): Plan {
+function makePlan(m: Known, read: Read, setup: Setup, verdict: Verdict, usdcIn: bigint, quoteOut: bigint, strategy: StrategyRow): Plan {
   return {
     v: 1,
     rules: 'parallaxpay/near-trade-v1',
@@ -244,15 +283,16 @@ function makePlan(m: Known, read: Read, setup: Setup, verdict: Verdict, usdcIn: 
     stop: setup.stop,
     target: setup.target,
     r1: setup.r1,
-    maxHoldSec: MAX_HOLD_SEC,
+    maxHoldSec: setup.maxHoldSec ?? MAX_HOLD_SEC,
     conviction: verdict.conviction,
     issuedAt: now(),
     why: [verdict.why, ...setup.reasons].filter(Boolean).slice(0, 6).map(s => s.slice(0, 240)),
     analyst: verdict.source,
+    strategy: { id: strategy.id, name: strategy.name, hash: strategy.hash },
   }
 }
 
-async function enter(m: Known, read: Read, setup: Setup, verdict: Verdict, share: number): Promise<boolean> {
+async function enter(m: Known, read: Read, setup: Setup, verdict: Verdict, share: number, strategy: StrategyRow): Promise<boolean> {
   const coin = read.coin
   if (!agentConfigured()) return false
   // Only open a trade when there's gas to close it again later, so a stop can always run.
@@ -276,7 +316,7 @@ async function enter(m: Known, read: Read, setup: Setup, verdict: Verdict, share
     return false
   }
   const { amount, quote } = fit
-  const plan = makePlan(m, read, setup, verdict, amount, quote)
+  const plan = makePlan(m, read, setup, verdict, amount, quote, strategy)
   const sealed = seal(plan)
   // The plan and its salt are saved before the seal exists, so the call can always be opened.
   const pos = getDb()
@@ -292,7 +332,7 @@ async function enter(m: Known, read: Read, setup: Setup, verdict: Verdict, share
       stop: setup.stop,
       target: setup.target,
       r1: setup.r1,
-      maxHoldSec: MAX_HOLD_SEC,
+      maxHoldSec: setup.maxHoldSec ?? MAX_HOLD_SEC,
       usdcIn: amount.toString(),
       createdAt: now(),
     })
@@ -335,7 +375,7 @@ async function enter(m: Known, read: Read, setup: Setup, verdict: Verdict, share
 }
 
 /** Ask first: seal the plan now and wait for the member to approve it from their wallet. */
-async function propose(m: Known, read: Read, setup: Setup, verdict: Verdict, share: number): Promise<boolean> {
+async function propose(m: Known, read: Read, setup: Setup, verdict: Verdict, share: number, strategy: StrategyRow): Promise<boolean> {
   const coin = read.coin
   if (!agentConfigured()) return false
   const wanted = sizeFor(m, share)
@@ -349,7 +389,7 @@ async function propose(m: Known, read: Read, setup: Setup, verdict: Verdict, sha
     return false
   }
   const { amount, quote } = fit
-  const sealed = seal(makePlan(m, read, setup, verdict, amount, quote))
+  const sealed = seal(makePlan(m, read, setup, verdict, amount, quote, strategy))
   const pos = getDb()
     .insert(schema.nearPositions)
     .values({
@@ -363,7 +403,7 @@ async function propose(m: Known, read: Read, setup: Setup, verdict: Verdict, sha
       stop: setup.stop,
       target: setup.target,
       r1: setup.r1,
-      maxHoldSec: MAX_HOLD_SEC,
+      maxHoldSec: setup.maxHoldSec ?? MAX_HOLD_SEC,
       usdcIn: amount.toString(),
       createdAt: now(),
     })

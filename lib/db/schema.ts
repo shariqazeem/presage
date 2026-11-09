@@ -264,6 +264,38 @@ export const nearPositions = sqliteTable(
   t => [index('near_positions_account').on(t.accountId, t.createdAt), index('near_positions_status').on(t.status)],
 )
 
+/**
+ * A strategy an agent can run: the building blocks a member chose (lib/near/strategy.ts), under a name.
+ * The house strategy isn't stored; it's the default. Settings stay private to members who hire it.
+ */
+export const nearStrategies = sqliteTable(
+  'near_strategies',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    owner: text('owner').notNull(),
+    /** The blocks, as canonical JSON. */
+    blocks: text('blocks').notNull(),
+    /** sha256 of the canonical blocks: what a sealed plan commits to. */
+    hash: text('hash').notNull(),
+    /** How its owner described it, when they taught it in words. */
+    words: text('words'),
+    /** On the board for others to see and hire. */
+    public: integer('public').notNull().default(0),
+    /** Adopted by ParallaxPay after beating the house strategy. */
+    adopted: integer('adopted').notNull().default(0),
+    createdAt: integer('created_at').notNull(),
+  },
+  t => [index('near_strategies_owner').on(t.owner), index('near_strategies_hash').on(t.hash)],
+)
+
+/** Which strategy each member's agent runs. No row means the house strategy. */
+export const nearMemberStrategy = sqliteTable('near_member_strategy', {
+  accountId: text('account_id').primaryKey(),
+  strategyId: text('strategy_id').notNull(),
+  setAt: integer('set_at').notNull(),
+})
+
 /** What the agent saw and did, one plain sentence at a time. The desk's live feed. */
 export const nearFeed = sqliteTable(
   'near_feed',

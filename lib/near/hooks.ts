@@ -81,3 +81,13 @@ export const usePresence = () =>
     },
     refetchInterval: 25_000,
   })
+
+export type BoardRecord = { trades: number; wins: number; avgPct: number | null; pnlUsd: number; open: number; members: number; lastAt: number | null }
+export type BoardRow = { id: string; name: string; owner: string | null; house: boolean; adopted: boolean; createdAt: number; record: BoardRecord; ranked: boolean; traits: string[] | null }
+
+/** The board: strategies ranked by their real, sealed trades. */
+export const useBoard = () => useQuery({ queryKey: ['near-board'], queryFn: () => json<{ strategies: BoardRow[]; minRanked: number }>('/api/near/strategies'), refetchInterval: 60_000 })
+
+/** One strategy on the board, with its trades. */
+export const useBoardStrategy = (id: string) =>
+  useQuery({ queryKey: ['near-board', id], queryFn: () => json<{ strategy: Omit<BoardRow, 'record' | 'ranked'> & { hash: string }; record: BoardRecord; trades: PositionView[] }>(`/api/near/strategies/${encodeURIComponent(id)}`), refetchInterval: 60_000 })

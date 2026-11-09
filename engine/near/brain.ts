@@ -4,7 +4,7 @@ import { assetOf, type Coin } from '../../lib/near/config'
 import { armPlan, higherTfQuality } from '../stquant/arming.js'
 import { ema, ord } from '../stquant/indicators.js'
 import { mfiExtreme, supportMap } from '../stquant/sniper.js'
-import { V2_DEFAULTS, stquantV2Explain } from './strategy'
+import { V2_DEFAULTS, v2Decide, v2Read, type V2Read } from './strategy'
 import { patternTargets } from '../stquant/structure.js'
 
 /**
@@ -24,6 +24,8 @@ export type Setup = {
   conviction: number
   rr: number
   reasons: string[]
+  /** The strategy's time limit for this trade; the house strategy's when absent. */
+  maxHoldSec?: number
 }
 
 /** One line of the agent's checklist, the way a trader runs down a chart before buying. */
@@ -52,6 +54,8 @@ export type Read = {
   /** One plain sentence for the feed. */
   line: string
   frames: Frames
+  /** The chart read once, so each member's strategy can be applied to it without reading again. */
+  v2: V2Read
 }
 
 const sig = (n: number) => Number(n.toPrecision(6))
@@ -86,10 +90,11 @@ export function readFrames(coin: Coin, frames: Frames): Read {
   // One look at the plan, shared: v2 keeps armPlan's level and money-flow gate and replaces its risk.
   // There is no sniper fallback any more: the history test traced most of v1's losses to it.
   const plan = armPlan(frames, { symbol: coin.symbol })
-  const v2 = stquantV2Explain(frames, V2_DEFAULTS, { plan })
+  const v2read = v2Read(frames, { plan })
+  const v2 = v2Decide(v2read, V2_DEFAULTS)
   const targets = patternTargets(frames, price)
   const setup: Setup | null = v2.setup
-    ? { route: 'v2', price, stop: v2.setup.stop, target: v2.setup.target, r1: v2.setup.r1, conviction: v2.setup.conviction, rr: v2.setup.rr, reasons: v2.setup.reasons }
+    ? { route: 'v2', price, stop: v2.setup.stop, target: v2.setup.target, r1: v2.setup.r1, conviction: v2.setup.conviction, rr: v2.setup.rr, reasons: v2.setup.reasons, maxHoldSec: v2.setup.maxHoldSec }
     : null
   // A limit plan from armPlan, shown as "armed" while price is above the level. v2 only buys at market.
   const armedAt = !setup && plan.arm && 'tp1' in plan && plan.entryType === 'limit' ? sig(plan.triggerPrice) : null
@@ -157,6 +162,7 @@ export function readFrames(coin: Coin, frames: Frames): Read {
     checks,
     line: narrate(coin, price, x1h?.value ?? null, x1h ? x1h.percentile : null, support, supportDistPct, setup, armedAt),
     frames,
+    v2: v2read,
   }
 }
 

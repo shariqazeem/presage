@@ -93,6 +93,8 @@ export type Plan = {
   issuedAt: number
   why: string[]
   analyst: { provider: 'near-ai'; model: string; chatId: string; signature: { text: string; signature: string; signing_address: string; signing_algo: string } | null } | { provider: 'rules' }
+  /** The strategy that made the plan, and a hash of its settings: checkable without giving them away. */
+  strategy?: { id: string; name: string; hash: string }
 }
 
 export type PositionView = {

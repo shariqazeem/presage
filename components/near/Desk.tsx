@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useQueryClient } from '@tanstack/react-query'
 import { IconChevron } from '../icons'
@@ -28,6 +28,7 @@ import { useNear } from './NearWallet'
 import { Switch } from './primitives'
 import { Ticket } from './Promises'
 import { FundSheet, RulesSheet, WithdrawSheet, sayError, tellAgent } from './sheets'
+import { StrategyCard, StrategyStudio } from './Strategy'
 import { focusOf, statusOf, voice } from './Stage'
 
 /**
@@ -145,7 +146,7 @@ export function Desk({ data, agent, refresh, preview = false }: { data: DeskData
   const qc = useQueryClient()
   const member = data.member!
   const now = useNow(30_000)
-  const [sheet, setSheet] = useState<'fund' | 'withdraw' | 'rules' | null>(null)
+  const [sheet, setSheet] = useState<'fund' | 'withdraw' | 'rules' | 'strategy' | null>(null)
   const [shot, setShot] = useState<PositionView | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const prices: Record<string, number> = Object.fromEntries(reads.map(r => [r.token, r.price]))
@@ -235,6 +236,10 @@ export function Desk({ data, agent, refresh, preview = false }: { data: DeskData
 
   const used = member.buys_today
   const allowed = member.rules.trades_per_day
+  // The board's "Shape your agent's strategy" lands here with the studio open.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has('strategy')) setSheet('strategy')
+  }, [])
 
   return (
     <div className="max-w-[1180px] mx-auto px-4 md:px-6 lg:px-8 pt-4 md:pt-7 pb-28 md:pb-12">
@@ -388,6 +393,8 @@ export function Desk({ data, agent, refresh, preview = false }: { data: DeskData
             </div>
           </MandateCard>
 
+          <StrategyCard onChange={() => setSheet('strategy')} />
+
           <div className="rounded-[22px] border border-line p-4">
             <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3">Talk to it</div>
             <div className="font-heading text-[18px] font-black tight mt-0.5 mb-3">Ask your agent anything</div>
@@ -447,6 +454,7 @@ export function Desk({ data, agent, refresh, preview = false }: { data: DeskData
       )}
       <WithdrawSheet open={sheet === 'withdraw'} onClose={() => setSheet(null)} member={member} onDone={refresh} />
       <RulesSheet open={sheet === 'rules'} onClose={() => setSheet(null)} current={member.rules} onDone={refresh} />
+      <StrategyStudio open={sheet === 'strategy'} onClose={() => setSheet(null)} />
     </div>
   )
 }

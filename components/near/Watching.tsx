@@ -16,6 +16,7 @@ import { Heartbeat, SectionTitle, Watch } from './Desk'
 import { FundFlow } from './Funding'
 import { usd } from './kit'
 import { MandateCard } from './Mandate'
+import { StrategyTeaser } from './Strategy'
 import { useNear } from './NearWallet'
 import { focusOf, voice } from './Stage'
 
@@ -153,6 +154,7 @@ export function WatchDesk({ rules, agent, member, onFunded }: { rules: Rules; ag
 
         <aside className="grid gap-4 min-w-0 lg:sticky lg:top-[120px]">
           <MandateCard rules={rules} state="draft" compact footer={<Link href="/start?edit=1" className="h-8 px-3 rounded-full bg-paper-2 text-[12.5px] font-semibold press grid place-items-center">Edit</Link>} />
+          <StrategyTeaser onFund={() => setFund(true)} />
           <div className="rounded-[22px] border border-line p-4">
             <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3">Talk to it</div>
             <div className="font-heading text-[18px] font-black tight mt-0.5 mb-3">Ask your agent anything</div>
