@@ -23,16 +23,16 @@ function Stat({ k, v, tone }: { k: string; v: string; tone?: 'up' | 'down' }) {
 function Row({ s, rank, now }: { s: BoardRow; rank: number | null; now: number }) {
   const r = s.record
   return (
-    <Link href={`/board/${s.id}`} className="rounded-[22px] border border-line bg-white p-4 press block hover:border-ink-3 transition-colors">
+    <Link href={`/board/${s.id}`} className="min-w-0 rounded-[22px] border border-line bg-white p-4 press block hover:border-ink-3 transition-colors">
       <div className="flex items-center gap-3">
         <span className={cx('w-9 h-9 rounded-full grid place-items-center num text-[14px] font-semibold shrink-0', rank === 1 ? 'foil text-white' : rank ? 'bg-ink text-white' : 'bg-paper-2 text-ink-3')}>{rank ?? '·'}</span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="font-heading text-[17px] font-black tight truncate">{s.house ? 'ParallaxPay · house method' : s.name}</span>
+            <span className="font-heading text-[17px] font-black tight truncate">{s.house ? 'The house method' : s.name}</span>
             {s.adopted && <span className="rounded-full foil text-white px-2 h-[20px] inline-flex items-center text-[10px] font-semibold uppercase tracking-[0.07em] shrink-0">Adopted</span>}
             {!s.ranked && <span className="rounded-full bg-paper-2 text-ink-3 px-2 h-[20px] inline-flex items-center text-[10px] font-semibold uppercase tracking-[0.07em] shrink-0">New</span>}
           </div>
-          <div className="text-[12.5px] text-ink-3 mt-0.5 truncate">{s.house ? 'The founder’s method, the default for every agent' : `by ${shortAccount(s.owner)}`}</div>
+          <div className="text-[12.5px] text-ink-3 mt-0.5 truncate">{s.house ? 'ParallaxPay’s own method' : `by ${shortAccount(s.owner)}`}</div>
         </div>
         <IconChevron size={16} className="text-ink-3 shrink-0" />
       </div>
@@ -86,7 +86,7 @@ export default function Board() {
         </Link>
       </section>
 
-      <div className="mt-6 grid gap-3">
+      <div className="mt-6 grid grid-cols-[minmax(0,1fr)] gap-3">
         {!data && Array.from({ length: 3 }, (_, i) => <div key={i} className="h-[132px] rounded-[22px] bg-paper-2 animate-pulse" />)}
         {rows.map((s, i) => (
           <Row key={s.id} s={s} rank={ranks[i]} now={now} />

@@ -137,7 +137,7 @@ function Option({ on, onClick, children, className = '' }: { on: boolean; onClic
 
 /* ------------------------------------------------------------------ the flow */
 
-/** Hiring ParallaxPay: meet it, write its mandate one answer at a time, sign it on NEAR, fund it. */
+/** Hiring ParallaxPay: meet it, write its mandate one answer at a time, start it (no wallet needed), fund it when ready. */
 export default function Start() {
   const router = useRouter()
   const { accountId } = useNear()

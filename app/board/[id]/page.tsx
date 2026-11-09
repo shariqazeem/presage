@@ -136,7 +136,7 @@ export default function BoardStrategy({ params }: { params: Promise<{ id: string
       <section className="mt-6">
         <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3">Its trades</div>
         <h2 className="font-heading text-[22px] font-black tight mt-0.5">Every one sealed before it happened</h2>
-        <div className={cx('grid gap-2 mt-3')}>
+        <div className={cx('grid grid-cols-[minmax(0,1fr)] gap-2 mt-3')}>
           {data?.trades.length ? (
             data.trades.map(t => <Ticket key={t.id} t={t} now={now} />)
           ) : (

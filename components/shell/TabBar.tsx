@@ -6,12 +6,12 @@ import { motion } from 'framer-motion'
 import { cx } from '../ui'
 import { TABS } from './nav'
 
-/** The phone tab bar: the floor, your agent, its work. */
+/** The phone tab bar: the floor, your agent, the board, its work. */
 export function TabBar() {
   const path = usePathname() ?? '/'
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-white/95 backdrop-blur-xl border-t border-line pb-[env(safe-area-inset-bottom)]" aria-label="Main">
-      <div className="grid grid-cols-3 h-[62px]">
+      <div className="grid h-[62px]" style={{ gridTemplateColumns: `repeat(${TABS.length}, minmax(0, 1fr))` }}>
         {TABS.map(item => {
           const active = item.match(path)
           const Icon = item.icon
