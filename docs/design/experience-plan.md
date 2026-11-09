@@ -4,6 +4,120 @@ Written 5 Nov 2026 for the NEAR HACKATHON build (deadline 14 Nov) and reset the 
 founder's review. This is the reference every screen is built and checked against, so the whole app
 feels like one product.
 
+## From here (9 Nov): anyone can hire it, anyone can teach it
+
+ParallaxPay went live on NEAR mainnet on 9 Nov. The founder then asked for three things:
+
+1. **Onboarding and funding that anyone can do,** premium and easy, from any chain.
+2. **A built-in wallet,** so people don't need one to start. No sponsored gas: the project can't fund
+   strangers, and everything should run on its own.
+3. **Agents people can shape:** their own rules and their own strategy, a leaderboard of whose
+   strategy works, and the best ones adopted. One flywheel that judges can see fit together.
+
+### What stays
+
+- Everything in the 6 Nov list below.
+- The vault's rules and its single agent account. No contract change is needed for any of this.
+- ParallaxPay's own method (the founder's TA) as the house strategy, and the drawings as the hero.
+
+### O1. Hire before you fund (shipped 9 Nov)
+
+- The mandate ends in "Start my agent". No wallet is needed.
+- Your agent's page shows what it would do with your mandate this minute, from its live reads and
+  the same sizing table real trades use. That's one of three things:
+  - the trade, with its stop and target on the chart;
+  - a setup your style lets pass;
+  - the closest coin, and the checks it still needs.
+- **Done when:** a visitor with no wallet writes a mandate and sees their agent's next move in under
+  a minute. Checked on phone and desktop.
+
+### O2. Funding in one step, from any chain (shipped 9 Nov)
+
+- One sheet funds the agent from either place:
+  - **A NEAR wallet:** sign the mandate and add USDC in a single confirmation.
+  - **Any chain, through NEAR Intents:** bring USDC from Base, Ethereum, Solana, Arbitrum, Tron or Bitcoin, then add it the moment it lands.
+- /fund uses the same component.
+
+### O3. A built-in account (next)
+
+- **No wallet?** The app makes a NEAR account on the device. It's an implicit account, so its key
+  never leaves the browser, and nobody else (ParallaxPay included) can move what's in it.
+- **The first deposit pays its own way:**
+  1. NEAR arrives in the account. A plain transfer creates the account, from any exchange or wallet.
+  2. About 0.35 NEAR is kept for gas.
+  3. The rest is swapped to USDC on Rhea.
+  4. The mandate is signed and the USDC deposited.
+
+  All of it happens automatically, with no wallet pop-ups.
+- **From other chains:** NEAR Intents' docs don't say whether 1-Click can deliver native NEAR to a
+  brand-new account. A $2 test from Base settles it. Until it passes, other chains go through a
+  connected wallet (O2).
+- **Yours to keep:**
+  - Back up the key (copy it or download it) at any time.
+  - Add your own wallet to the account.
+  - Withdraw to any NEAR account.
+  - The page says plainly that the key lives in this browser.
+- **Done when:** someone with only NEAR on an exchange goes from nothing to a funded, signed agent
+  with one transfer, and can back up and withdraw.
+
+### S1. The strategy studio (11–12 Nov)
+
+- **Strategies, not settings.** Every agent runs a strategy, and ParallaxPay's own method is the house
+  strategy.
+- **Make one from the same building blocks the engine uses** (`V2Params`):
+  - how close to the level it buys;
+  - where the stop goes;
+  - the reward it needs (minimum R);
+  - how long it holds;
+  - the daily-trend filter;
+  - whether it locks profit at +1R;
+  - how picky it is (minimum grade);
+  - the coins it trades.
+
+  You see what your strategy would mark on today's charts while you change it.
+- **Or write it in your own words.** NEAR AI turns the text into the same building blocks and shows them
+  back for you to confirm. That's teaching it your own skill, with the model running in a TEE.
+- **Every strategy trades on paper, live, from the moment it's made.** It uses the same reads as the
+  house agent:
+  - Each round in which any strategy enters is sealed on NEAR under ParallaxPay's own vault account,
+    and opened on exit.
+  - So no record can be edited after the fact. (`parallaxpay.near` joins the vault once, 0.02 NEAR,
+    with the founder's yes.)
+- **Done when:** a strategy made in words or blocks shows its first paper decisions on the drawings,
+  and its first sealed entry has a nearblocks link.
+
+### S2. Leaderboard, hiring a strategy, and the flywheel (12 Nov)
+
+- **The leaderboard** ranks strategies by their live paper record:
+  - kept promises;
+  - return per trade;
+  - worst drawdown;
+  - trades taken.
+
+  Losses are shown. Strategies with too few trades are marked "new", not ranked.
+- **Members can hire any strategy for their agent.** The vault still enforces their mandate, and the
+  agent applies the chosen strategy to their account.
+- **The flywheel:** when a community strategy beats the house strategy over enough trades, ParallaxPay
+  adopts it and credits its creator. Creator rewards come after the hackathon.
+- **Done when:** the board shows the house strategy and community strategies side by side, and a member
+  can switch their agent's strategy in one tap.
+
+### Order from here
+
+| Phase | Target |
+| --- | --- |
+| O1 hire before you fund | 9 Nov ✓ |
+| O2 funding from any chain in hiring | 9 Nov ✓ |
+| O3 built-in account | 10 Nov |
+| S1 strategy studio | 11 Nov |
+| S2 leaderboard, hiring a strategy, adoption | 12 Nov |
+| Video and submission | 13 Nov |
+
+**If time runs short,** cut in this order:
+1. Adoption (keep the rule on the page).
+2. Writing a strategy in words, if NEAR AI credits aren't in place.
+3. Other chains for the built-in account.
+
 ## From here (6 Nov): the agent's eye, a chart you can hold, every token
 
 The founder reviewed the reset and asked for seven things, to be built on it, not instead of it:
