@@ -66,11 +66,15 @@ Environment for the agent (in `.env.local`): `NEAR_AGENT_KEY` (the function-call
 
 ### Mainnet accounts
 
+Live on NEAR mainnet since 9 Nov 2026, with all 25 coins listed.
+
 | Account | Role |
 | --- | --- |
-| `vault.parallaxpay.near` | The vault contract |
-| `agent.parallaxpay.near` | The agent. Its server key can only call `trade`, `seal`, `reveal` and `recover` on the vault, with no deposit |
-| `parallaxpay.near` | The owner: lists coins and pools, sets the agent account, pauses trading. It can't move members' coins |
+| [`vault.parallaxpay.near`](https://nearblocks.io/address/vault.parallaxpay.near) | The vault contract ([deployed here](https://nearblocks.io/txns/FXe33mwU19VsEVoKy8su5VUcPXvYvGc9qbBX3en7fsBi)) |
+| [`agent.parallaxpay.near`](https://nearblocks.io/address/agent.parallaxpay.near) | The agent. Its server key can only call `trade`, `seal`, `reveal` and `recover` on the vault, with no deposit |
+| [`parallaxpay.near`](https://nearblocks.io/address/parallaxpay.near) | The owner: lists coins and pools, sets the agent account, pauses trading. It can't move members' coins |
+
+The vault's on-chain `code_hash` is `B77jv24sNJ1WhtUSmgMuP1XS4pLJeZtNwCWzjE8KqyFw`: the base58 sha256 of `near/vault` built from this repository (`npm run near:build`, sha256 hex `9625f996…34d92e82`).
 
 ### How one trade works
 
