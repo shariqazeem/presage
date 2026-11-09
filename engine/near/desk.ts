@@ -7,7 +7,7 @@ import { COINS, CORE_SYMBOLS, USDC, USDC_ID, VAULT_ID, coinById, feedName, type 
 import { quoteBuy, quoteSell } from '../../lib/near/rhea'
 import { fromUnits, lessBps } from '../../lib/near/units'
 import { closePosition, feed, latestReads, markOpen, syncMember, type Plan, type PositionRow } from '../../lib/near/store'
-import { allowsCoin, tradeEnd, vault, type Member } from '../../lib/near/vault'
+import { allowsCoin, tradeEnd, vault, type Member, STYLE_SHARE, STYLE_NAMES } from '../../lib/near/vault'
 import { errMsg, log } from '../log'
 import { review, type Verdict } from './analyst'
 import { exitReason, readCoin, usd, type Read, type Setup } from './brain'
@@ -25,12 +25,7 @@ const MIN_TRADE = 1_000_000n // $1
 /** How long an "ask first" proposal waits for the member. */
 export const PROPOSAL_TTL_SEC = 30 * 60
 /** How much of a member's largest trade each grade gets, by style. A grade a style doesn't list is passed. */
-const SIZE: Record<number, Record<number, number>> = {
-  0: { 5: 1 },
-  1: { 5: 1, 4: 0.7 },
-  2: { 5: 1, 4: 0.7, 3: 0.5 },
-}
-export const STYLE_NAMES = ['calm', 'balanced', 'bold'] as const
+const SIZE = STYLE_SHARE
 
 const now = () => Math.floor(Date.now() / 1000)
 const CHART_DIR = resolve(process.env.PARALLAXPAY_CHART_DIR ?? 'var/charts')

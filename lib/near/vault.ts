@@ -18,6 +18,18 @@ export type Rules = {
 export const MAX_COINS = 8
 export const MAX_BUYS_PER_DAY = 48
 
+/**
+ * How much of a member's largest buy each style puts into a setup, by the setup's grade out of 5.
+ * A grade a style doesn't list is a pass. The agent sizes real trades with this, and the app uses it
+ * to show what the agent would do for a mandate that isn't funded yet.
+ */
+export const STYLE_SHARE: Record<number, Record<number, number>> = {
+  0: { 5: 1 },
+  1: { 5: 1, 4: 0.7 },
+  2: { 5: 1, 4: 0.7, 3: 0.5 },
+}
+export const STYLE_NAMES = ['calm', 'balanced', 'bold'] as const
+
 /** Whether a member's rules let the agent buy this coin: any listed coin when their list is empty. */
 export const allowsCoin = (rules: Pick<Rules, 'coins'>, coinId: string) => rules.coins.length === 0 || rules.coins.includes(coinId)
 

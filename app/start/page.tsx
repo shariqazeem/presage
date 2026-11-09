@@ -3,29 +3,26 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import toast from 'react-hot-toast'
 import { IconBack, IconCheck } from '@/components/icons'
 import { AgentDrawing } from '@/components/near/AgentDrawing'
-import { NearButton, qty, usd } from '@/components/near/kit'
+import { FundFlow } from '@/components/near/Funding'
+import { usd } from '@/components/near/kit'
 import { MandateCard } from '@/components/near/Mandate'
 import { useNear } from '@/components/near/NearWallet'
-import { sayError, tellAgent } from '@/components/near/sheets'
 import { PerDayPicker, SizePicker } from '@/components/near/SizePicker'
+import { WouldDoCard } from '@/components/near/Watching'
 import { CoinChooser } from '@/components/near/coins'
 import { ranked } from '@/lib/near/rank'
 import { focusOf, voice } from '@/components/near/Stage'
 import { Mark } from '@/components/shell/Mark'
 import { cx } from '@/components/ui'
-import { USDC, USDC_ID } from '@/lib/near/config'
-import { px } from '@/lib/near/drawing'
-import { useAgentState, useDesk, type CoinRead } from '@/lib/near/hooks'
-import { ftBalance } from '@/lib/near/rpc'
-import { depositTx, joinTx } from '@/lib/near/tx'
+import { USDC } from '@/lib/near/config'
+import { useAgentState, useDesk } from '@/lib/near/hooks'
 import { fromUnits, toUnits } from '@/lib/near/units'
 import { MAX_COINS, allowsCoin, coinsInWords, type Rules } from '@/lib/near/vault'
+import { saveRules, savedRules, startWatching, stopWatching } from '@/lib/near/watch'
 
-const SAVED = 'parallaxpay_rules'
-const STEPS = ['meet', 'mode', 'style', 'coins', 'size', 'sign', 'fund', 'done'] as const
+const STEPS = ['meet', 'mode', 'style', 'coins', 'size', 'ready', 'fund', 'done'] as const
 type Step = (typeof STEPS)[number]
 const NIGHT: Step[] = ['meet', 'done']
 const MANDATE_STEPS: Step[] = ['mode', 'style', 'coins', 'size']
@@ -143,43 +140,29 @@ function Option({ on, onClick, children, className = '' }: { on: boolean; onClic
 /** Hiring ParallaxPay: meet it, write its mandate one answer at a time, sign it on NEAR, fund it. */
 export default function Start() {
   const router = useRouter()
-  const { accountId, send } = useNear()
+  const { accountId } = useNear()
   const { data: agent } = useAgentState()
   const { data: desk, refetch } = useDesk(accountId)
   const [step, setStep] = useState<Step>('meet')
   const [rules, setRules] = useState<Rules>(defaults)
-  const [busy, setBusy] = useState(false)
-  const [signed, setSigned] = useState(false)
-  const [saved, setSaved] = useState(false)
-  const [wallet, setWallet] = useState<number | null>(null)
-  const [amount, setAmount] = useState('')
+  // How it ended: funded (signed with money in), signed only, or watching before funding.
+  const [outcome, setOutcome] = useState<'funded' | 'joined' | 'watching' | null>(null)
   const set = (patch: Partial<Rules>) => setRules(r => ({ ...r, ...patch }))
-  const joined = Boolean(desk?.member)
+  const member = desk?.member ?? null
   const vaultLive = agent?.vault != null
   const night = NIGHT.includes(step)
 
-  // Answers survive a reload, and the wait for the vault to open.
+  // Answers survive a reload; "Edit" on your agent comes straight back to the mandate.
   useEffect(() => {
-    try {
-      const s = localStorage.getItem(SAVED)
-      if (s) setRules({ ...defaults(), ...(JSON.parse(s) as Rules) })
-    } catch {}
+    const s = savedRules()
+    if (s) setRules({ ...defaults(), ...s })
+    if (new URLSearchParams(window.location.search).has('edit')) setStep('mode')
   }, [])
-  useEffect(() => {
-    try {
-      localStorage.setItem(SAVED, JSON.stringify(rules))
-    } catch {}
-  }, [rules])
+  useEffect(() => saveRules(rules), [rules])
   // A member who comes back lands on funding, not on the mandate again.
   useEffect(() => {
-    if (joined && !signed && STEPS.indexOf(step) < STEPS.indexOf('fund')) setStep('fund')
-  }, [joined, signed, step])
-  useEffect(() => {
-    if (step !== 'fund' || !accountId) return
-    ftBalance(USDC_ID, accountId)
-      .then(b => setWallet(fromUnits(b, USDC.decimals)))
-      .catch(() => setWallet(0))
-  }, [step, accountId])
+    if (member && !outcome && STEPS.indexOf(step) < STEPS.indexOf('fund')) setStep('fund')
+  }, [member, outcome, step])
 
   const i = STEPS.indexOf(step)
   const next = () => setStep(STEPS[Math.min(STEPS.length - 1, i + 1)])
@@ -187,59 +170,22 @@ export default function Start() {
   const size = fromUnits(rules.max_trade, USDC.decimals)
   const reads = useMemo(() => ranked(agent?.reads ?? []), [agent])
   const lead = reads.find(r => r.setup) ?? [...reads].sort((a, b) => (b.checks ?? []).filter(c => c.ok).length - (a.checks ?? []).filter(c => c.ok).length)[0]
-  const mine = reads.filter(r => allowsCoin(desk?.member?.rules ?? rules, r.token))
+  const mine = reads.filter(r => allowsCoin(member?.rules ?? rules, r.token))
   const mineLead = mine.find(r => r.setup) ?? mine[0]
 
-  const join = async () => {
-    if (!accountId) return
-    setBusy(true)
-    try {
-      const [hash] = await send([joinTx(rules)])
-      await tellAgent(accountId, hash)
-      setSigned(true)
-      await refetch()
-      setTimeout(() => setStep('fund'), 1400)
-    } catch (e) {
-      sayError(e)
-    }
-    setBusy(false)
-  }
-  const fund = async () => {
-    if (!accountId) return
-    setBusy(true)
-    try {
-      const [hash] = await send([depositTx(toUnits(amount, USDC.decimals))])
-      await tellAgent(accountId, hash)
-      await refetch()
-      setStep('done')
-    } catch (e) {
-      sayError(e)
-    }
-    setBusy(false)
+  // Hired before funding: the mandate stays on this device and your agent starts showing what it would do.
+  const watch = () => {
+    startWatching(rules)
+    setOutcome('watching')
+    setStep('done')
   }
 
   // The pinned button at the bottom: what it says and does depends on the step.
-  let primary: { label: string; onClick?: () => void; disabled?: boolean; node?: ReactNode } = { label: 'Continue', onClick: next }
+  let primary: { label: string; onClick?: () => void; disabled?: boolean; node?: ReactNode; secondary?: { label: string; onClick: () => void } } = { label: 'Continue', onClick: next }
   if (step === 'meet') primary = { label: 'Write my mandate', onClick: next }
   if (step === 'size') primary = { label: 'See my mandate', onClick: next }
-  if (step === 'sign') {
-    if (!vaultLive)
-      primary = saved
-        ? { label: 'Watch it work meanwhile', onClick: () => router.push('/') }
-        : {
-            label: 'Save my mandate',
-            onClick: () => {
-              setSaved(true)
-              toast.success('Saved on this device. Sign it the moment the vault opens.')
-            },
-          }
-    else if (!accountId) primary = { label: '', node: <NearButton variant="full" label="Connect a NEAR wallet to sign" /> }
-    else primary = { label: busy ? 'Confirm in your wallet…' : signed ? 'Signed' : 'Sign on NEAR', onClick: join, disabled: busy || signed }
-  }
-  if (step === 'fund') {
-    const n = Number(amount)
-    primary = { label: busy ? 'Confirm in your wallet…' : n > 0 ? `Add ${usd(n)}` : 'Add USDC', onClick: fund, disabled: busy || !(n > 0) || (wallet != null && n > wallet) }
-  }
+  if (step === 'ready') primary = { label: 'Start my agent', onClick: watch, secondary: { label: 'Fund it now instead', onClick: next } }
+  if (step === 'fund') primary = { label: '', node: <></>, secondary: member ? { label: 'I’ll add funds later', onClick: () => setStep('done') } : { label: 'Not now, just watch for me', onClick: watch } }
   if (step === 'done') primary = { label: 'Open your agent', onClick: () => router.push('/desk') }
 
   return (
@@ -410,67 +356,31 @@ export default function Start() {
           </div>
         )}
 
-        {step === 'sign' && (
+        {step === 'ready' && (
           <div>
-            <Question sub={vaultLive ? 'Signing writes it into the vault on NEAR. It costs 0.02 NEAR for storage, returned if you ever leave.' : undefined}>Here&rsquo;s your mandate.</Question>
-            <div className="relative mt-6">
-              <MandateCard rules={rules} state={signed ? 'signed' : 'draft'} signer={accountId} />
-              {signed && (
-                <span className="absolute -top-4 -right-2 w-[92px] h-[92px] rounded-full foil grid place-items-center text-white shadow-[0_12px_30px_-8px_rgba(236,72,153,0.55)] animate-[stamp_.55s_cubic-bezier(.2,1.4,.4,1)_both]">
-                  <span className="w-[76px] h-[76px] rounded-full border-2 border-white/70 grid place-items-center text-center text-[10.5px] font-black uppercase tracking-[0.08em] leading-tight">
-                    Sealed
-                    <br />
-                    on NEAR
-                  </span>
-                </span>
-              )}
+            <Question sub="I can start on it now and show you what I'd do for you, live. Fund me whenever you want me to act.">Here&rsquo;s your mandate.</Question>
+            <div className="mt-6">
+              <MandateCard rules={rules} state="draft" />
             </div>
-            {!vaultLive && (
-              <div className="mt-4 rounded-[18px] bg-paper-2 p-4 text-[14px] text-ink-2 leading-snug">
-                <b className="text-ink">{saved ? 'Saved on this device.' : 'Signing opens when the vault goes live on mainnet, very soon.'}</b>{' '}
-                {saved ? 'Come back and sign it in one tap once the vault is open. Until then, you can watch it work on the floor.' : 'Save your mandate now and sign it in one tap when it opens. The vault already passed its full end-to-end test on'}{' '}
-                {!saved && (
-                  <>
-                    <a href="https://testnet.nearblocks.io/address/vault.pp-e2e-mw2mf9t4.testnet" target="_blank" rel="noreferrer" className="underline decoration-line underline-offset-2">
-                      testnet
-                    </a>
-                    .
-                  </>
-                )}
-              </div>
-            )}
           </div>
         )}
 
         {step === 'fund' && (
           <div>
-            <Question sub="USDC moves from your wallet into your account in the vault. I trade from there, inside your mandate.">Give me something to work with.</Question>
-            <div className="mt-8 text-center">
-              <div className="flex items-center justify-center gap-1">
-                <span className="num text-[56px] font-semibold text-ink-3">$</span>
-                <input inputMode="decimal" value={amount} onChange={e => setAmount(e.target.value.replace(/[^\d.]/g, ''))} placeholder="0" className="num text-[56px] font-semibold w-[220px] text-center outline-none bg-transparent placeholder:text-line" />
-              </div>
-              <div className="text-[13.5px] text-ink-3 mt-1">{wallet != null ? `${qty(wallet)} USDC in your wallet` : 'Checking your wallet…'}</div>
+            <Question sub={member ? 'USDC moves into your account in the vault. I trade from there, inside your mandate.' : 'Sign your mandate on NEAR and move USDC into your own account in the vault, in one confirmation.'}>Give me something to work with.</Question>
+            <div className="mt-6">
+              <FundFlow
+                rules={rules}
+                member={member}
+                vaultLive={vaultLive}
+                onDone={how => {
+                  stopWatching()
+                  void refetch()
+                  setOutcome(how)
+                  setStep('done')
+                }}
+              />
             </div>
-            {wallet != null && wallet > 0 && (
-              <div className="mt-5 grid grid-cols-3 gap-2">
-                {[0.25, 0.5, 1].map(f => (
-                  <button key={f} onClick={() => setAmount(String(Math.floor(wallet * f * 100) / 100))} className="h-11 rounded-[14px] bg-paper-2 text-[14px] font-semibold press">
-                    {f === 1 ? 'Max' : `${f * 100}%`}
-                  </button>
-                ))}
-              </div>
-            )}
-            <Link href="/fund" className="mt-5 flex items-center justify-between rounded-[20px] border border-line p-4 press">
-              <div>
-                <div className="font-semibold text-[15px]">From another chain</div>
-                <div className="text-[13px] text-ink-3">USDC, ETH, SOL or BTC through NEAR Intents</div>
-              </div>
-              <span className="text-[20px]">→</span>
-            </Link>
-            <button onClick={() => setStep('done')} className="block mx-auto mt-4 text-[13.5px] text-ink-3 press">
-              I&rsquo;ll add funds later
-            </button>
           </div>
         )}
 
@@ -486,9 +396,18 @@ export default function Start() {
               <h1 className="font-heading text-[36px] md:text-[44px] leading-none font-black tight">I&rsquo;m on it.</h1>
             </div>
             <div className="mt-6">
+              {outcome === 'watching' ? (
+                <Sequence
+                  items={[
+                    { node: <Bubble>I&rsquo;m watching {coinsInWords(rules.coins, 'every coin I can trade')} for you now. Here&rsquo;s what I&rsquo;d do with your mandate this minute:</Bubble>, wait: 1100 },
+                    { node: <WouldDoCard rules={rules} reads={agent?.reads ?? []} className="border border-white/[0.08]" />, wait: 2200 },
+                    { node: <Bubble>Fund me whenever you want me to act. Until then I&rsquo;ll keep showing you what I&rsquo;d do, on your agent&rsquo;s page.</Bubble> },
+                  ]}
+                />
+              ) : (
               <Sequence
                 items={[
-                  { node: <Bubble>I&rsquo;m watching {coinsInWords((desk?.member?.rules ?? rules).coins, 'every coin I can trade')} for you now.</Bubble>, wait: 1000 },
+                  { node: <Bubble>{outcome === 'funded' || outcome === 'joined' ? 'Your mandate is signed on NEAR. ' : ''}I&rsquo;m watching {coinsInWords((member?.rules ?? rules).coins, 'every coin I can trade')} for you now.</Bubble>, wait: 1000 },
                   ...(mineLead
                     ? [
                         {
@@ -502,9 +421,10 @@ export default function Start() {
                         { node: <Bubble>{voice(mineLead)}</Bubble>, wait: 1300 },
                       ]
                     : []),
-                  { node: <Bubble>{(desk?.member?.rules ?? rules).autopilot ? 'When a setup fits your mandate, I seal the plan on NEAR and trade it. You can stop me any time.' : 'When a setup fits your mandate, I seal the plan on NEAR and ask you first.'}</Bubble> },
+                  { node: <Bubble>{(member?.rules ?? rules).autopilot ? 'When a setup fits your mandate, I seal the plan on NEAR and trade it. You can stop me any time.' : 'When a setup fits your mandate, I seal the plan on NEAR and ask you first.'}</Bubble> },
                 ]}
               />
+              )}
             </div>
           </div>
         )}
@@ -515,6 +435,11 @@ export default function Start() {
           {primary.node ?? (
             <button onClick={primary.onClick} disabled={primary.disabled} className={cx('w-full h-[56px] rounded-[18px] font-semibold text-[16px] press disabled:opacity-40', night ? 'bg-white text-ink' : 'bg-ink text-white')}>
               {primary.label}
+            </button>
+          )}
+          {primary.secondary && (
+            <button onClick={primary.secondary.onClick} className={cx('w-full h-11 mt-1.5 rounded-[14px] text-[14.5px] font-semibold press', night ? 'text-[#C9C9CF]' : 'text-ink-2')}>
+              {primary.secondary.label}
             </button>
           )}
         </div>

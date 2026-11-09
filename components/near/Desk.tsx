@@ -48,7 +48,7 @@ function holdings(member: Member, prices: Record<string, number>) {
     .filter(r => r.amount > 0 || r.id === USDC_ID)
 }
 
-function Heartbeat({ at }: { at: number | undefined }) {
+export function Heartbeat({ at }: { at: number | undefined }) {
   const now = useNow(1000)
   if (!at) return null
   const left = Math.max(0, at - now)
@@ -63,7 +63,7 @@ function Heartbeat({ at }: { at: number | undefined }) {
   )
 }
 
-function SectionTitle({ eyebrow, title, right }: { eyebrow: string; title: string; right?: React.ReactNode }) {
+export function SectionTitle({ eyebrow, title, right }: { eyebrow: string; title: string; right?: React.ReactNode }) {
   return (
     <div className="flex items-end justify-between gap-3">
       <div>
@@ -119,7 +119,7 @@ function Mission({ p, price, action }: { p: PositionView; price: number | null; 
 }
 
 /** A coin it is watching for you: its drawing and what it says about it. */
-function Watch({ r }: { r: CoinRead }) {
+export function Watch({ r }: { r: CoinRead }) {
   const s = statusOf(r)
   return (
     <Link href={`/?coin=${r.coin}#live`} className="rounded-[20px] bg-ink text-white overflow-hidden press block">

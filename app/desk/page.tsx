@@ -5,9 +5,12 @@ import { useEffect, useState } from 'react'
 import { Desk } from '@/components/near/Desk'
 import { NearButton } from '@/components/near/kit'
 import { useNear } from '@/components/near/NearWallet'
+import { WatchDesk } from '@/components/near/Watching'
 import { Mark } from '@/components/shell/Mark'
 import { useAgentState, useDesk } from '@/lib/near/hooks'
 import { previewDesk } from '@/lib/near/preview'
+import type { Rules } from '@/lib/near/vault'
+import { savedRules, stopWatching, watching } from '@/lib/near/watch'
 
 /** Your agent: one member's ParallaxPay, its proposals and trades for them, their mandate. */
 export default function DeskPage() {
@@ -15,12 +18,20 @@ export default function DeskPage() {
   const { data: agent } = useAgentState()
   const { data: desk, refetch, isLoading } = useDesk(accountId)
   const [preview, setPreview] = useState(false)
+  // A mandate written on this device and not funded yet: the agent already works on it.
+  const [draft, setDraft] = useState<Rules | null>(null)
   useEffect(() => {
     // Sample data for checking the design locally. Development builds only.
     if (process.env.NODE_ENV !== 'production' && new URLSearchParams(window.location.search).has('preview')) setPreview(true)
+    if (watching()) setDraft(savedRules())
   }, [])
+  // Once it's signed on NEAR, the vault holds the mandate.
+  useEffect(() => {
+    if (desk?.member) stopWatching()
+  }, [desk?.member])
   if (preview) return <Desk data={previewDesk(agent?.reads ?? [])} agent={agent} refresh={() => {}} preview />
   if (accountId && desk?.member) return <Desk data={desk} agent={agent} refresh={() => void refetch()} />
+  if (draft && !(accountId && isLoading)) return <WatchDesk rules={draft} agent={agent} member={desk?.member ?? null} onFunded={() => void refetch()} />
   return (
     <div className="max-w-[560px] mx-auto px-4 pt-10 md:pt-14 pb-24">
       <div className="rounded-[28px] bg-ink text-white p-6 md:p-8 text-center relative overflow-hidden">
