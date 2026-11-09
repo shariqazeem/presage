@@ -11,6 +11,7 @@
  *   npx tsx scripts/near/setup.ts routes     list every coin in lib/near/config.ts in the vault, ten to a transaction
  *   npx tsx scripts/near/setup.ts plan       what "all" would send and cost, and whether there's enough NEAR (sends nothing)
  *   npx tsx scripts/near/setup.ts all        account, vault, agent, register and routes in order, after one "yes" to the whole plan
+ *   npx tsx scripts/near/setup.ts topup 0.45 move NEAR from the owner to the agent for gas
  */
 import '../../engine/env'
 import { createHash } from 'node:crypto'
@@ -214,6 +215,24 @@ async function routes() {
   }
 }
 
+/**
+ * Moves NEAR from the owner to the agent for gas. NEAR holds 0.3 NEAR of the agent's balance while each
+ * 300 Tgas trade runs, and the agent only opens a trade with 0.1 NEAR more spare to close it later.
+ *   npx tsx scripts/near/setup.ts topup [NEAR]   (0.45 by default)
+ */
+async function topup() {
+  const amount = near(Number(process.argv[3] ?? '0.45'))
+  if (!(amount > 0n)) throw new Error('Say how much NEAR, e.g. topup 0.45')
+  const ownerBalance = await nearBalance(OWNER_ID)
+  if (ownerBalance < amount + near(0.2)) throw new Error(`${OWNER_ID} holds ${fmt(ownerBalance)}; it keeps 0.2 NEAR for its own transactions.`)
+  const agentBalance = await nearBalance(AGENT_ID)
+  await confirm([
+    `move ${fmt(amount)} from ${OWNER_ID} to ${AGENT_ID} for gas`,
+    `the agent then holds ${fmt(agentBalance + amount)}; ${OWNER_ID} keeps ${fmt(ownerBalance - amount)}`,
+  ])
+  await send(owner(), AGENT_ID, [actions.transfer(amount)])
+}
+
 /** Everything "all" would still send, what it costs, and what's there to pay for it. Sends nothing. */
 async function plan(): Promise<{ lines: string[]; need: bigint; have: bigint }> {
   const imp = implicitId(ownerKey())
@@ -293,7 +312,7 @@ async function all() {
   await status()
 }
 
-const steps: Record<string, () => Promise<void>> = { status, keys, plan: showPlan, account: createOwner, vault: createVault, agent: createAgent, register, routes, all }
+const steps: Record<string, () => Promise<void>> = { status, keys, plan: showPlan, account: createOwner, vault: createVault, agent: createAgent, register, routes, all, topup }
 const step = steps[process.argv[2] ?? 'status']
 if (!step) {
   console.log(`Steps: ${Object.keys(steps).join(', ')}`)

@@ -11,7 +11,7 @@ import { allowsCoin, tradeEnd, vault, type Member } from '../../lib/near/vault'
 import { errMsg, log } from '../log'
 import { review, type Verdict } from './analyst'
 import { exitReason, readCoin, usd, type Read, type Setup } from './brain'
-import { agentCall, agentConfigured } from './signer'
+import { agentCall, agentConfigured, gasShortfall } from './signer'
 import { V2_DEFAULTS } from './strategy'
 import { renderChart } from '../stquant/charts.js'
 
@@ -260,6 +260,12 @@ function makePlan(m: Known, read: Read, setup: Setup, verdict: Verdict, usdcIn: 
 async function enter(m: Known, read: Read, setup: Setup, verdict: Verdict, share: number): Promise<boolean> {
   const coin = read.coin
   if (!agentConfigured()) return false
+  // Only open a trade when there's gas to close it again later, so a stop can always run.
+  const low = await gasShortfall(300, 0.1)
+  if (low) {
+    console.warn(`[near] skipped ${coin.symbol} for ${m.accountId}: ${low}`)
+    return false
+  }
   if (m.member.buys_today >= m.member.rules.trades_per_day) {
     feed('pass', `Passed on ${coin.symbol}: today's ${m.member.rules.trades_per_day} buys are used.`, { accountId: m.accountId, coin: coin.id, ...AGENT })
     return false
