@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/shariqazeem/presage/actions/workflows/ci.yml/badge.svg)](https://github.com/shariqazeem/presage/actions/workflows/ci.yml)
 
-An AI agent that trades for you on NEAR, inside rules you set.
+An AI agent that trades for you on NEAR, inside rules you set. Hire it in a minute without a wallet, fund it from any chain, shape its strategy in your own words, and see every strategy ranked by real, sealed trades.
 
 You fund your own account in the ParallaxPay vault (a NEAR contract) and choose how the agent runs: ask first or autopilot, how picky it is, which coins (any coin it lists, or up to eight you pick), the largest buy (any amount) and how many buys a day. The vault enforces those rules on every agent trade, swaps only through Rhea pools the owner has listed (every coin with a classic Rhea pool against wNEAR or USDC that is deep enough and trades: 25 today), and pays withdrawals to the member and nobody else. Before each trade the agent seals its plan on NEAR (a sha256 fingerprint); after the trade it opens the plan, and anyone can check it against the seal.
 
@@ -16,6 +16,8 @@ You fund your own account in the ParallaxPay vault (a NEAR contract) and choose 
 | The agent's drawings | [`components/near/AgentDrawing.tsx`](components/near/AgentDrawing.tsx), [`lib/near/drawing.ts`](lib/near/drawing.ts) | The agent's own support/resistance, trendline and money-flow code, run in the browser on the same candles it reads; the newest candle moves with live prices read from Rhea's pools on NEAR (`get_pool_by_ids`) |
 | Every coin it trades | [`scripts/near/discover.ts`](scripts/near/discover.ts), [`lib/near/coins.json`](lib/near/coins.json) | Rhea's pools: each token with a classic pool against wNEAR or USDC, $5k+ of liquidity and trades in the last day, routed through the vault |
 | Shared code | [`lib/near`](lib/near) | Read-only RPC client, Rhea quotes, vault types, 1-Click helpers |
+| Built-in account | [`lib/near/device.ts`](lib/near/device.ts), [`lib/near/deviceSetup.ts`](lib/near/deviceSetup.ts), [`components/near/DeviceAccount.tsx`](components/near/DeviceAccount.tsx) | A NEAR implicit account whose key is made and kept in the browser; funded with NEAR, it keeps gas, swaps the rest to USDC with Rhea's instant swap, signs the mandate and deposits, with no wallet pop-ups |
+| Strategies and the board | [`lib/near/strategy.ts`](lib/near/strategy.ts), [`engine/near/strategies.ts`](engine/near/strategies.ts), [`app/board`](app/board), [`components/near/Strategy.tsx`](components/near/Strategy.tsx) | Members' strategies run on the agent's own engine; changes signed with the member's account (NEP-413, checked against a full-access key); teaching in words through NEAR AI Cloud in a TEE; every sealed plan commits to its strategy's settings hash |
 | Mainnet setup | [`scripts/near/setup.ts`](scripts/near/setup.ts) | Account creation, deploy, storage registration, routes |
 
 **Disclosure.** ParallaxPay existed before this hackathon as a product on Metis (calls sealed on Metis, a paid oracle, an agent builder). That state is tagged `pre-hackathon`; everything after the tag is the NEAR build, and `git diff pre-hackathon..hackathon-submission` shows all of it. The chart-reading rules the agent applies ([`engine/stquant`](engine/stquant), the founder's own method, formerly run as "ST Quant") predate the hackathon; their NEAR-specific risk rules are new.
@@ -39,15 +41,22 @@ The vault holds each member's coins and rules. The agent can only call `trade`, 
 ### Try it
 
 1. Open the app (hosted at https://parallaxpay.80.225.209.190.sslip.io) and watch the agent read the coin closest to a trade. Its drawing plays in front of you: candles, the support and resistance it mapped (with touch counts), its trendlines and money flow, all computed with its own code. It says in one sentence what it is waiting for, its six checks tick in, and **The exact chart it read** opens the four-timeframe image it actually analysed. It watches every coin it can trade on Rhea (25 at the last discovery): the ones closest to a trade are re-read every 15 minutes, the rest at least about hourly. Pinch or ctrl-scroll the chart to zoom, drag to pan, hold for a candle's numbers, and press **Watch it read the chart** to have it talk you through its own lines.
-2. Press **Hire ParallaxPay**. It introduces itself on its live chart, then asks four questions (ask first or autopilot, how picky, any coin or only some, how big: any amount) while your mandate fills in. Connect a NEAR wallet and **Sign on NEAR** (0.02 NEAR for storage, returned if you leave), then see your mandate on NEAR:
+2. Press **Hire ParallaxPay**. It introduces itself on its live chart, then asks four questions (ask first or autopilot, how picky, any coin or only some, how big: any amount) while your mandate fills in. Press **Start my agent**: no wallet needed. **Your agent** already shows what it would do with your mandate right now, on its chart (the plan itself stays sealed until you fund it).
+3. Press **Fund it**, three ways:
+   - **A NEAR wallet** (HOT, Meteor, MyNearWallet, OKX, MetaMask): one confirmation signs your mandate into the vault (0.02 NEAR for storage, returned if you leave) and adds USDC.
+   - **No wallet**: **Get a ParallaxPay account** makes a NEAR account in your browser. Send it NEAR from any exchange; one tap keeps 0.45 NEAR for gas, swaps the rest to USDC on Rhea, signs your mandate and deposits. Back up its key any time.
+   - **Another chain**: bring USDC from Base, Ethereum, Solana, Arbitrum, Tron or Bitcoin through NEAR Intents, then add it.
+
+   Then see your mandate on NEAR:
    ```bash
    near contract call-function as-read-only vault.parallaxpay.near get_member json-args '{"account_id":"YOU.near"}' network-config mainnet now
    ```
-3. Add USDC from your wallet into the vault, or open **/fund** to bring USDC from Base, Ethereum, Solana, Arbitrum, Tron or Bitcoin through NEAR Intents, and see the balance on **Your agent**.
 4. With **Ask first**, wait for a proposal: the agent's message with the sealed plan drawn on its chart. Press **Approve**, then see the trade on nearblocks: one transaction that deposits into the vault's Rhea account, swaps, and withdraws back, with the exact amounts in its `trade_end` event.
 5. Ask it anything ("Why aren't you buying NEAR?") on the floor or on **Your agent**, and see it answer from its live checklist, on NEAR AI Cloud.
 6. Open **Its work** and any promise in it: the plan drawn on the chart it was sealed on with where it got in and out, the promise step by step (sealed, bought, sold, opened), then your browser recompute `sha256(salt ‖ plan)` against the fingerprint the vault holds and check the NEAR AI Cloud enclave's signature on the analyst's verdict.
 7. Turn **Autopilot** off and see it off on NEAR at once; press **Withdraw** and see the coins arrive in your wallet.
+8. **Shape its strategy** on **Your agent**: tell it how you trade in your own words (NEAR AI turns them into its settings), or set the blocks yourself. One signature with your account, no gas. Its next sealed plan names your strategy and commits to its settings.
+9. Open **Board**: strategies ranked by their real, sealed trades. Records are public; a strategy's settings unlock when you hire it, and one that beats the house over 20 trades gets adopted.
 
 ### Run it locally
 
