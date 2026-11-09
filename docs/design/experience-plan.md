@@ -69,7 +69,7 @@ ParallaxPay went live on NEAR mainnet on 9 Nov. The founder then asked for three
 - **NEAR AI only for paying members.** Teaching a strategy in words is for funded members only, so
   its cost always has a paying user behind it.
 
-### S1. Your agent's strategy (next)
+### S1. Your agent's strategy (shipped 9 Nov)
 
 - **Every funded agent runs a strategy.** ParallaxPay's own method (the founder's TA) is the house
   strategy and the default.
@@ -89,7 +89,7 @@ ParallaxPay went live on NEAR mainnet on 9 Nov. The founder then asked for three
   without giving the recipe away.
 - **Done when:** a funded member changes their agent's strategy, and its next plan is sealed with it.
 
-### S2. The board, hiring a strategy, and adoption
+### S2. The board, hiring a strategy, and adoption (shipped 9 Nov)
 
 - **The board ranks strategies by their real, sealed trades:**
   - trades taken;
@@ -112,13 +112,15 @@ ParallaxPay went live on NEAR mainnet on 9 Nov. The founder then asked for three
 | O1 hire before you fund | 9 Nov ✓ |
 | O2 funding from any chain in hiring | 9 Nov ✓ |
 | O3 built-in account | 9 Nov ✓ |
-| S1 your agent's strategy | 10–11 Nov |
-| S2 the board, hiring a strategy, adoption | 11–12 Nov |
+| S1 your agent's strategy | 9 Nov ✓ |
+| S2 the board, hiring a strategy, adoption | 9 Nov ✓ (adoption is the published rule, applied by the owner) |
 | Video and submission | 13 Nov |
 
-**If time runs short,** cut in this order:
-1. Adoption (keep the rule on the board).
-2. Teaching in words, if NEAR AI credits aren't in place.
+**Next:**
+- The founder's first real trade.
+- NEAR AI credits, so teaching in words and the analyst run on the model rather than its fallbacks.
+- QA on phone and desktop.
+- The video and the submission (13 Nov).
 
 ## From here (6 Nov): the agent's eye, a chart you can hold, every token
 
