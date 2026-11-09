@@ -16,6 +16,7 @@ import { Heartbeat, SectionTitle, Watch } from './Desk'
 import { FundFlow } from './Funding'
 import { usd } from './kit'
 import { MandateCard } from './Mandate'
+import { useNear } from './NearWallet'
 import { focusOf, voice } from './Stage'
 
 /**
@@ -33,7 +34,7 @@ export function WouldDoCard({ rules, reads, onFund, fundLabel = 'Fund it so I ca
   const style = STYLE_NAMES[rules.style] ?? 'balanced'
   const said =
     d.kind === 'buy'
-      ? `I'd buy ${usd(d.usd, { trim: true })} of ${r.coin} now, near ${px(r.price)}. If I'm wrong I'm out at ${px(r.setup!.stop)}; I'm aiming for ${px(r.setup!.target)}.`
+      ? `I'd buy ${usd(d.usd, { trim: true })} of ${r.coin} now, near ${px(r.price)}. My plan is ready: where I'd get out either way, sealed on NEAR the moment you fund me.`
       : d.kind === 'pass'
         ? `${r.coin} has a setup, graded ${d.grade}/5. Your ${style} style waits for ${lowestGrade(rules.style)}/5 or better, so I'd let this one pass.`
         : `Nothing to buy for you yet. ${voice(r)}`
@@ -49,11 +50,19 @@ export function WouldDoCard({ rules, reads, onFund, fundLabel = 'Fund it so I ca
           coin={r.coin}
           tf="1h"
           size="card"
-          {...(d.kind === 'buy' && r.setup ? { plan: { entry: r.price, stop: r.setup.stop, target: r.setup.target } } : { focus: focusOf(r) })}
+          focus={focusOf(r)}
           className="aspect-[16/9]"
-          label={d.kind === 'buy' ? `The ${r.coin} trade ParallaxPay would take for you, with its stop and target` : `ParallaxPay's drawing of ${r.coin}`}
+          label={`ParallaxPay's drawing of ${r.coin}`}
         />
       </div>
+      {d.kind === 'buy' && (
+        <div className="px-4 pt-1 flex items-center gap-2">
+          <span className="w-5 h-5 rounded-full foil grid place-items-center shrink-0" aria-hidden>
+            <span className="w-2 h-2 rounded-[2px] bg-white" />
+          </span>
+          <span className="text-[12.5px] text-[#C9C9CF]">Stop and target sealed until you fund</span>
+        </div>
+      )}
       {d.kind === 'wait' && d.missing.length > 0 && (
         <div className="px-4 pt-1 flex flex-wrap items-center gap-1.5">
           <span className="text-[12px] text-[#8A8A92] mr-0.5">Still needs</span>
@@ -67,7 +76,7 @@ export function WouldDoCard({ rules, reads, onFund, fundLabel = 'Fund it so I ca
       {onFund && (
         <div className="px-4 pb-4 pt-3">
           <button onClick={onFund} className="w-full h-12 rounded-[14px] bg-white text-ink font-semibold press">
-            {d.kind === 'buy' ? `Fund it and I'll take trades like this` : fundLabel}
+            {d.kind === 'buy' ? 'Fund it to unlock the plan' : fundLabel}
           </button>
         </div>
       )}
@@ -78,6 +87,7 @@ export function WouldDoCard({ rules, reads, onFund, fundLabel = 'Fund it so I ca
 
 /** Your agent before it's funded: watching for you, saying what it would do, one tap from real. */
 export function WatchDesk({ rules, agent, member, onFunded }: { rules: Rules; agent: AgentState | undefined; member: Member | null; onFunded: () => void }) {
+  const { kind } = useNear()
   const [fund, setFund] = useState(false)
   const reads = agent?.reads ?? []
   const ok = ranked(reads.filter(r => allowsCoin(rules, r.token)))
@@ -152,7 +162,13 @@ export function WatchDesk({ rules, agent, member, onFunded }: { rules: Rules; ag
       </div>
 
       <Sheet open={fund} onClose={() => setFund(false)} title={member ? 'Add funds' : 'Fund your agent'}>
-        <p className={cx('text-[14px] text-ink-2 leading-snug -mt-1 mb-4')}>{member ? 'USDC moves into your account in the vault. Withdraw it whenever you like.' : 'Sign your mandate on NEAR and move USDC into your own account in the vault. It trades from there, inside your mandate, and you can withdraw any time.'}</p>
+        <p className={cx('text-[14px] text-ink-2 leading-snug -mt-1 mb-4')}>
+          {kind === 'device'
+            ? 'Send NEAR to your ParallaxPay account. One tap then swaps it to USDC, signs your mandate and moves the USDC into your own account in the vault.'
+            : member
+              ? 'USDC moves into your account in the vault. Withdraw it whenever you like.'
+              : 'Sign your mandate on NEAR and move USDC into your own account in the vault. It trades from there, inside your mandate, and you can withdraw any time.'}
+        </p>
         <FundFlow
           rules={rules}
           member={member}

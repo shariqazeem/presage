@@ -1,5 +1,6 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useState, type ReactNode } from 'react'
 import { motion } from 'framer-motion'
@@ -9,7 +10,10 @@ import { cx } from '../ui'
 import { nearTxUrl } from '@/lib/near/config'
 import type { CoinRead } from '@/lib/near/hooks'
 import type { FeedLine, PositionView } from '@/lib/near/store'
-import { useNear } from './NearWallet'
+import { shortAccount, useNear } from './NearWallet'
+
+// Loaded on demand, which also keeps kit free of a static import cycle with DeviceAccount.
+const BackupSheet = dynamic(() => import('./DeviceAccount').then(m => m.BackupSheet), { ssr: false })
 
 export function money(n: number | null | undefined, opts: { sign?: boolean } = {}): string {
   if (n == null || !Number.isFinite(n)) return '—'
@@ -57,9 +61,10 @@ export function TxLink({ hash, children, className = '' }: { hash: string | null
 
 /** Connect a NEAR wallet, or once connected, the account with a small menu. */
 export function NearButton({ variant = 'nav', label = 'Connect NEAR wallet', className = '' }: { variant?: 'nav' | 'full'; label?: string; className?: string }) {
-  const { accountId, ready, connect, disconnect } = useNear()
+  const { accountId, kind, ready, connect, disconnect } = useNear()
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [backup, setBackup] = useState(false)
   const size = variant === 'full' ? 'h-[54px] px-6 text-base w-full rounded-[14px]' : 'h-10 px-4 text-sm rounded-[12px]'
   if (!ready) return <div className={cx(variant === 'full' ? 'h-[54px] w-full' : 'h-10 w-32', 'rounded-[14px] bg-paper-2 animate-pulse')} aria-hidden />
   if (!accountId) {
@@ -79,15 +84,27 @@ export function NearButton({ variant = 'nav', label = 'Connect NEAR wallet', cla
   }
   return (
     <div className={cx('relative', variant === 'full' && 'w-full', className)}>
-      <button onClick={() => setOpen(o => !o)} className={cx('border border-line bg-white font-semibold text-ink hover:border-ink transition-colors flex items-center gap-2', size)}>
-        <span className="w-2 h-2 rounded-full bg-up" />
-        <span className="num truncate max-w-[180px]">{accountId}</span>
+      <button onClick={() => setOpen(o => !o)} className={cx('border border-line bg-white font-semibold text-ink hover:border-ink transition-colors flex items-center gap-2', size)} aria-label={kind === 'device' ? `Your ParallaxPay account ${accountId}` : `Wallet ${accountId}`}>
+        <span className={cx('w-2 h-2 rounded-full', kind === 'device' ? 'foil' : 'bg-up')} />
+        <span className="num truncate max-w-[180px]">{shortAccount(accountId)}</span>
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-56 bg-white border border-line rounded-[14px] shadow-xl p-1.5 z-50">
+        <div className="absolute right-0 mt-2 w-60 bg-white border border-line rounded-[14px] shadow-xl p-1.5 z-50">
+          {kind === 'device' && <div className="px-3 pt-2 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3">ParallaxPay account on this device</div>}
           <button onClick={() => navigator.clipboard?.writeText(accountId).then(() => setOpen(false))} className="w-full text-left px-3 py-2.5 rounded-[10px] text-[14px] hover:bg-paper-2">
-            Copy account name
+            {kind === 'device' ? 'Copy address' : 'Copy account name'}
           </button>
+          {kind === 'device' && (
+            <button
+              onClick={() => {
+                setOpen(false)
+                setBackup(true)
+              }}
+              className="w-full text-left px-3 py-2.5 rounded-[10px] text-[14px] hover:bg-paper-2"
+            >
+              Back up your key
+            </button>
+          )}
           <button
             onClick={async () => {
               setOpen(false)
@@ -95,10 +112,11 @@ export function NearButton({ variant = 'nav', label = 'Connect NEAR wallet', cla
             }}
             className="w-full text-left px-3 py-2.5 rounded-[10px] text-[14px] text-down hover:bg-paper-2"
           >
-            Disconnect
+            {kind === 'device' ? 'Use a wallet instead' : 'Disconnect'}
           </button>
         </div>
       )}
+      {kind === 'device' && <BackupSheet open={backup} onClose={() => setBackup(false)} />}
     </div>
   )
 }

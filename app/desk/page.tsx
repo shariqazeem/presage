@@ -6,6 +6,7 @@ import { Desk } from '@/components/near/Desk'
 import { NearButton } from '@/components/near/kit'
 import { useNear } from '@/components/near/NearWallet'
 import { WatchDesk } from '@/components/near/Watching'
+import { RestoreSheet } from '@/components/near/DeviceAccount'
 import { Mark } from '@/components/shell/Mark'
 import { useAgentState, useDesk } from '@/lib/near/hooks'
 import { previewDesk } from '@/lib/near/preview'
@@ -18,6 +19,7 @@ export default function DeskPage() {
   const { data: agent } = useAgentState()
   const { data: desk, refetch, isLoading } = useDesk(accountId)
   const [preview, setPreview] = useState(false)
+  const [restore, setRestore] = useState(false)
   // A mandate written on this device and not funded yet: the agent already works on it.
   const [draft, setDraft] = useState<Rules | null>(null)
   useEffect(() => {
@@ -31,7 +33,8 @@ export default function DeskPage() {
   }, [desk?.member])
   if (preview) return <Desk data={previewDesk(agent?.reads ?? [])} agent={agent} refresh={() => {}} preview />
   if (accountId && desk?.member) return <Desk data={desk} agent={agent} refresh={() => void refetch()} />
-  if (draft && !(accountId && isLoading)) return <WatchDesk rules={draft} agent={agent} member={desk?.member ?? null} onFunded={() => void refetch()} />
+  // Stays mounted while a new account's desk loads, so a funding sheet in progress isn't lost.
+  if (draft) return <WatchDesk rules={draft} agent={agent} member={desk?.member ?? null} onFunded={() => void refetch()} />
   return (
     <div className="max-w-[560px] mx-auto px-4 pt-10 md:pt-14 pb-24">
       <div className="rounded-[28px] bg-ink text-white p-6 md:p-8 text-center relative overflow-hidden">
@@ -51,6 +54,9 @@ export default function DeskPage() {
             <div className="mt-6">
               <NearButton variant="full" />
             </div>
+            <button onClick={() => setRestore(true)} className="mt-3 text-[13.5px] font-semibold text-[#C9C9CF] hover:text-white">
+              Have a ParallaxPay account key? Open it here
+            </button>
           </>
         ) : (
           <>
@@ -64,6 +70,7 @@ export default function DeskPage() {
       <Link href="/" className="block text-center mt-4 text-[13.5px] font-semibold text-ink-3 hover:text-ink">
         Watch it work on the floor →
       </Link>
+      <RestoreSheet open={restore} onClose={() => setRestore(false)} />
     </div>
   )
 }

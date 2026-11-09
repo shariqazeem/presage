@@ -9,6 +9,7 @@ import { ftBalance } from '@/lib/near/rpc'
 import { depositTx, joinTx, type WalletTx } from '@/lib/near/tx'
 import { fromUnits, toUnits } from '@/lib/near/units'
 import type { Member, Rules } from '@/lib/near/vault'
+import { DeviceFund } from './DeviceAccount'
 import { NearButton, money, qty, usd } from './kit'
 import { useNear } from './NearWallet'
 import { sayError, tellAgent } from './sheets'
@@ -194,8 +195,9 @@ export function IntentsFund({ recipient, onRecipient, onArrived }: { recipient: 
  * USDC over from another chain first. `rules` is the mandate to sign when there's no membership yet.
  */
 export function FundFlow({ rules, member, vaultLive, onDone }: { rules: Rules; member: Member | null; vaultLive: boolean; onDone: (how: 'joined' | 'funded') => void }) {
-  const { accountId, send } = useNear()
+  const { accountId, kind, send, createDevice } = useNear()
   const [tab, setTab] = useState<'wallet' | 'chain'>('wallet')
+  const [making, setMaking] = useState(false)
   const [wallet, setWallet] = useState<number | null>(null)
   const [amount, setAmount] = useState('')
   const [busy, setBusy] = useState(false)
@@ -236,6 +238,9 @@ export function FundFlow({ rules, member, vaultLive, onDone }: { rules: Rules; m
 
   if (!vaultLive) return <p className="rounded-[18px] bg-paper-2 p-4 text-[14px] text-ink-2 leading-snug">The vault isn&rsquo;t answering right now, so funding is paused. Your mandate is saved on this device; try again in a minute.</p>
 
+  // The built-in account: send it NEAR, then one tap swaps, signs and deposits. No wallet pop-ups.
+  if (kind === 'device') return <DeviceFund rules={rules} onDone={() => onDone('funded')} />
+
   return (
     <div>
       <div role="tablist" aria-label="Where the money comes from" className="grid grid-cols-2 gap-1 p-1 rounded-[16px] bg-paper-2">
@@ -254,7 +259,25 @@ export function FundFlow({ rules, member, vaultLive, onDone }: { rules: Rules; m
       {!accountId ? (
         <div className="mt-5">
           <NearButton variant="full" label={tab === 'wallet' ? 'Connect a NEAR wallet' : 'Connect the NEAR wallet it should arrive in'} />
-          <p className="text-[13px] text-ink-3 mt-3 text-center leading-snug">HOT, Meteor, MyNearWallet, OKX, or MetaMask through Ethereum wallets.</p>
+          <p className="text-[13px] text-ink-3 mt-2.5 text-center leading-snug">HOT, Meteor, MyNearWallet, OKX, or MetaMask through Ethereum wallets.</p>
+          {tab === 'wallet' && (
+            <button
+              onClick={async () => {
+                setMaking(true)
+                try {
+                  await createDevice()
+                } catch (e) {
+                  sayError(e)
+                }
+                setMaking(false)
+              }}
+              disabled={making}
+              className="mt-4 w-full rounded-[18px] border border-line p-4 text-left press disabled:opacity-60"
+            >
+              <div className="font-semibold text-[15px]">{making ? 'Making your account…' : 'No wallet? Get a ParallaxPay account'}</div>
+              <div className="text-[13px] text-ink-3 mt-0.5 leading-snug">A NEAR account made in this browser. Send it NEAR from any exchange and it does the rest. Its key never leaves your device.</div>
+            </button>
+          )}
         </div>
       ) : tab === 'chain' ? (
         <div className="mt-5">

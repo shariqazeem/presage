@@ -20,6 +20,7 @@ import { allowsCoin, type Member } from '@/lib/near/vault'
 import { Floor } from './agent'
 import { AgentDrawing } from './AgentDrawing'
 import { Ask } from './Ask'
+import { DeviceFund } from './DeviceAccount'
 import { pctText, qty, usd } from './kit'
 import { MandateCard } from './Mandate'
 import { RollingNumber } from './motion'
@@ -140,7 +141,7 @@ export function Watch({ r }: { r: CoinRead }) {
 
 export function Desk({ data, agent, refresh, preview = false }: { data: DeskData; agent: AgentState | undefined; refresh: () => void; preview?: boolean }) {
   const reads = agent?.reads ?? []
-  const { accountId, send } = useNear()
+  const { accountId, kind, send } = useNear()
   const qc = useQueryClient()
   const member = data.member!
   const now = useNow(30_000)
@@ -272,7 +273,7 @@ export function Desk({ data, agent, refresh, preview = false }: { data: DeskData
           </div>
           <div className="grid grid-cols-2 gap-2 md:w-[280px] shrink-0">
             <button onClick={() => setSheet('fund')} className="h-11 rounded-full bg-white text-ink text-[14px] font-semibold press">
-              Add USDC
+              {kind === 'device' ? 'Add funds' : 'Add USDC'}
             </button>
             <button onClick={() => setSheet('withdraw')} className="h-11 rounded-full bg-white/10 text-white text-[14px] font-semibold press">
               Withdraw
@@ -428,7 +429,22 @@ export function Desk({ data, agent, refresh, preview = false }: { data: DeskData
           </>
         )}
       </Sheet>
-      <FundSheet open={sheet === 'fund'} onClose={() => setSheet(null)} onDone={refresh} />
+      {kind === 'device' ? (
+        <Sheet open={sheet === 'fund'} onClose={() => setSheet(null)} title="Add funds">
+          <p className="text-[14px] text-ink-2 leading-snug -mt-1 mb-4">Send NEAR to your ParallaxPay account. One tap swaps it to USDC and moves it into your vault account; it keeps a little NEAR for gas.</p>
+          {sheet === 'fund' && (
+            <DeviceFund
+              rules={member.rules}
+              onDone={() => {
+                setSheet(null)
+                void after()
+              }}
+            />
+          )}
+        </Sheet>
+      ) : (
+        <FundSheet open={sheet === 'fund'} onClose={() => setSheet(null)} onDone={refresh} />
+      )}
       <WithdrawSheet open={sheet === 'withdraw'} onClose={() => setSheet(null)} member={member} onDone={refresh} />
       <RulesSheet open={sheet === 'rules'} onClose={() => setSheet(null)} current={member.rules} onDone={refresh} />
     </div>
