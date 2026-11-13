@@ -33,8 +33,11 @@ export function statusOf(r: CoinRead): Status {
   return { word: 'Watching', tone: 'quiet' }
 }
 
-/** What it says about a coin, in its own voice. */
-export function voice(r: CoinRead): string {
+/**
+ * What it says about a coin, in its own voice. `trend: false` is for a member whose strategy trades
+ * falling markets: a falling daily trend is then no reason to wait, so it gives the next one.
+ */
+export function voice(r: CoinRead, { trend = true }: { trend?: boolean } = {}): string {
   const sup = r.support
   const dist = r.supportDistPct
   const checks = r.checks ?? []
@@ -47,7 +50,7 @@ export function voice(r: CoinRead): string {
   else if (dist <= 2.5) where = `${r.coin} is ${dist.toFixed(1)}% above its ${sup.tf} support at ${px(sup.price)}.`
   else where = `${r.coin} is ${dist.toFixed(1)}% above its nearest support at ${px(sup.price)}.`
   let wait: string
-  if (failed('trend')) wait = 'The daily trend is falling, so I stay out until it turns.'
+  if (trend && failed('trend')) wait = 'The daily trend is falling, so I stay out until it turns.'
   else if (sup && dist != null && dist < -0.05) wait = 'I need it to win that level back before I buy.'
   else if (failed('momentum')) wait = `Money flow hasn't bottomed${r.mfi15 != null ? ` (MFI ${Math.round(r.mfi15)} on the 15m)` : ''}, so I'm waiting for it to flush and turn up.`
   else if (sup && dist != null && dist > 2.5) wait = 'I wait for a pullback to it.'

@@ -28,7 +28,7 @@ import { useNear } from './NearWallet'
 import { Switch } from './primitives'
 import { Ticket } from './Promises'
 import { FundSheet, RulesSheet, WithdrawSheet, sayError, tellAgent } from './sheets'
-import { StrategyCard, StrategyStudio } from './Strategy'
+import { StrategyCard, StrategyStudio, useMyStrategy } from './Strategy'
 import { focusOf, statusOf, voice } from './Stage'
 
 /**
@@ -120,8 +120,8 @@ function Mission({ p, price, action }: { p: PositionView; price: number | null; 
   )
 }
 
-/** A coin it is watching for you: its drawing and what it says about it. */
-export function Watch({ r }: { r: CoinRead }) {
+/** A coin it is watching for you: its drawing and what it says about it, in the terms of your strategy. */
+export function Watch({ r, trend = true }: { r: CoinRead; trend?: boolean }) {
   const s = statusOf(r)
   return (
     <Link href={`/?coin=${r.coin}#live`} className="rounded-[20px] bg-ink text-white overflow-hidden press block">
@@ -135,7 +135,7 @@ export function Watch({ r }: { r: CoinRead }) {
       <div className="px-1.5 pt-1">
         <AgentDrawing coin={r.coin} tf="1h" size="card" focus={focusOf(r)} className="aspect-[16/8]" label={`ParallaxPay's drawing of ${r.coin}`} />
       </div>
-      <p className="px-4 pb-4 pt-1 text-[13px] text-[#C9C9CF] leading-snug line-clamp-3">{voice(r)}</p>
+      <p className="px-4 pb-4 pt-1 text-[13px] text-[#C9C9CF] leading-snug line-clamp-3">{voice(r, { trend })}</p>
     </Link>
   )
 }
@@ -158,7 +158,11 @@ export function Desk({ data, agent, refresh, preview = false }: { data: DeskData
   const usdc = BigInt(member.balances[USDC_ID] ?? '0')
   const openPnl = open.reduce((s, p) => s + (prices[p.token] != null && p.coinAmount != null ? p.coinAmount * prices[p.token] - p.usdcIn : 0), 0)
   const ok = ranked(reads.filter(r => allowsCoin(member.rules, r.token)))
-  const mine = ok.slice(0, 4)
+  // A coin it is already trading for you is under "Working on", with its plan; here it watches the rest.
+  const holding = new Set(open.map(p => p.token))
+  const mine = ok.filter(r => !holding.has(r.token)).slice(0, 4)
+  const strategy = useMyStrategy()
+  const trend = strategy.mine ? strategy.mine.blocks.trend : true
   const watching = member.rules.coins.length && member.rules.coins.length <= 4 ? mine.map(r => r.coin).join(' and ') : `the ${mine.length} closest of ${ok.length} coins`
   const guard = () => {
     if (preview) toast('This is a preview with sample data.')
@@ -364,7 +368,7 @@ export function Desk({ data, agent, refresh, preview = false }: { data: DeskData
               <SectionTitle eyebrow="Watching for you" title={`What it sees on ${watching}`} />
               <div className="grid sm:grid-cols-2 gap-3 mt-3">
                 {mine.map(r => (
-                  <Watch key={r.coin} r={r} />
+                  <Watch key={r.coin} r={r} trend={trend} />
                 ))}
               </div>
             </section>
@@ -393,7 +397,7 @@ export function Desk({ data, agent, refresh, preview = false }: { data: DeskData
             </div>
           </MandateCard>
 
-          <StrategyCard onChange={() => setSheet('strategy')} />
+          <StrategyCard onChange={() => setSheet('strategy')} my={strategy} />
 
           <div className="rounded-[22px] border border-line p-4">
             <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3">Talk to it</div>

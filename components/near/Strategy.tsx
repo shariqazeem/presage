@@ -67,8 +67,8 @@ function Chips({ items, dark = false }: { items: string[]; dark?: boolean }) {
 }
 
 /** On your agent's page: which strategy it runs, one tap from changing it. */
-export function StrategyCard({ onChange }: { onChange: () => void }) {
-  const { mine, open, busy } = useMyStrategy()
+export function StrategyCard({ onChange, my }: { onChange: () => void; my: ReturnType<typeof useMyStrategy> }) {
+  const { mine, open, busy } = my
   return (
     <div className="rounded-[22px] border border-line p-4">
       <div className="flex items-start justify-between gap-3">
