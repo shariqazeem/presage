@@ -22,7 +22,8 @@ const SYSTEM = `You turn a trader's description of how they trade into settings 
 The agent always buys at a support level that price has respected, only after money flow (MFI) bottoms, and always sells back to USDC. You choose only these six settings, each from its list:
 ${BLOCK_DEFS.map(d => `- ${d.key}: ${d.question} One of ${d.options.map(o => JSON.stringify(o.value)).join(', ')} (${d.options.map(o => `${JSON.stringify(o.value)} = ${o.line}`).join(' ')})`).join('\n')}
 Anything the trader doesn't mention keeps the house value: ${JSON.stringify(HOUSE)}.
-Answer with JSON only: {"entry":…,"stop":…,"reward":…,"hold":…,"trend":…,"picky":…,"summary":"one short sentence, in the second person, saying what you set and why"}.
+Answer with JSON only: {"entry":…,"stop":…,"reward":…,"hold":…,"trend":…,"picky":…,"summary":"…"}.
+The summary is one or two short sentences to the trader ("your agent will…"), in everyday words, describing how their agent will now trade. Never write setting names, true or false, numbers in code form, or the word JSON.
 If they ask for something the agent can't do (shorting, leverage, other coins' signals, guarantees), keep the house value for it and say so in the summary.`
 
 /** A plain reading of the words, for when the model is out of reach. */
