@@ -6,6 +6,39 @@ An AI agent that trades for you on NEAR, inside rules you set. Hire it in a minu
 
 You fund your own account in the ParallaxPay vault (a NEAR contract) and choose how the agent runs: ask first or autopilot, how picky it is, which coins (any coin it lists, or up to eight you pick), the largest buy (any amount) and how many buys a day. The vault enforces those rules on every agent trade, swaps only through Rhea pools the owner has listed (every coin with a classic Rhea pool against wNEAR or USDC that is deep enough and trades: 25 today), and pays withdrawals to the member and nobody else. Before each trade the agent seals its plan on NEAR (a sha256 fingerprint); after the trade it opens the plan, and anyone can check it against the seal.
 
+**Live:** [parallaxpay.xyz](https://parallaxpay.xyz) · **Vault:** [`vault.parallaxpay.near`](https://nearblocks.io/address/vault.parallaxpay.near) · **Board:** [parallaxpay.xyz/board](https://parallaxpay.xyz/board)
+
+**The problem.** An AI agent that trades for you needs your money, and giving an agent your keys means trusting it with everything you hold. ParallaxPay splits the two. Your money and your rules sit in your own account in a vault contract on NEAR. The agent holds a key that can only call `trade`, `seal`, `reveal` and `recover` on that vault; the vault refuses any trade outside your rules and pays withdrawals to you alone. Before every trade the agent seals its plan on NEAR, and a NEAR AI model running in a TEE reviews the chart and signs its answer.
+
+## Proof on NEAR mainnet
+
+The first member joined on 13 Nov 2026 with a ParallaxPay built-in account (a NEAR account made in the browser, no wallet), funded with 2.88 NEAR. One tap ran five transactions in 21 seconds:
+
+| Step | Transaction | What the chain shows |
+| --- | --- | --- |
+| Ready to receive USDC | [`4pmPubK8…LasLr`](https://nearblocks.io/txns/4pmPubK85gsbi81LiyVbLgzHBCh7WqXAvmhVtXLUasLr) | `storage_deposit` on native USDC |
+| Kept 0.45 NEAR for gas, wrapped the rest | [`53WR7qAJ…yqD1`](https://nearblocks.io/txns/53WR7qAJuQZyLA6BENVwwTjXgNHgnY3J2mQFmQtiyqD1) | `near_deposit` on `wrap.near` |
+| Swapped on Rhea | [`5GVX928M…y8Qz`](https://nearblocks.io/txns/5GVX928MNUphwvVqKeeqB4PyM3LmyLXUZcbNvY3by8Qz) | `v2.ref-finance.near` sent 8.399936 USDC to the account |
+| Mandate signed into the vault | [`9B21breF…S4sGL`](https://nearblocks.io/txns/9B21breFtNBvYmtVECQmfQ9PUyNEUwGGi3K4FTPS4sGL) | the vault's own `join` event: autopilot, $5 a buy, 3 a day, any coin, bold |
+| Deposited | [`4TP7wb6S…DQBkx`](https://nearblocks.io/txns/4TP7wb6S4Er5H8q4iqQ52UBiHqfAjSTGrEqcDzVDQBkx) | 8.399936 USDC into `vault.parallaxpay.near` |
+
+Its strategy, [Bounce buyer](https://parallaxpay.xyz/board/s_36091b39cc), was taught in plain words through NEAR AI and runs on the agent from its next read. Read the member's rules and balance from the vault yourself:
+
+```bash
+near contract call-function as-read-only vault.parallaxpay.near get_member json-args '{"account_id":"71658cdc828c4f7d7be1a0bef97f4a332375806dc461629329ffda572eef9a72"}' network-config mainnet now
+```
+
+You should see `"autopilot": true, "max_trade": "5000000", "trades_per_day": 3, "coins": [], "style": 2` and its USDC balance (6 decimals) in `balances`.
+
+## Try it in three minutes
+
+1. Open [parallaxpay.xyz](https://parallaxpay.xyz). You see ParallaxPay reading a coin: the chart, the support, resistance and trendlines it drew with its own code, its six checks, and one sentence on what it waits for. Scroll the chart into view and it walks you through its own lines.
+2. Ask it something in **Ask it** ("Why aren't you buying anything today?"). You get an answer from its live reads, labelled *answered on NEAR AI*.
+3. Press **Hire ParallaxPay** and answer four questions. You see your mandate. **Start my agent** shows what it would do for you right now, with no wallet.
+4. Press **Fund it now instead**, then **No wallet? Get a ParallaxPay account**. You get a NEAR account made in your browser. Send it at least 1 NEAR and press **Put … to work**: five transactions tick, each linked.
+5. Open **Board**. Strategies are ranked by real, sealed trades; open one and its settings stay sealed (with their sha256) until you hire it.
+6. Open **Its work** and any promise in it. Your browser recomputes `sha256(salt ‖ plan)` against the fingerprint the vault holds and checks the NEAR AI enclave's signature on the analyst's verdict.
+
 ## Built for the NEAR HACKATHON (1–14 Nov 2026)
 
 The same founder also entered **[Umanity](https://github.com/shariqazeem/umanity)** in the NEAR HACKATHON: crypto giving on camera. The two are separate products with separate code.
@@ -22,7 +55,7 @@ The same founder also entered **[Umanity](https://github.com/shariqazeem/umanity
 | Strategies and the board | [`lib/near/strategy.ts`](lib/near/strategy.ts), [`engine/near/strategies.ts`](engine/near/strategies.ts), [`app/board`](app/board), [`components/near/Strategy.tsx`](components/near/Strategy.tsx) | Members' strategies run on the agent's own engine; changes signed with the member's account (NEP-413, checked against a full-access key); teaching in words through NEAR AI Cloud in a TEE; every sealed plan commits to its strategy's settings hash |
 | Mainnet setup | [`scripts/near/setup.ts`](scripts/near/setup.ts) | Account creation, deploy, storage registration, routes |
 
-**Disclosure.** ParallaxPay existed before this hackathon as a product on Metis (calls sealed on Metis, a paid oracle, an agent builder). That state is tagged `pre-hackathon`; everything after the tag is the NEAR build, and `git diff pre-hackathon..hackathon-submission` shows all of it. The chart-reading rules the agent applies ([`engine/stquant`](engine/stquant), the founder's own method, formerly run as "ST Quant") predate the hackathon; their NEAR-specific risk rules are new.
+**Disclosure.** ParallaxPay existed before this hackathon as a product on Metis (calls sealed on Metis, a paid oracle, an agent builder). That state is tagged `pre-hackathon`; everything after the tag is the NEAR build, and `git diff pre-hackathon..hackathon-submission` shows all of it ([compare on GitHub](https://github.com/shariqazeem/parallaxpay-near/compare/pre-hackathon...hackathon-submission)). The chart-reading rules the agent applies ([`engine/stquant`](engine/stquant), the founder's own method, formerly run as "ST Quant") predate the hackathon; their NEAR-specific risk rules are new.
 
 ### How it fits together
 
@@ -40,7 +73,7 @@ flowchart LR
 
 The vault holds each member's coins and rules. The agent can only call `trade`, `seal`, `reveal` and `recover`, and the vault checks every trade against the member's rules before it touches Rhea. Withdrawals go to the member only.
 
-### Try it
+### Try it, step by step
 
 1. Open the app at **[parallaxpay.xyz](https://parallaxpay.xyz)** and watch the agent read the coin closest to a trade. Its drawing plays in front of you: candles, the support and resistance it mapped (with touch counts), its trendlines and money flow, all computed with its own code. It says in one sentence what it is waiting for, its six checks tick in, and **The exact chart it read** opens the four-timeframe image it actually analysed. It watches every coin it can trade on Rhea (25 at the last discovery): the ones closest to a trade are re-read every 15 minutes, the rest at least about hourly. Pinch or ctrl-scroll the chart to zoom, drag to pan, hold for a candle's numbers, and press **Watch it read the chart** to have it talk you through its own lines.
 2. Press **Hire ParallaxPay**. It introduces itself on its live chart, then asks four questions (ask first or autopilot, how picky, any coin or only some, how big: any amount) while your mandate fills in. Press **Start my agent**: no wallet needed. **Your agent** already shows what it would do with your mandate right now, on its chart (the plan itself stays sealed until you fund it).
@@ -94,6 +127,13 @@ The vault's on-chain `code_hash` is `B77jv24sNJ1WhtUSmgMuP1XS4pLJeZtNwCWzjE8KqyF
 3. For each member whose rules fit, the agent sizes the trade (style and grade decide the share of the member's largest buy), quotes it on Rhea and cuts it down until it moves the coin's pool less than 1%, and calls `vault.trade` with the plan's fingerprint. The vault checks the member's rules, then runs three steps, each confirmed by a callback with exact amounts: `ft_transfer_call` into its own Rhea account, `swap` (Rhea returns the amount out), `withdraw` back (Rhea reports what arrived). One trade runs at a time, so `recover` can always settle a trade that stopped part-way from what Rhea holds.
 4. Ask-first members get a proposal sealed with `vault.seal`; they approve it from their own wallet, and the server records it only after reading the transaction back from NEAR.
 5. On exit the agent sells back to USDC and calls `vault.reveal`, which checks the plan against its seal and logs it.
+
+### Built with
+
+- **NEAR:** `near-sdk` 5.27 (the vault, in Rust), `near-api-js` 7.4, NEAR Connect (`@hot-labs/near-connect` 0.12), the NEAR Intents 1-Click API, NEAR AI Cloud (`z-ai/glm-5.3-flash`, answers signed in a TEE), Rhea (`v2.ref-finance.near`).
+- **App and agent:** Next.js 15, React 19, TanStack Query, Tailwind CSS 4, Drizzle ORM on SQLite (`better-sqlite3`), TypeScript run with `tsx`.
+- **Baseline from before the hackathon:** the founder's chart-reading engine in [`engine/stquant`](engine/stquant) and the earlier Metis app (see the disclosure above).
+- **AI tools:** written with Claude Code (Anthropic) as a coding assistant. At runtime the agent's second opinion, the Ask answers and teaching in words come from NEAR AI Cloud.
 
 ### Known limits
 
