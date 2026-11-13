@@ -65,7 +65,10 @@ export async function review(read: Read, setup: Setup): Promise<Verdict> {
     const model = nearAiModel()
     const { value, answer } = await nearAiChatJson<Reply>({
       model,
-      maxTokens: 700,
+      // The model reasons over the chart before it writes the verdict: ~1,500 tokens and ~45 s on a
+      // four-panel chart. Out of room or time, it answers again without reasoning (ai.ts).
+      maxTokens: 3000,
+      timeoutMs: 120_000,
       messages: [
         {
           role: 'user',

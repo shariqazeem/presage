@@ -69,8 +69,10 @@ export async function POST(req: NextRequest) {
             { role: 'system', content: SYSTEM },
             { role: 'user', content: words },
           ],
-          maxTokens: 300,
+          maxTokens: 400,
           timeoutMs: 30_000,
+          // Someone is waiting on the screen, and the blocks it picks are shown back to change.
+          quick: true,
         })
         const blocks = validBlocks({ ...HOUSE, ...value })
         if (blocks) return NextResponse.json({ blocks, summary: String(value.summary ?? '').slice(0, 240) || `Set: ${traits(blocks).join(', ')}.`, by: 'near-ai', model: answer.model, chatId: answer.chatId })

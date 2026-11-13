@@ -105,7 +105,7 @@ export async function ask(question: string, accountId: string | null): Promise<A
   ]
   if (nearAiConfigured()) {
     try {
-      const a = await nearAiChat({ messages, maxTokens: 260, temperature: 0.3, timeoutMs: 45_000 })
+      const a = await nearAiChat({ messages, maxTokens: 300, temperature: 0.3, timeoutMs: 30_000, quick: true })
       return { text: a.text.trim(), by: 'near-ai', model: a.model, chatId: a.chatId }
     } catch (e) {
       // Out of credit, a timeout: the question still gets answered, by the other model or its own checks.

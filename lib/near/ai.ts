@@ -17,18 +17,51 @@ const headers = () => ({ authorization: `Bearer ${process.env.NEAR_AI_API_KEY}`,
 
 export type NearAiAnswer = { text: string; chatId: string; model: string }
 
-export async function nearAiChat(opts: { messages: ChatMessage[]; model?: string; temperature?: number; maxTokens?: number; timeoutMs?: number }): Promise<NearAiAnswer> {
+type Completion = { id: string; model?: string; choices: { message: { content: string | null }; finish_reason?: string }[] }
+
+/**
+ * One answer from the model. The default model reasons before it answers, and when its token budget runs
+ * out mid-thought it answers nothing, so an empty reply is asked again with reasoning turned down.
+ * `quick` skips the reasoning from the start: a chat reply in about a second instead of five.
+ */
+export async function nearAiChat(opts: {
+  messages: ChatMessage[]
+  model?: string
+  temperature?: number
+  maxTokens?: number
+  timeoutMs?: number
+  quick?: boolean
+}): Promise<NearAiAnswer> {
   const model = opts.model ?? nearAiModel()
-  const res = await fetch(`${BASE}/chat/completions`, {
-    method: 'POST',
-    headers: headers(),
-    body: JSON.stringify({ model, messages: opts.messages, temperature: opts.temperature ?? 0.1, max_tokens: opts.maxTokens ?? 700, stream: false }),
-    signal: AbortSignal.timeout(opts.timeoutMs ?? 90_000),
-  })
-  if (!res.ok) throw new Error(`NEAR AI ${res.status}: ${(await res.text()).slice(0, 200)}`)
-  const body = (await res.json()) as { id: string; model?: string; choices: { message: { content: string | null } }[] }
-  const text = body.choices[0]?.message?.content ?? ''
-  if (!text.trim()) throw new Error('NEAR AI returned an empty answer')
+  const call = async (quick: boolean): Promise<Completion> => {
+    const res = await fetch(`${BASE}/chat/completions`, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({
+        model,
+        messages: opts.messages,
+        temperature: opts.temperature ?? 0.1,
+        max_tokens: opts.maxTokens ?? 700,
+        stream: false,
+        ...(quick ? { reasoning_effort: 'low' } : {}),
+      }),
+      signal: AbortSignal.timeout(opts.timeoutMs ?? 90_000),
+    })
+    if (!res.ok) throw new Error(`NEAR AI ${res.status}: ${(await res.text()).slice(0, 200)}`)
+    return (await res.json()) as Completion
+  }
+  const said = (c: Completion) => c.choices[0]?.message?.content ?? ''
+  let body: Completion | null = null
+  try {
+    body = await call(Boolean(opts.quick))
+  } catch (e) {
+    // A long think that ran out of time gets one quick answer instead.
+    const timedOut = e instanceof Error && (e.name === 'TimeoutError' || e.name === 'AbortError')
+    if (opts.quick || !timedOut) throw e
+  }
+  if (!body || (!said(body).trim() && !opts.quick)) body = await call(true)
+  const text = said(body)
+  if (!text.trim()) throw new Error(`NEAR AI returned an empty answer (${body.choices[0]?.finish_reason ?? 'no reason given'})`)
   return { text, chatId: body.id, model: body.model ?? model }
 }
 
