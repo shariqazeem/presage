@@ -4,13 +4,13 @@
 
 An AI agent that trades for you on NEAR, inside rules you set. Hire it in a minute without a wallet, fund it from any chain, shape its strategy in your own words, and see every strategy ranked by real, sealed trades.
 
-You fund your own account in the ParallaxPay vault (a NEAR contract) and choose how the agent runs: ask first or autopilot, how picky it is, which coins (any coin it lists, or up to eight you pick), the largest buy (any amount) and how many buys a day. The vault enforces those rules on every agent trade, swaps only through Rhea pools the owner has listed (every coin with a classic Rhea pool against wNEAR or USDC that is deep enough and trades: 25 today), and pays withdrawals to the member and nobody else. Before each trade the agent seals its plan on NEAR (a sha256 fingerprint); after the trade it opens the plan, and anyone can check it against the seal.
-
 **Live:** [parallaxpay.xyz](https://parallaxpay.xyz) · **Vault:** [`vault.parallaxpay.near`](https://nearblocks.io/address/vault.parallaxpay.near) · **Board:** [parallaxpay.xyz/board](https://parallaxpay.xyz/board)
 
 ![ParallaxPay reading NEAR on the 1H: the resistance it found ("Price has turned at $3.563 6 times, from both sides. Now it's resistance."), its trendlines, money flow and its six checks](docs/media/floor.jpg)
 
 **The problem.** An AI agent that trades for you needs your money, and giving an agent your keys means trusting it with everything you hold. ParallaxPay splits the two. Your money and your rules sit in your own account in a vault contract on NEAR. The agent holds a key that can only call `trade`, `seal`, `reveal` and `recover` on that vault; the vault refuses any trade outside your rules and pays withdrawals to you alone. Before every trade the agent seals its plan on NEAR, and a NEAR AI model running in a TEE reviews the chart and signs its answer.
+
+**What you control.** Ask first or autopilot, how picky it is, which coins (any coin it lists, or up to eight you pick), the largest buy (any amount) and how many buys a day. It trades only through Rhea pools the owner has listed: every coin with a classic Rhea pool against wNEAR or USDC that is deep enough and trades, 25 today. After a trade it opens the sealed plan, and anyone can check it against the seal, losses included.
 
 ## Proof on NEAR mainnet
 
