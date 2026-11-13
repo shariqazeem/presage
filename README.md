@@ -34,6 +34,16 @@ near contract call-function as-read-only vault.parallaxpay.near get_member json-
 
 You should see `"autopilot": true, "max_trade": "5000000", "trades_per_day": 3, "coins": [], "style": 2` and its USDC balance (6 decimals) in `balances`.
 
+### Its first trade, on its own
+
+At 22:18 UTC on 13 Nov 2026 the agent traded for this member with no one at the keyboard. Bounce buyer's rules found SOL on a floor it had bounced off many times, with selling slowing; the NEAR AI analyst reviewed the same chart and graded it 4/5. Then one transaction, signed by the agent's limited key:
+
+| Step | Transaction | What the chain shows |
+| --- | --- | --- |
+| Plan sealed, then bought | [`96TuqM27…53Gy`](https://nearblocks.io/txns/96TuqM27Vs5e9oJnsRD4v8ToNaj8iC9YjBdQPZGh53Gy) | The vault's `seal` event (call #0, `a14668f0…2d5af9`) comes before `trade_start`. Rhea swapped 3.50 USDC → 1.0234 wNEAR → 0.04420472 SOL, and `trade_end` shows it filled into the member's vault account. $3.50 is inside the member's $5-a-buy rule. |
+
+The plan stays sealed until the trade ends. Then the agent reveals it, and [its page](https://parallaxpay.xyz/record/1) checks it against that hash in your browser, profit or loss.
+
 ## Try it in three minutes
 
 1. Open [parallaxpay.xyz](https://parallaxpay.xyz). You see ParallaxPay reading a coin: the chart, the support, resistance and trendlines it drew with its own code, its six checks, and one sentence on what it waits for. Scroll the chart into view and it walks you through its own lines.
