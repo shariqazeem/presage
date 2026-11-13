@@ -281,6 +281,13 @@ async function fitToPool(coin: Coin, amount: bigint): Promise<{ amount: bigint; 
   return `its Rhea pool is too thin to buy without moving the price more than ${MAX_IMPACT * 100}%`
 }
 
+/** A reason cut to fit the plan, at a word and with an ellipsis, never mid-word ("…is missing r"). */
+function clip(s: string, n: number): string {
+  if (s.length <= n) return s
+  const cut = s.lastIndexOf(' ', n - 1)
+  return `${s.slice(0, cut > n * 0.6 ? cut : n - 1).replace(/[\s,;:—–-]+$/, '')}…`
+}
+
 function seal(plan: Plan) {
   const json = JSON.stringify(plan)
   const salt = randomBytes(32)
@@ -304,7 +311,7 @@ function makePlan(m: Known, read: Read, setup: Setup, verdict: Verdict, usdcIn: 
     maxHoldSec: setup.maxHoldSec ?? MAX_HOLD_SEC,
     conviction: verdict.conviction,
     issuedAt: now(),
-    why: [verdict.why, ...setup.reasons].filter(Boolean).slice(0, 6).map(s => s.slice(0, 240)),
+    why: [verdict.why, ...setup.reasons].filter(Boolean).slice(0, 6).map(s => clip(s, 240)),
     analyst: verdict.source,
     strategy: { id: strategy.id, name: strategy.name, hash: strategy.hash },
   }

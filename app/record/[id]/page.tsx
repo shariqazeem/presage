@@ -153,8 +153,8 @@ export default function Receipt({ params }: { params: Promise<{ id: string }> })
               </div>
             </div>
             {t.pnlUsd != null && t.status === 'closed' && (
-              <div className="text-right">
-                <div className={cx('num text-[34px] font-semibold leading-none', won ? 'text-up-d' : 'text-down-d')}>{usd(t.pnlUsd, { sign: true })}</div>
+              <div className="text-right shrink-0">
+                <div className={cx('num text-[34px] font-semibold leading-none whitespace-nowrap', won ? 'text-up-d' : 'text-down-d')}>{usd(t.pnlUsd, { sign: true })}</div>
                 <div className="num text-[13px] text-[#8A8A92] mt-1.5">{pctText(t.pnlPct)}</div>
               </div>
             )}
