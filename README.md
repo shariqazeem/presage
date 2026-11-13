@@ -36,13 +36,15 @@ You should see `"autopilot": true, "max_trade": "5000000", "trades_per_day": 3, 
 
 ### Its first trade, on its own
 
-At 22:18 UTC on 13 Nov 2026 the agent traded for this member with no one at the keyboard. Bounce buyer's rules found SOL on a floor it had bounced off many times, with selling slowing; the NEAR AI analyst reviewed the same chart and graded it 4/5. Then one transaction, signed by the agent's limited key:
+At 22:18 UTC on 13 Nov 2026 the agent traded for this member with no one at the keyboard. Bounce buyer's rules found SOL on a floor it had bounced off many times, with selling slowing; the NEAR AI analyst reviewed the same chart and graded it 4/5. Every step below was signed by the agent's limited key:
 
 | Step | Transaction | What the chain shows |
 | --- | --- | --- |
 | Plan sealed, then bought | [`96TuqM27…53Gy`](https://nearblocks.io/txns/96TuqM27Vs5e9oJnsRD4v8ToNaj8iC9YjBdQPZGh53Gy) | The vault's `seal` event (call #0, `a14668f0…2d5af9`) comes before `trade_start`. Rhea swapped 3.50 USDC → 1.0234 wNEAR → 0.04420472 SOL, and `trade_end` shows it filled into the member's vault account. $3.50 is inside the member's $5-a-buy rule. |
+| Sold at its stop | [`7ypmbX7k…SJcE`](https://nearblocks.io/txns/7ypmbX7kd4oW18b8FSH43PweJR9NPtqKYaguppaQSJcE) | 44 minutes later SOL fell through the stop ($77.25 on the chart against a $77.28 stop). Rhea swapped the 0.04420472 SOL → 1.0172 wNEAR → 3.460311 USDC, back into the member's vault account: −$0.04 (−1.1%). |
+| Plan opened | [`3Cg9Ws5P…7ipS`](https://nearblocks.io/txns/3Cg9Ws5PSy3Htve3sYNFizkYLHARU5z2e8Ao9Lar7ipS) | The vault's `reveal`. The contract recomputes sha256(salt ‖ plan) and accepts the plan only if it matches the seal. It did: entry near $78.22, stop $77.28, target $80.72, NEAR AI's 4/5, and the hash of the Bounce buyer settings it traded with. |
 
-The plan stays sealed until the trade ends. Then the agent reveals it, and [its page](https://parallaxpay.xyz/record/1) checks it against that hash in your browser, profit or loss.
+[Its page](https://parallaxpay.xyz/record/1) shows the whole trade, loss included, and runs three checks in your browser: the fingerprint the vault holds, sha256(salt + plan) against it, and the NEAR AI enclave's signature on the analyst's answer.
 
 ## Try it in three minutes
 
