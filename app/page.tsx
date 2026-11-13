@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { ActionButton, Sealed } from '@/components/kit'
 import { AGENTS, Avatar, Floor } from '@/components/near/agent'
 import { Ask } from '@/components/near/Ask'
-import { NearButton, usd } from '@/components/near/kit'
+import { usd } from '@/components/near/kit'
 import { MandateCard } from '@/components/near/Mandate'
 import { RollingNumber } from '@/components/near/motion'
 import { useNear } from '@/components/near/NearWallet'
@@ -45,10 +45,8 @@ export default function Home() {
   const watching = member ? coinsInWords(member.rules.coins, 'every coin it trades') : ''
   const cta = member ? (
     <ActionButton href="/desk">Your agent</ActionButton>
-  ) : accountId ? (
-    <ActionButton href="/start">Hire ParallaxPay</ActionButton>
   ) : (
-    <NearButton variant="full" label="Hire ParallaxPay" />
+    <ActionButton href="/start">Hire ParallaxPay</ActionButton>
   )
 
   return (

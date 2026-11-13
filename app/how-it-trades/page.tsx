@@ -5,8 +5,6 @@ import { ActionButton } from '@/components/kit'
 import { IconChevron } from '@/components/icons'
 import { AGENTS, Avatar, Checklist, StatStrip } from '@/components/near/agent'
 import { AgentDrawing } from '@/components/near/AgentDrawing'
-import { NearButton } from '@/components/near/kit'
-import { useNear } from '@/components/near/NearWallet'
 import { focusOf, voice } from '@/components/near/Stage'
 import { Mark } from '@/components/shell/Mark'
 import { cx } from '@/components/ui'
@@ -59,7 +57,6 @@ const PIPELINE = [
 
 /** ParallaxPay's profile: who it is, how it decides, the agents it works with, and its live checks. */
 export default function HowItTrades() {
-  const { accountId } = useNear()
   const { data: agent } = useAgentState()
   const [step, setStep] = useState(0)
   const [shot, setShot] = useState<string | null>(null)
@@ -68,7 +65,8 @@ export default function HowItTrades() {
   const [pick, setPick] = useState<string | null>(null)
   const now = reads.find(r => r.coin === pick) ?? lead
   const m = METHOD[step]
-  const cta = accountId ? <ActionButton href="/start">Hire ParallaxPay</ActionButton> : <NearButton variant="full" label="Hire ParallaxPay" />
+  // Hiring needs no wallet; the wallet, or a built-in account, comes at the end of it.
+  const cta = <ActionButton href="/start">Hire ParallaxPay</ActionButton>
 
   return (
     <div className="max-w-[1180px] mx-auto px-4 md:px-6 lg:px-8 pt-5 md:pt-9 pb-24 md:pb-16">

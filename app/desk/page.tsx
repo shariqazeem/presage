@@ -57,6 +57,13 @@ export default function DeskPage() {
             <button onClick={() => setRestore(true)} className="mt-3 text-[13.5px] font-semibold text-[#C9C9CF] hover:text-white">
               Have a ParallaxPay account key? Open it here
             </button>
+            <p className="mt-5 text-[13.5px] text-[#8A8A92]">
+              Not hired yet?{' '}
+              <Link href="/start" className="font-semibold text-white underline decoration-white/30 underline-offset-2">
+                Hire ParallaxPay
+              </Link>
+              , no wallet needed.
+            </p>
           </>
         ) : (
           <>
