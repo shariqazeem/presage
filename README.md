@@ -99,7 +99,7 @@ The vault's on-chain `code_hash` is `B77jv24sNJ1WhtUSmgMuP1XS4pLJeZtNwCWzjE8KqyF
 
 - One trade at a time across the vault; the agent queues members.
 - Coins are those with a classic Rhea pool against wNEAR (through the USDC/wNEAR pool 4512) or native USDC, at least $5k of liquidity, a fee under 1% and trades in the last day: 25 at the last discovery. Another 42 tokens have a pool but barely trade; discovery picks them up when they do. Tokens whose liquidity sits only in Rhea's concentrated-liquidity (DCL) pools aren't traded yet: that needs a second swap path in the vault.
-- The owner can upgrade this hackathon deployment with the vault account's full-access key. That key is to be removed or put behind a timelock before real money uses it.
+- The vault account still holds the owner's full-access key, so its code can be upgraded: members trust the owner not to deploy code that moves their coins. The key goes, or moves behind a timelock, once the contract settles after the hackathon.
 - Not financial advice. The agent can lose money; its record shows losses as they happen.
 
 ---
