@@ -10,7 +10,7 @@ KEY="${PARALLAXPAY_VM_KEY:-$HOME/.ssh/sage-vm.key}"
 VM="${PARALLAXPAY_VM:-ubuntu@80.225.209.190}"
 R=/home/ubuntu/parallaxpay
 NODE=/home/ubuntu/.nvm/versions/node/v22.23.2/bin
-SITE="${PARALLAXPAY_PUBLIC_URL:-https://parallaxpay.80.225.209.190.sslip.io}"
+SITE="${PARALLAXPAY_PUBLIC_URL:-https://parallaxpay.xyz}"
 S() { ssh -n -o StrictHostKeyChecking=no -i "$KEY" "$VM" "$@"; }
 cd "$(dirname "$0")/.."
 
