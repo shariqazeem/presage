@@ -1,14 +1,12 @@
 # ParallaxPay
 
-[![CI](https://github.com/shariqazeem/parallaxpay-near/actions/workflows/ci.yml/badge.svg)](https://github.com/shariqazeem/parallaxpay-near/actions/workflows/ci.yml)
-
 An AI agent that trades for you on NEAR, inside rules you set. Hire it in a minute without a wallet, fund it from any chain, shape its strategy in your own words, and see every strategy ranked by real, sealed trades.
 
 You fund your own account in the ParallaxPay vault (a NEAR contract) and choose how the agent runs: ask first or autopilot, how picky it is, which coins (any coin it lists, or up to eight you pick), the largest buy (any amount) and how many buys a day. The vault enforces those rules on every agent trade, swaps only through Rhea pools the owner has listed (every coin with a classic Rhea pool against wNEAR or USDC that is deep enough and trades: 25 today), and pays withdrawals to the member and nobody else. Before each trade the agent seals its plan on NEAR (a sha256 fingerprint); after the trade it opens the plan, and anyone can check it against the seal.
 
 ## Built for the NEAR HACKATHON (1–14 Nov 2026)
 
-The same founder also entered **[Umanity](https://github.com/shariqazeem/umanity)** in the NEAR HACKATHON: crypto giving on camera. The two are separate products with separate code.
+The same founder also entered **[Umanity](https://gitlab.com/shariqazeem/umanity)** in the NEAR HACKATHON: crypto giving on camera. The two are separate products with separate code.
 
 | Piece | Where | NEAR tech used |
 | --- | --- | --- |
