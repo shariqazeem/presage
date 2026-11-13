@@ -37,6 +37,8 @@ export type AgentState = {
   nextCheckAt: number
   reads: CoinRead[]
   feed: FeedLine[]
+  /** The latest setups and passes, however old: the feed alone loses them in a quiet market. */
+  setups?: FeedLine[]
   record: RecordStats
   vault: { members: number; trades: number; calls: number; paused: boolean } | null
 }
@@ -70,13 +72,29 @@ export function useLivePrice(symbol: string | undefined | null): number | null {
 
 let tabId: string | null = null
 
+/** One anonymous id per browser tab, kept across reloads so a reload isn't counted as another person. */
+function presenceId(): string {
+  if (tabId) return tabId
+  try {
+    tabId = sessionStorage.getItem('parallaxpay_presence')
+  } catch {
+    // Private mode or blocked storage: a fresh id for this page load.
+  }
+  if (!tabId || !/^[a-z0-9]{8,32}$/.test(tabId)) tabId = Math.random().toString(36).slice(2, 14).padEnd(8, '0')
+  try {
+    sessionStorage.setItem('parallaxpay_presence', tabId)
+  } catch {
+    // as above
+  }
+  return tabId
+}
+
 /** How many people have ParallaxPay open right now (this tab included). */
 export const usePresence = () =>
   useQuery({
     queryKey: ['near-presence'],
     queryFn: async () => {
-      tabId ??= Math.random().toString(36).slice(2, 14)
-      const r = await fetch('/api/near/presence', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: tabId }) })
+      const r = await fetch('/api/near/presence', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: presenceId() }) })
       return ((await r.json()) as { here: number }).here
     },
     refetchInterval: 25_000,

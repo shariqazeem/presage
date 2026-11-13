@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useNow } from '@/components/kit'
-import { IconCheck, IconLock } from '@/components/icons'
+import { IconChart, IconLock, IconUnlock } from '@/components/icons'
 import { Floor } from '@/components/near/agent'
 import { AgentDrawing } from '@/components/near/AgentDrawing'
 import { ago, usd } from '@/components/near/kit'
@@ -99,7 +99,7 @@ export default function Record() {
   const trades = preview ? previewDesk(agent?.reads ?? []).positions : (data?.trades ?? [])
   const s = data?.stats
   const shown = trades.filter(t => (filter === 'all' ? true : filter === 'live' ? t.status === 'proposed' || t.status === 'open' : t.status === 'closed'))
-  const setups = (agent?.feed ?? []).filter(l => l.kind === 'setup' || l.kind === 'pass' || l.kind === 'seal')
+  const setups = agent?.setups ?? (agent?.feed ?? []).filter(l => l.kind === 'setup' || l.kind === 'pass' || l.kind === 'seal')
   return (
     <div className="max-w-[1180px] mx-auto px-4 md:px-6 lg:px-8 pt-5 md:pt-9 pb-24 md:pb-16">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -130,7 +130,7 @@ export default function Record() {
           </div>
           <div className="rounded-[18px] bg-paper-2 px-4 py-3">
             <div className="num text-[24px] font-semibold">{Math.round((s.wins / s.closed) * 100)}%</div>
-            <div className="text-[12.5px] text-ink-3">ended up</div>
+            <div className="text-[12.5px] text-ink-3">won</div>
           </div>
           <div className="rounded-[18px] bg-paper-2 px-4 py-3">
             <div className={cx('num text-[24px] font-semibold', s.pnlUsd < 0 && 'text-down', s.pnlUsd > 0 && 'text-up')}>{usd(s.pnlUsd, { sign: true })}</div>
@@ -154,7 +154,7 @@ export default function Record() {
           <div className="mt-6 grid md:grid-cols-3 gap-3">
             {STEPS.map((st, i) => (
               <div key={st.title} className="rounded-[20px] border border-line p-4">
-                <span className={cx('w-8 h-8 rounded-full grid place-items-center text-white', i === 0 ? 'foil' : 'bg-ink')}>{i === 0 ? <IconLock size={14} /> : i === 1 ? <span className="num text-[12px] font-semibold">2</span> : <IconCheck size={14} weight={3} />}</span>
+                <span className={cx('w-8 h-8 rounded-full grid place-items-center text-white', i === 0 ? 'foil' : 'bg-ink')}>{i === 0 ? <IconLock size={14} /> : i === 1 ? <IconChart size={14} /> : <IconUnlock size={14} />}</span>
                 <div className="font-semibold text-[15px] mt-3">{st.title}</div>
                 <p className="text-[13.5px] text-ink-2 leading-snug mt-1">{st.text}</p>
               </div>

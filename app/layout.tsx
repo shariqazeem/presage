@@ -18,7 +18,7 @@ const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500', '600
 
 export const metadata: Metadata = {
   metadataBase: new URL(site),
-  title: 'ParallaxPay: an AI trader that works for you on NEAR, inside your rules',
+  title: { default: 'ParallaxPay: an AI trader that works for you on NEAR, inside your rules', template: '%s · ParallaxPay' },
   description:
     'ParallaxPay trades the coins on Rhea for you, NEAR, ZEC, RHEA, AURORA and more, from your own account in its vault on NEAR, inside the rules you set. Every plan is sealed on NEAR before the trade and opened after it.',
   openGraph: {

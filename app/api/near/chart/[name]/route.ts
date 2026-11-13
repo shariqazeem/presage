@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ name: string }> }) {
   const { name } = await params
-  if (!/^([A-Z]{2,6}|pos-\d{1,9})$/.test(name)) return NextResponse.json({ error: 'No such chart' }, { status: 404 })
+  if (!/^([A-Z0-9]{2,16}|pos-\d{1,9})$/.test(name)) return NextResponse.json({ error: 'No such chart' }, { status: 404 })
   const path = resolve(process.env.PARALLAXPAY_CHART_DIR ?? 'var/charts', `near-${name}.png`)
   if (!existsSync(path)) return NextResponse.json({ error: 'No chart yet' }, { status: 404 })
   const live = !name.startsWith('pos-')

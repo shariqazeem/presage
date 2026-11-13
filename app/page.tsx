@@ -103,7 +103,7 @@ export default function Home() {
                 <Avatar actor={id} size={30} />
                 <div className="min-w-0">
                   <div className="text-[13.5px] font-semibold leading-tight">{AGENTS[id].name}</div>
-                  <div className="text-[12px] text-ink-3 truncate">{id === 'parallaxpay' ? 'Trader · reads every 15 minutes' : 'NEAR AI in a TEE · checks every setup'}</div>
+                  <div className="text-[12px] text-ink-3 truncate">{id === 'parallaxpay' ? 'Trader · reads every 15 minutes' : 'NEAR AI in a TEE · reviews before money moves'}</div>
                 </div>
               </Link>
             ))}
@@ -131,7 +131,7 @@ export default function Home() {
             <MandateCard rules={member.rules} state="signed" signer={accountId} compact className="mt-4" footer={<Link href="/desk" className="text-[13px] font-semibold">Change</Link>} />
           </div>
         ) : (
-          <div className="rounded-[22px] bg-paper-2 p-4 md:p-6 grid md:grid-cols-[1fr_1.1fr] gap-5 items-center">
+          <div className="rounded-[22px] bg-paper-2 p-4 md:p-6 grid md:grid-cols-[1fr_1.1fr] lg:grid-cols-1 xl:grid-cols-[1fr_1.1fr] gap-5 items-center">
             <div>
               <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3">Hire it</div>
               <div className="font-heading text-[24px] md:text-[28px] font-black tight leading-[1.05] mt-1">Give it a mandate, not your keys.</div>
@@ -143,7 +143,8 @@ export default function Home() {
                   </li>
                 ))}
               </ol>
-              <div className="mt-5 max-w-[260px]">{cta}</div>
+              {/* On phones the button rides above the tab bar the whole way down, so it isn't shown twice. */}
+              <div className="mt-5 max-w-[260px] hidden md:block">{cta}</div>
             </div>
             <MandateCard rules={EXAMPLE} compact />
           </div>
@@ -164,7 +165,7 @@ export default function Home() {
             <span className="absolute top-0 inset-x-0 h-[3px] foil-line" />
             <div className="min-w-0 flex-1">
               <div className="font-semibold text-[15px]">Funds on another chain?</div>
-              <p className="text-[13.5px] text-[#C9C9CF] leading-snug mt-0.5">USDC, ETH, SOL or BTC arrive as USDC on NEAR through NEAR Intents, usually within a minute.</p>
+              <p className="text-[13.5px] text-[#C9C9CF] leading-snug mt-0.5">USDC, ETH, SOL or BTC arrive as USDC on NEAR through NEAR Intents: Solana and Base in under a minute, Bitcoin in about 13.</p>
             </div>
             <IconChevron size={18} className="text-[#8A8A92] shrink-0" />
           </Link>

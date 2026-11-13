@@ -5,7 +5,7 @@ import { poolOhlcv } from '../market/geckoterminal'
 import type { Candle } from '../market/types'
 import { coinBySymbol } from './config'
 import type { AgentState } from './hooks'
-import { feedFor, latestReads, recordStats } from './store'
+import { feedFor, latestReads, recordStats, setupFeed } from './store'
 import { vault, type VaultConfig } from './vault'
 
 /**
@@ -35,6 +35,7 @@ export async function agentSnapshot(): Promise<AgentState> {
     nextCheckAt: Math.ceil((Date.now() / 1000 - 20) / period) * period + 20,
     reads: latestReads() as AgentState['reads'],
     feed: feedFor(null, 30),
+    setups: setupFeed(6),
     record: recordStats(),
     vault: c ? { members: c.members, trades: c.trades, calls: c.calls, paused: c.paused } : null,
   }

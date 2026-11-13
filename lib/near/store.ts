@@ -33,6 +33,22 @@ export function feedFor(accountId: string | null, limit = 40): FeedLine[] {
     .map(r => ({ id: r.id, at: r.at, kind: r.kind, text: r.text, coin: r.coin, tx: r.tx, actor: r.actor, mine: r.accountId != null }))
 }
 
+/**
+ * The agent's latest setups and passes on the public floor, however long ago they were. In a quiet market
+ * hundreds of "watching" lines come after them, and the plain feed would push them out.
+ */
+export function setupFeed(limit = 6): FeedLine[] {
+  const f = schema.nearFeed
+  return getDb()
+    .select()
+    .from(f)
+    .where(and(isNull(f.accountId), inArray(f.kind, ['setup', 'pass', 'seal'])))
+    .orderBy(desc(f.id))
+    .limit(limit)
+    .all()
+    .map(r => ({ id: r.id, at: r.at, kind: r.kind, text: r.text, coin: r.coin, tx: r.tx, actor: r.actor, mine: false }))
+}
+
 /** Reads one member from the vault into the agent's list. Null if they aren't a member (any more). */
 export async function syncMember(accountId: string): Promise<Member | null> {
   const member = await vault.member(accountId)

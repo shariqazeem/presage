@@ -64,14 +64,24 @@ function Checks({ r }: { r?: CoinRead }) {
 
 type Row = { coin: Coin; read?: CoinRead }
 
-function useRows(reads: CoinRead[], query: string): Row[] {
+/** The coins people know, in the order a new member looks for them; the rest follow by trading volume. */
+const FAMILIAR = ['NEAR', 'ZEC', 'WBTC', 'SOL', 'RHEA', 'AURORA']
+const familiarity = (symbol: string) => (FAMILIAR.includes(symbol) ? FAMILIAR.indexOf(symbol) : FAMILIAR.length)
+
+/** The floor lists the coins closest to a trade first; choosing coins for a mandate starts with familiar ones. */
+function useRows(reads: CoinRead[], query: string, order: 'closest' | 'familiar' = 'closest'): Row[] {
   return useMemo(() => {
     const bySymbol = new Map(reads.map(r => [r.coin, r]))
     const q = query.trim().toLowerCase()
+    const byVolume = (a: Row, b: Row) => (b.coin.vol24 ?? 0) - (a.coin.vol24 ?? 0)
     return COINS.map(coin => ({ coin, read: bySymbol.get(coin.symbol) }))
       .filter(({ coin }) => !q || coin.symbol.toLowerCase().includes(q) || coin.name.toLowerCase().includes(q))
-      .sort((a, b) => (b.read ? closeness(b.read) : -1) - (a.read ? closeness(a.read) : -1) || (b.coin.vol24 ?? 0) - (a.coin.vol24 ?? 0))
-  }, [reads, query])
+      .sort(
+        order === 'familiar'
+          ? (a, b) => familiarity(a.coin.symbol) - familiarity(b.coin.symbol) || byVolume(a, b)
+          : (a, b) => (b.read ? closeness(b.read) : -1) - (a.read ? closeness(a.read) : -1) || byVolume(a, b),
+      )
+  }, [reads, query, order])
 }
 
 function Search({ value, onChange, count }: { value: string; onChange: (v: string) => void; count: number }) {
@@ -131,7 +141,7 @@ export function CoinList({ reads, current, onPick }: { reads: CoinRead[]; curren
 /** The mandate's list: tick the coins it may buy, up to `max`. */
 export function CoinChooser({ reads, chosen, onToggle, max }: { reads: CoinRead[]; chosen: string[]; onToggle: (id: string) => void; max: number }) {
   const [query, setQuery] = useState('')
-  const rows = useRows(reads, query)
+  const rows = useRows(reads, query, 'familiar')
   return (
     <div>
       <Search value={query} onChange={setQuery} count={COINS.length} />

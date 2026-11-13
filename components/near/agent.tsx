@@ -158,8 +158,8 @@ export function StatStrip({ agent }: { agent: AgentState | undefined }) {
   const items = [
     { v: agent?.vault?.members ?? '—', k: 'members' },
     { v: rec?.closed ?? 0, k: 'trades closed' },
-    { v: rec?.closed ? `${Math.round((rec.wins / rec.closed) * 100)}%` : '—', k: 'ended up' },
-    { v: rec?.closed ? money(rec.pnlUsd, { sign: true }) : '—', k: 'made, losses in', tone: rec && rec.closed ? (rec.pnlUsd >= 0 ? 'text-up' : 'text-down') : '' },
+    { v: rec?.closed ? `${Math.round((rec.wins / rec.closed) * 100)}%` : '—', k: 'won' },
+    { v: rec?.closed ? money(rec.pnlUsd, { sign: true }) : '—', k: 'profit, losses included', tone: rec && rec.closed ? (rec.pnlUsd >= 0 ? 'text-up' : 'text-down') : '' },
   ]
   return (
     <div className="grid grid-cols-4 gap-2">

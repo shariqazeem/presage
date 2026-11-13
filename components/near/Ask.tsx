@@ -42,7 +42,7 @@ export function Ask({ coin, dark = true }: { coin?: string; dark?: boolean }) {
             <li key={i} className="grid gap-2">
               <div className={cx('justify-self-end max-w-[85%] rounded-[14px] rounded-br-[4px] px-3.5 py-2 text-[13.5px]', dark ? 'bg-white text-ink' : 'bg-ink text-white')}>{t.q}</div>
               <div className="flex gap-2.5 max-w-[92%]">
-                <Mark size={26} />
+                <Mark size={26} className="shrink-0" />
                 <div className={cx('rounded-[14px] rounded-tl-[4px] px-3.5 py-2.5 text-[13.5px] leading-snug', dark ? 'bg-white/[0.07] text-[#E6E6E3]' : 'bg-paper-2 text-ink-2')}>
                   {t.error ? <span className="text-down-d">{t.error}</span> : t.a ?? <span className={cx('animate-[soft-pulse_1.2s_ease-in-out_infinite]', sub)}>Reading the charts…</span>}
                   {t.a && t.by === 'near-ai' && <div className={cx('label !text-[8.5px] mt-1.5', sub)}>answered on NEAR AI · {t.model}</div>}

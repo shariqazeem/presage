@@ -25,12 +25,16 @@ function Row({ s, rank, now }: { s: BoardRow; rank: number | null; now: number }
   return (
     <Link href={`/board/${s.id}`} className="min-w-0 rounded-[22px] border border-line bg-white p-4 press block hover:border-ink-3 transition-colors">
       <div className="flex items-center gap-3">
-        <span className={cx('w-9 h-9 rounded-full grid place-items-center num text-[14px] font-semibold shrink-0', rank === 1 ? 'foil text-white' : rank ? 'bg-ink text-white' : 'bg-paper-2 text-ink-3')}>{rank ?? '·'}</span>
+        {s.house && !rank ? (
+          <Mark size={36} className="shrink-0" />
+        ) : (
+          <span className={cx('w-9 h-9 rounded-full grid place-items-center num text-[14px] font-semibold shrink-0', rank === 1 ? 'foil text-white' : rank ? 'bg-ink text-white' : 'bg-paper-2 text-ink-3')}>{rank ?? '·'}</span>
+        )}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 min-w-0">
             <span className="font-heading text-[17px] font-black tight truncate">{s.house ? 'The house method' : s.name}</span>
             {s.adopted && <span className="rounded-full foil text-white px-2 h-[20px] inline-flex items-center text-[10px] font-semibold uppercase tracking-[0.07em] shrink-0">Adopted</span>}
-            {!s.ranked && <span className="rounded-full bg-paper-2 text-ink-3 px-2 h-[20px] inline-flex items-center text-[10px] font-semibold uppercase tracking-[0.07em] shrink-0">New</span>}
+            {!s.ranked && <span className="rounded-full bg-paper-2 text-ink-3 px-2 h-[20px] inline-flex items-center text-[10px] font-semibold uppercase tracking-[0.07em] shrink-0">{s.house ? 'Default' : 'New'}</span>}
           </div>
           <div className="text-[12.5px] text-ink-3 mt-0.5 truncate">{s.house ? 'ParallaxPay’s own method' : `by ${shortAccount(s.owner)}`}</div>
         </div>

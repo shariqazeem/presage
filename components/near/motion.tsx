@@ -9,7 +9,8 @@ import { cx } from '../ui'
  */
 export function RollingNumber({ value, className = '' }: { value: string; className?: string }) {
   return (
-    <span className={cx('inline-flex leading-none num', className)} aria-label={value} role="text">
+    <span className={cx('inline-flex leading-none num', className)}>
+      <span className="sr-only">{value}</span>
       {value.split('').map((ch, i) =>
         /\d/.test(ch) ? (
           <Digit key={`${value.length}:${i}`} d={Number(ch)} />

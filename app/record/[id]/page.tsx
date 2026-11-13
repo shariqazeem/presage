@@ -96,7 +96,16 @@ export default function Receipt({ params }: { params: Promise<{ id: string }> })
         .catch(() => setSigOk(false))
   }, [t])
 
-  if (error && !mock) return <div className="max-w-[760px] mx-auto px-4 pt-10 text-ink-2">No such promise.</div>
+  if (error && !mock)
+    return (
+      <div className="max-w-[560px] mx-auto px-4 pt-16 pb-28 text-center">
+        <h1 className="font-heading text-[26px] font-black tight">No promise with that number.</h1>
+        <p className="text-[14.5px] text-ink-2 mt-2 leading-snug">Every plan ParallaxPay seals on NEAR is listed in its work, losses included.</p>
+        <Link href="/record" className="mt-5 inline-flex h-11 px-5 rounded-full bg-ink text-white text-[14px] font-semibold items-center press">
+          See its work
+        </Link>
+      </div>
+    )
   if (!t)
     return (
       <div className="max-w-[1180px] mx-auto px-4 pt-10 grid lg:grid-cols-[0.85fr_1.15fr] gap-4">

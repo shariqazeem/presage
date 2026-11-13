@@ -194,7 +194,7 @@ export function higherTfQuality(frames) {
       notes.push(`${tf} rising support (${lo.touches} touches)`);
     } else {
       score -= weight;
-      notes.push(`${tf} support is FALLING (${lo.touches} touches)`);
+      notes.push(`${tf} support is falling (${lo.touches} touches)`);
     }
   }
   // Higher lows on the daily = the structure is still building.

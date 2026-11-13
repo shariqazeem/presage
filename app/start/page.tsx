@@ -268,9 +268,10 @@ export default function Start() {
                 <div className={cx('mt-4 rounded-[16px] p-3 flex items-center gap-3', !rules.autopilot ? 'bg-white/10' : 'bg-paper-2')}>
                   <Mark size={30} className="shrink-0" />
                   <div className="min-w-0 flex-1 text-[13px] leading-snug">
+                    <span className={cx('block text-[10.5px] font-semibold uppercase tracking-[0.07em] mb-0.5', !rules.autopilot ? 'text-white/55' : 'text-ink-3')}>For example</span>
                     <b>I&rsquo;d buy $25 of NEAR.</b> It&rsquo;s on support and money flow bottomed. Stop $3.71.
                   </div>
-                  <span className={cx('text-[12.5px] font-semibold rounded-full px-3 h-8 grid place-items-center shrink-0', !rules.autopilot ? 'bg-white text-ink' : 'bg-ink text-white')}>Approve</span>
+                  <span aria-hidden className={cx('text-[12.5px] font-semibold rounded-full px-3 h-8 grid place-items-center shrink-0 border', !rules.autopilot ? 'border-white/30 text-white/70' : 'border-line text-ink-3')}>Approve</span>
                 </div>
               </Option>
               <Option on={rules.autopilot} onClick={() => set({ autopilot: true })}>
@@ -279,6 +280,7 @@ export default function Start() {
                 <div className={cx('mt-4 rounded-[16px] p-3 flex items-center gap-3', rules.autopilot ? 'bg-white/10' : 'bg-paper-2')}>
                   <Mark size={30} className="shrink-0" />
                   <div className="min-w-0 flex-1 text-[13px] leading-snug">
+                    <span className={cx('block text-[10.5px] font-semibold uppercase tracking-[0.07em] mb-0.5', rules.autopilot ? 'text-white/55' : 'text-ink-3')}>For example</span>
                     <b>Bought $25 of NEAR</b> at $3.74. Plan sealed on NEAR. I&rsquo;m watching the stop.
                   </div>
                 </div>

@@ -65,9 +65,15 @@ export function usd(n: number): string {
   if (n >= 1000) return `$${n.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
   if (n >= 10) return `$${n.toFixed(2)}`
   if (n >= 0.01 || n <= 0) return `$${n.toFixed(n >= 1 ? 3 : 4)}`
-  // Coins priced in tiny fractions keep four significant digits: $0.000000008893, not $0.0000.
-  return `$${n.toFixed(Math.min(20, 3 - Math.floor(Math.log10(n))))}`
+  if (n >= 0.0001) return `$${n.toFixed(3 - Math.floor(Math.log10(n)))}`
+  // Coins priced in tiny fractions: the zeros counted the way DEX screens and the drawings write them,
+  // $0.0₈8893 for $0.000000008893 (as lib/near/drawing.ts px does).
+  const zeros = -Math.floor(Math.log10(n)) - 1
+  const digits = Math.round(n * 10 ** (zeros + 4)).toString().replace(/0+$/, '') || '0'
+  return `$0.0${[...String(zeros)].map(d => SUBSCRIPT[Number(d)]).join('')}${digits}`
 }
+
+const SUBSCRIPT = '₀₁₂₃₄₅₆₇₈₉'
 
 export async function readCoin(coin: Coin): Promise<Read> {
   const frames = await loadFrames(assetOf(coin))
@@ -134,7 +140,7 @@ export function readFrames(coin: Coin, frames: Frames): Read {
       key: 'trend',
       label: 'The daily trend is not falling',
       ok: e50 == null ? null : !dailyFalling,
-      note: e50 != null ? `daily close ${((dayClose / e50 - 1) * 100).toFixed(1)}% ${dayClose >= e50 ? 'above' : 'below'} its 50-day average` : 'not enough daily history',
+      note: e50 != null ? `daily close ${Math.abs((dayClose / e50 - 1) * 100).toFixed(1)}% ${dayClose >= e50 ? 'above' : 'below'} its 50-day average` : 'not enough daily history',
     },
     {
       key: 'room',

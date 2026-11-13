@@ -85,7 +85,7 @@ export function Promises({ max = 3 }: { max?: number }) {
               </div>
               <div>
                 <div className="num text-[16px] font-semibold">{Math.round((stats.wins / stats.closed) * 100)}%</div>
-                <div className="text-[11.5px] text-ink-3">ended up</div>
+                <div className="text-[11.5px] text-ink-3">won</div>
               </div>
               <div>
                 <div className={cx('num text-[16px] font-semibold', stats.pnlUsd > 0 && 'text-up', stats.pnlUsd < 0 && 'text-down')}>{usd(stats.pnlUsd, { sign: true })}</div>
