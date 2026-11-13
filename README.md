@@ -8,11 +8,15 @@ You fund your own account in the ParallaxPay vault (a NEAR contract) and choose 
 
 **Live:** [parallaxpay.xyz](https://parallaxpay.xyz) · **Vault:** [`vault.parallaxpay.near`](https://nearblocks.io/address/vault.parallaxpay.near) · **Board:** [parallaxpay.xyz/board](https://parallaxpay.xyz/board)
 
+![ParallaxPay reading NEAR on the 1H: the resistance it found ("Price has turned at $3.563 6 times, from both sides. Now it's resistance."), its trendlines, money flow and its six checks](docs/media/floor.jpg)
+
 **The problem.** An AI agent that trades for you needs your money, and giving an agent your keys means trusting it with everything you hold. ParallaxPay splits the two. Your money and your rules sit in your own account in a vault contract on NEAR. The agent holds a key that can only call `trade`, `seal`, `reveal` and `recover` on that vault; the vault refuses any trade outside your rules and pays withdrawals to you alone. Before every trade the agent seals its plan on NEAR, and a NEAR AI model running in a TEE reviews the chart and signs its answer.
 
 ## Proof on NEAR mainnet
 
 The first member joined on 13 Nov 2026 with a ParallaxPay built-in account (a NEAR account made in the browser, no wallet), funded with 2.88 NEAR. One tap ran five transactions in 21 seconds:
+
+![The first member's hire on a phone: the mandate, the built-in account with 2.88 NEAR, and the agent at work after the deposit](docs/media/hire.jpg)
 
 | Step | Transaction | What the chain shows |
 | --- | --- | --- |
