@@ -132,7 +132,7 @@ export default function Home() {
           <div className="rounded-[22px] bg-paper-2 p-4 md:p-6 grid md:grid-cols-[1fr_1.1fr] lg:grid-cols-1 xl:grid-cols-[1fr_1.1fr] gap-5 items-center">
             <div>
               <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3">Hire it</div>
-              <div className="font-heading text-[24px] md:text-[28px] font-black tight leading-[1.05] mt-1">Give it a mandate, not your keys.</div>
+              <div className="font-heading text-[24px] md:text-[28px] font-black tight leading-[1.05] mt-1">Three steps, then it trades for you.</div>
               <ol className="mt-4 grid gap-2.5">
                 {['Write the mandate: coins, size, how often, ask first or autopilot.', 'Sign it with your NEAR wallet. The vault enforces it.', 'Add USDC. It trades only from your own account.'].map((s, i) => (
                   <li key={s} className="flex gap-2.5 text-[14px] text-ink-2 leading-snug">
