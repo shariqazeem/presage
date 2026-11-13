@@ -16,7 +16,7 @@ export function Footer() {
           <Link href="/board" className="hover:text-ink">The board</Link>
           <Link href="/record" className="hover:text-ink">Its work</Link>
           <Link href="/fund" className="hover:text-ink">Fund from any chain</Link>
-          <a href="https://github.com/shariqazeem/presage" target="_blank" rel="noreferrer" className="hover:text-ink">
+          <a href="https://github.com/shariqazeem/parallaxpay-near" target="_blank" rel="noreferrer" className="hover:text-ink">
             Code
           </a>
         </div>
