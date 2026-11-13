@@ -189,12 +189,29 @@ async function onSetups(read: Read, setups: Map<string, StrategySetup>) {
   const house = setups.get(HOUSE_ID)
   // Members whose rules take this coin, grouped by the strategy their agent runs, where it has a setup.
   const groups = new Map<string, Known[]>()
+  let takers = 0
+  let inIt = 0
   for (const m of knownMembers()) {
-    if (!allowsCoin(m.member.rules, coin.id) || hasLiveIdea(m.accountId, coin.id)) continue
+    if (!allowsCoin(m.member.rules, coin.id)) continue
+    takers++
+    if (hasLiveIdea(m.accountId, coin.id)) {
+      inIt++
+      continue
+    }
     const sid = strategyFor(m.accountId).id
     if (setups.has(sid)) groups.set(sid, [...(groups.get(sid) ?? []), m])
   }
-  if (house) feed('setup', groups.size ? read.line : `${read.line} Every member who trades ${coin.symbol} is already in it.`, { coin: coin.id, ...AGENT })
+  if (house) {
+    // Said as it is: nobody to buy for, everyone already in, or their strategies waiting.
+    const why = groups.size
+      ? ''
+      : !takers
+        ? ` No member trades ${coin.symbol} yet, so nothing was bought.`
+        : inIt === takers
+          ? ` Every member who trades ${coin.symbol} is already in it.`
+          : ` The members who trade ${coin.symbol} run strategies that wait.`
+    feed('setup', `${read.line}${why}`, { coin: coin.id, ...AGENT })
+  }
   if (!groups.size) return
   // One review per distinct plan: strategies that drew the same stop and target share it.
   const reviewed = new Map<string, Verdict>()
@@ -202,10 +219,11 @@ async function onSetups(read: Read, setups: Map<string, StrategySetup>) {
   let asked = 0
   for (const [sid, members] of groups) {
     const { strategy, setup } = setups.get(sid)!
-    const key = `${setup.stop}|${setup.target}`
+    // A strategy that trades falling markets is graded as one: same plan, its own review.
+    const key = `${setup.stop}|${setup.target}|${strategy.blocks.trend}`
     let verdict = reviewed.get(key)
     if (!verdict) {
-      verdict = await review(read, setup)
+      verdict = await review(read, setup, { tradesFalling: !strategy.blocks.trend })
       reviewed.set(key, verdict)
       const byAnalyst = verdict.source.provider === 'near-ai'
       const whose = sid === HOUSE_ID ? '' : ` for agents on ${strategy.name}`

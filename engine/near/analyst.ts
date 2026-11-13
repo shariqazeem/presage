@@ -25,7 +25,7 @@ type Reply = Omit<Verdict, 'source'>
  * A second opinion on a setup the rules found: the founder's rubric applied to the rendered chart by
  * an open model on NEAR AI Cloud. It can pass on a setup or lower its grade; it never sets prices.
  */
-export async function review(read: Read, setup: Setup): Promise<Verdict> {
+export async function review(read: Read, setup: Setup, strategy: { tradesFalling?: boolean } = {}): Promise<Verdict> {
   const rulesOnly: Verdict = {
     verdict: 'BUY',
     conviction: setup.conviction,
@@ -53,6 +53,14 @@ export async function review(read: Read, setup: Setup): Promise<Verdict> {
     `The plan you are grading: buy at market, stop ${setup.stop}, target ${setup.target}${setup.r1 ? `, first resistance ${setup.r1}` : ''} (${setup.rr.toFixed(1)}R).`,
     `What the rules engine saw: ${setup.reasons.slice(0, 8).join(' | ')}`,
     '',
+    ...(strategy.tradesFalling
+      ? [
+          'THIS MEMBER’S STRATEGY trades falling markets by choice. A falling 1D or 4H is not a reason to pass',
+          'on its own, so the rubric’s "actively falling" condition does not apply to this plan. Everything else',
+          'does: the level and its touches, the money flow, overbought higher timeframes, the room to the target.',
+          '',
+        ]
+      : []),
     'The image has four panels (1D, 4H, 1H, 15m), each with MFI below. Dashed green is detected support',
     'with its touch count, dashed red is resistance, blue dotted is the last price. Work top-down.',
     '',
