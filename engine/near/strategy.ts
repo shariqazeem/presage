@@ -17,7 +17,8 @@ import { fitBoundary, patternTargets, resistanceZones } from '../stquant/structu
  * Measured by scripts/near/backtest.ts (Binance NEAR, ZEC, BTC, ETH, SOL, Nov 2025 - Nov 2026, 0.3% fee
  * + 0.1% slippage a side). V2_DEFAULTS are the least-bad cell of its grid on months 1-8. Every cell lost
  * money in months 1-8 AND in months 9-12: before costs the entries are a coin flip, and the 0.8% round
- * trip is the loss. Not proven; do not trade it live on that evidence.
+ * trip is the loss. Not proven: it trades live only inside members' limits (largest buy, buys a day), and
+ * its sealed record is the live test. The README says so under Known limits.
  */
 
 export type V2Params = {

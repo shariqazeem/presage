@@ -253,7 +253,7 @@ export default function Receipt({ params }: { params: Promise<{ id: string }> })
               <span className="w-9 h-9 rounded-full foil grid place-items-center text-white shrink-0">
                 <IconLock size={15} />
               </span>
-              <p className="text-[14px] text-ink-2 leading-snug">Still sealed. Only its fingerprint is public until the trade ends; then the plan opens here and this page checks it against the fingerprint.</p>
+              <p className="text-[14px] text-ink-2 leading-snug">Sealed on NEAR before the buy, so the plan can’t change. When the trade ends, the full plan opens here and this page checks it against the fingerprint.</p>
             </div>
           )}
         </div>

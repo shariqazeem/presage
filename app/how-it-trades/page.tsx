@@ -167,7 +167,7 @@ export default function HowItTrades() {
       <section className="mt-8 md:mt-12">
         <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3">Right now</div>
         <h2 className="font-heading text-[26px] md:text-[32px] font-black tight mt-1">Its live checks, coin by coin</h2>
-        <p className="text-[14px] text-ink-3 mt-1">All six have to pass before it trades. Closest to a trade first.</p>
+        <p className="text-[14px] text-ink-3 mt-1">The house method trades only when all six pass; a member’s strategy can relax some. Closest to a trade first.</p>
         <div className="mt-4 flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 md:mx-0 md:px-0 pb-1">
           {reads.map(r => {
             const on = r.coin === now?.coin

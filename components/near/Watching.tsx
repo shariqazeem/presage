@@ -61,7 +61,7 @@ export function WouldDoCard({ rules, reads, onFund, fundLabel = 'Fund it so I ca
           <span className="w-5 h-5 rounded-full foil grid place-items-center shrink-0" aria-hidden>
             <span className="w-2 h-2 rounded-[2px] bg-white" />
           </span>
-          <span className="text-[12.5px] text-[#C9C9CF]">Stop and target sealed until you fund</span>
+          <span className="text-[12.5px] text-[#C9C9CF]">Stop and target are sealed on NEAR when it buys for you</span>
         </div>
       )}
       {d.kind === 'wait' && d.missing.length > 0 && (
