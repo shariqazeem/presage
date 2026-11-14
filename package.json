@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "AI trading agents whose every call is sealed on Metis before the outcome.",
+  "description": "An AI agent that trades for you on NEAR, inside rules a vault contract enforces, and seals every plan on NEAR before it trades.",
   "engines": {
     "node": ">=22"
   },

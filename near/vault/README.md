@@ -10,7 +10,7 @@ has listed, and pays withdrawals to the member and nobody else.
 | --- | --- | --- |
 | Member | `join`, deposit USDC, `set_rules`, `stop`, `trade` their own coins, `withdraw` any time, `leave` | touch anyone else's coins |
 | Agent | `trade` a member's coins inside their rules, `seal` and `reveal` calls, `recover` a stuck trade | withdraw, send coins anywhere, trade a member with autopilot off, buy more than the member allows |
-| Owner | list coins and pools (`set_route`), set the agent account, pause trades and deposits | move or withdraw anyone's coins, block withdrawals |
+| Owner | list coins and pools (`set_route`), set the agent account, pause trades and deposits | move or withdraw anyone's coins through the contract, block withdrawals |
 
 A member's rules: autopilot on or off, which coins the agent may buy, the largest buy (USDC), how
 many buys a day, and a style (calm, balanced or bold) for how picky the agent is about entries. Sells
@@ -26,7 +26,7 @@ Before the agent enters, it can seal its plan (`sha256(salt ‖ plan)`). When it
 
 ## Build and test
 
-Run the unit tests (42, covering every path a trade can take):
+Run the unit tests (45, covering every path a trade can take):
 
 ```bash
 cargo test
@@ -42,14 +42,16 @@ The contract is written to `target/near/parallaxpay_vault.wasm`.
 
 ## Deploy
 
-Deploy and set up the vault with `scripts/near/deploy-vault.ts` (from the repo root). It needs the
-owner account's key in `.env.local` and signs real mainnet transactions, so it asks before each one.
+Deploy and set up the vault with `scripts/near/setup.ts` (from the repo root): `npx tsx scripts/near/setup.ts plan`
+shows what it would send, `all` runs it, and each step also runs on its own (`account`, `vault`, `agent`,
+`register`, `routes`, `status`). It needs the owner account's key in `.env.local`, signs real mainnet
+transactions, and asks before sending.
 
-The setup it runs, in order:
+What it sets up, in order:
 
 1. `new(owner, agent, exchange = v2.ref-finance.near, usdc)`
-2. `storage_deposit` for the vault on Rhea and on each token contract (USDC, wNEAR, ZEC)
-3. `set_route([usdc, wrap.near], [4512])` for NEAR and `set_route([usdc, wrap.near, zec.omft.near], [4512, 6065])` for ZEC
+2. `storage_deposit` for the vault on Rhea and on each listed coin's token contract
+3. `set_route` for every coin `scripts/near/discover.ts` finds (25 on mainnet today), e.g. `set_route([usdc, wrap.near], [4512])` for NEAR
 4. A function-call key on the agent account, limited to `trade`, `seal`, `reveal` and `recover` on the vault
 
 ## Use it
@@ -101,6 +103,10 @@ Each change logs a [NEP-297](https://github.com/near/NEPs/blob/master/neps/nep-0
 ## Known limits
 
 - One trade at a time across the vault. A trade takes a few blocks, so the agent queues them.
-- The owner lists the pools. A member's exposure to the agent is capped by their own limits.
-- This deployment can be upgraded by whoever holds the vault account's full-access key (the
-  ParallaxPay owner). That key will be removed, or put behind a timelock, before real money uses it.
+- Members trust the owner: it lists the pools and sets the agent account. A member's exposure to the
+  agent is capped by their own limits (largest buy, buys a day, coins).
+- The vault caps how much the agent buys, not the price it pays: the agent sets the minimum out from its
+  own Rhea quote, less its slippage allowance (0.8% by default).
+- This deployment can be upgraded by whoever holds the vault account's full-access key (the ParallaxPay
+  owner). Real money has been in it since 13 Nov 2026, so members trust the owner not to deploy code that
+  moves their coins; the key goes, or moves behind a timelock, once the contract settles after the hackathon.
