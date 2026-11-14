@@ -493,7 +493,7 @@ export function tell(e: AgentEvent): Told | null {
       if (e.masked)
         return {
           text: d.paid ? <>{who} answered a paid question</> : <>{who} called <b className="text-ink">{sym}</b> for the next {String(d.horizon)}</>,
-          detail: 'Sealed on Metis. It opens when the time is up.',
+          detail: 'Sealed. It opens when the time is up.',
           href: `/calls/${d.callId}`,
           tone: 'blue',
         }
