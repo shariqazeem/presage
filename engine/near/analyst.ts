@@ -29,7 +29,8 @@ export async function review(read: Read, setup: Setup, strategy: { tradesFalling
   const rulesOnly: Verdict = {
     verdict: 'BUY',
     conviction: setup.conviction,
-    why: setup.reasons.slice(0, 2).join('; '),
+    // Each reason is a sentence already; joined with "; " the plan read "…timeframe).; It is…".
+    why: setup.reasons.slice(0, 2).map(r => (/[.!?…]$/.test(r) ? r : `${r}.`)).join(' '),
     plain: `${read.coin.symbol} is sitting on a level buyers have defended, after a pullback.`,
     wouldChangeMind: `a close below ${usd(setup.stop)}`,
     source: { provider: 'rules' },
@@ -100,8 +101,9 @@ export async function review(read: Read, setup: Setup, strategy: { tradesFalling
       source: { provider: 'near-ai', model: answer.model, chatId: answer.chatId, signature },
     }
   } catch (e) {
-    l.warn(`NEAR AI review failed, going on the rules alone: ${errMsg(e)}`)
-    // Without the second opinion, the setup is graded one step lower.
-    return { ...rulesOnly, conviction: Math.max(1, setup.conviction - 1), why: `No second opinion was available, so it is graded one step lower. ${rulesOnly.why}` }
+    l.warn(`NEAR AI review failed, so no buy this read: ${errMsg(e)}`)
+    // No second opinion, no trade: every buy is reviewed by NEAR AI in a TEE. Until 14 Nov 2026 it bought on
+    // the rules alone, one grade lower (plan #1 says so on its receipt). The next read asks again.
+    return { ...rulesOnly, verdict: 'WAIT', why: 'NEAR AI didn’t answer in time, so I wait for the next read rather than buy without its second opinion.' }
   }
 }

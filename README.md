@@ -46,6 +46,8 @@ At 22:18 UTC on 13 Nov 2026 the agent traded for this member with no one at the 
 
 [Its page](https://parallaxpay.xyz/record/1) shows the whole trade, loss included, and runs three checks in your browser: the fingerprint the vault holds, sha256(salt + plan) against it, and the NEAR AI enclave's signature on the analyst's answer.
 
+Its second trade followed at 23:12 UTC ([plan #1](https://parallaxpay.xyz/record/2)), also SOL, and also stopped out: −$0.05 (−1.6%), sealed before the buy and opened after, the same way. NEAR AI didn't answer in time for that one, so the agent bought on its rules alone, one grade lower, and its receipt says so. Since 14 Nov it never buys without the second opinion: no answer from NEAR AI, no trade.
+
 ## Try it in three minutes
 
 1. Open [parallaxpay.xyz](https://parallaxpay.xyz). You see ParallaxPay reading a coin: the chart, the support, resistance and trendlines it drew with its own code, its six checks, and one sentence on what it waits for. Scroll the chart into view and it walks you through its own lines.
