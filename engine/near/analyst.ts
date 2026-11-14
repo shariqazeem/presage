@@ -35,7 +35,8 @@ export async function review(read: Read, setup: Setup, strategy: { tradesFalling
     wouldChangeMind: `a close below ${usd(setup.stop)}`,
     source: { provider: 'rules' },
   }
-  if (!nearAiConfigured()) return rulesOnly
+  // No second opinion, no trade, here too: without NEAR AI set up, the agent waits rather than buy on its rules alone.
+  if (!nearAiConfigured()) return { ...rulesOnly, verdict: 'WAIT', why: 'NEAR AI isn’t set up here, so I don’t buy without its second opinion.' }
   const text = [
     'You are the analyst for ParallaxPay, an AI agent that trades spot crypto for its members on NEAR.',
     'It buys at market through a Rhea pool (0.3% fee each way) and can only be long or in cash.',
