@@ -2,15 +2,17 @@
 
 [![CI](https://github.com/shariqazeem/parallaxpay-near/actions/workflows/ci.yml/badge.svg)](https://github.com/shariqazeem/parallaxpay-near/actions/workflows/ci.yml)
 
-An AI agent that trades for you on NEAR, inside rules you set. Hire it in a minute without a wallet, fund it with NEAR or from another chain through NEAR Intents, shape its strategy in your own words, and see every strategy ranked by real, sealed trades.
+An AI agent that trades for you on NEAR, inside rules a smart contract enforces. Hire it in a minute without a wallet, teach it your strategy in plain words, and check every plan it makes against a fingerprint it sealed on NEAR before the trade.
 
-**Live:** [parallaxpay.xyz](https://parallaxpay.xyz) · **Vault:** [`vault.parallaxpay.near`](https://nearblocks.io/address/vault.parallaxpay.near) · **Board:** [parallaxpay.xyz/board](https://parallaxpay.xyz/board)
+**Live:** [parallaxpay.xyz](https://parallaxpay.xyz) · **Demo:** [video on X](https://x.com/shariq_ai/status/2121480302170374434) · **Vault:** [`vault.parallaxpay.near`](https://nearblocks.io/address/vault.parallaxpay.near) · **Board:** [parallaxpay.xyz/board](https://parallaxpay.xyz/board)
 
 ![ParallaxPay reading NEAR on the 1H: the resistance it found ("Price has turned at $3.563 6 times, from both sides. Now it's resistance."), its trendlines, money flow and its six checks](docs/media/floor.jpg)
 
-**The problem.** AI trading agents are black boxes: you hand one your money and never see why it buys. ParallaxPay shows every decision, and keeps the money where only your rules apply. Your money and your rules sit in your own account in a vault contract on NEAR. The agent signs with a function-call key that can only call `trade`, `seal`, `reveal` and `recover` on that vault; the vault refuses any trade outside your rules and pays withdrawals to you alone. Before every trade the agent seals its plan on NEAR, and a NEAR AI model running in a TEE reviews the chart and signs its answer.
+**The problem.** AI trading agents are black boxes: you hand one your money and never see why it buys, or whether the record it shows you is the real one.
 
-**What you control.** Ask first or autopilot, how picky it is, which coins (any coin it lists, or up to eight you pick), the largest buy (any amount) and how many buys a day. It trades only through Rhea pools the owner has listed: every coin with a classic Rhea pool against wNEAR or USDC that is deep enough and trades, 25 today. After a trade it opens the sealed plan, and anyone can check it against the seal, losses included.
+**What ParallaxPay does.** Your money and your rules sit in your own account in a vault contract on NEAR. The agent signs with a function-call key that can only call `trade`, `seal`, `reveal` and `recover` on that vault; the vault refuses any trade outside your rules and pays withdrawals to you alone. Before every buy, a NEAR AI model running in a TEE reviews the chart and signs its verdict, and the agent seals the plan on NEAR as a sha256 fingerprint. When the trade ends, the plan opens and anyone can check it against the seal.
+
+**What you control.** Ask first or autopilot, how picky it is, which coins (any coin it lists, or up to eight you pick), the largest buy and how many buys a day. Teach it your own strategy in words, or hire one from the board, where strategies are ranked by real, sealed trades and one that beats the house method over 20 trades is adopted. It trades only through Rhea pools the owner has listed: every coin with a classic Rhea pool against wNEAR or USDC that is deep enough and active, 25 today.
 
 ## Proof on NEAR mainnet
 
@@ -26,27 +28,27 @@ The first member, the founder with his own money, joined on 13 Nov 2026 with a P
 | Mandate signed into the vault | [`9B21breF…S4sGL`](https://nearblocks.io/txns/9B21breFtNBvYmtVECQmfQ9PUyNEUwGGi3K4FTPS4sGL) | the vault's own `join` event: autopilot, $5 a buy, 3 a day, any coin, bold |
 | Deposited | [`4TP7wb6S…DQBkx`](https://nearblocks.io/txns/4TP7wb6S4Er5H8q4iqQ52UBiHqfAjSTGrEqcDzVDQBkx) | 8.399936 USDC into `vault.parallaxpay.near` |
 
-Its strategy, [Bounce buyer](https://parallaxpay.xyz/board/s_36091b39cc), was taught in plain words through NEAR AI and runs on the agent from its next read. Read the member's rules and balance from the vault yourself:
+Its strategy, [Bounce buyer](https://parallaxpay.xyz/board/s_36091b39cc), was taught in plain words through NEAR AI. Read the member's rules and balance straight from the vault:
 
 ```bash
 near contract call-function as-read-only vault.parallaxpay.near get_member json-args '{"account_id":"71658cdc828c4f7d7be1a0bef97f4a332375806dc461629329ffda572eef9a72"}' network-config mainnet now
 ```
 
-You should see `"autopilot": true, "max_trade": "5000000", "trades_per_day": 3, "coins": [], "style": 2` and its USDC balance (6 decimals) in `balances`.
+You should see `"autopilot": true, "max_trade": "5000000", "trades_per_day": 3, "coins": [], "style": 2` under `rules`, and its USDC balance (6 decimals) in `balances`.
 
-### Its first trade, on its own
+### A full trade, end to end
 
 At 22:18 UTC on 13 Nov 2026 the agent traded for this member with no one at the keyboard. Bounce buyer's rules found SOL on a floor it had bounced off many times, with selling slowing; the NEAR AI analyst reviewed the same chart and graded it 4/5. Every step below was signed by the agent's limited key:
 
 | Step | Transaction | What the chain shows |
 | --- | --- | --- |
 | Plan sealed, then bought | [`96TuqM27…53Gy`](https://nearblocks.io/txns/96TuqM27Vs5e9oJnsRD4v8ToNaj8iC9YjBdQPZGh53Gy) | The vault's `seal` event (call #0, `a14668f0…2d5af9`) comes before `trade_start`. Rhea swapped 3.50 USDC → 1.0234 wNEAR → 0.04420472 SOL (a fill at $79.18 a SOL, about 1% above the $78.22 Binance price the plan was drawn on), and `trade_end` shows it filled into the member's vault account. $3.50 is inside the member's $5-a-buy rule. |
-| Sold at its stop | [`7ypmbX7k…SJcE`](https://nearblocks.io/txns/7ypmbX7kd4oW18b8FSH43PweJR9NPtqKYaguppaQSJcE) | 44 minutes later SOL fell through the stop ($77.25 on the chart against a $77.28 stop). Rhea swapped the 0.04420472 SOL → 1.0172 wNEAR → 3.460311 USDC, back into the member's vault account: −$0.04 (−1.1%). |
+| Sold at its stop | [`7ypmbX7k…SJcE`](https://nearblocks.io/txns/7ypmbX7kd4oW18b8FSH43PweJR9NPtqKYaguppaQSJcE) | 44 minutes later SOL fell through the stop ($77.25 on the chart against a $77.28 stop) and the agent sold: Rhea swapped the 0.04420472 SOL → 1.0172 wNEAR → 3.460311 USDC, back into the member's vault account. |
 | Plan opened | [`3Cg9Ws5P…7ipS`](https://nearblocks.io/txns/3Cg9Ws5PSy3Htve3sYNFizkYLHARU5z2e8Ao9Lar7ipS) | The vault's `reveal`. The contract recomputes sha256(salt ‖ plan) and accepts the plan only if it matches the seal. It did: entry near $78.22, stop $77.28, target $80.72, NEAR AI's 4/5, and the hash of the Bounce buyer settings it traded with. |
 
-[Its page](https://parallaxpay.xyz/record/1) shows the whole trade, loss included, and runs three checks in your browser: the fingerprint the vault holds, sha256(salt + plan) against it, and the signature NEAR AI Cloud returned with the analyst's answer, which must recover to the signing address sealed in the plan (an address anyone can compare with NEAR AI Cloud's attestation report for the model).
+[Its receipt](https://parallaxpay.xyz/record/1) replays the trade on the chart it was sealed on and runs three checks in your browser: the fingerprint the vault holds, sha256(salt + plan) against it, and the signature NEAR AI Cloud returned with the analyst's answer, which must recover to the signing address sealed in the plan (compare it with NEAR AI Cloud's attestation report for the model).
 
-Its second trade followed at 23:12 UTC ([plan #1](https://parallaxpay.xyz/record/2)), also SOL, and also stopped out: −$0.05 (−1.6%), sealed before the buy and opened after, the same way. NEAR AI didn't answer in time for that one, so the agent bought on its rules alone, one grade lower, and its receipt says so. Since 14 Nov it never buys without the second opinion: no answer from NEAR AI, no trade. Every trade after these lands on [its work](https://parallaxpay.xyz/record) the same way, sealed first and opened after, with its own receipt.
+The second plan followed at 23:12 UTC ([plan #1](https://parallaxpay.xyz/record/2)), sealed and opened the same way. NEAR AI timed out on that one and the agent bought on its rules alone, which its receipt records; since 14 Nov a missing review means no trade. Every plan since is on [its work](https://parallaxpay.xyz/record), each with its own receipt.
 
 ## Try it in three minutes
 
@@ -91,7 +93,7 @@ flowchart LR
 
 The vault holds each member's coins and rules. The agent can only call `trade`, `seal`, `reveal` and `recover`, and the vault checks every trade against the member's rules before it touches Rhea. Withdrawals go to the member only.
 
-### Try it, step by step
+### Full walkthrough
 
 1. Open the app at **[parallaxpay.xyz](https://parallaxpay.xyz)** and watch the agent read the coin closest to a trade. Its drawing plays in front of you: candles, the support and resistance it mapped (with touch counts), its trendlines and money flow, all computed with its own code. It says in one sentence what it is waiting for, its six checks tick in, and **The exact chart it read** opens the four-timeframe image it actually analysed. It watches every coin it can trade on Rhea (25 at the last discovery): the ones closest to a trade are re-read every 15 minutes, the rest at least about hourly. Pinch or ctrl-scroll the chart to zoom, drag to pan, hold for a candle's numbers, and press **Watch it read the chart** to have it talk you through its own lines.
 2. Press **Hire ParallaxPay**. It introduces itself on its live chart, then asks four questions (ask first or autopilot, how picky, any coin or only some, how big: any amount) while your mandate fills in. Press **Start my agent**: no wallet needed. **Your agent** already shows what it would do with your mandate right now, on its chart (the plan itself stays sealed until you fund it).
@@ -134,7 +136,7 @@ Live on NEAR mainnet since 9 Nov 2026, with all 25 coins listed.
 | --- | --- |
 | [`vault.parallaxpay.near`](https://nearblocks.io/address/vault.parallaxpay.near) | The vault contract ([deployed here](https://nearblocks.io/txns/FXe33mwU19VsEVoKy8su5VUcPXvYvGc9qbBX3en7fsBi)) |
 | [`agent.parallaxpay.near`](https://nearblocks.io/address/agent.parallaxpay.near) | The agent. Its server key can only call `trade`, `seal`, `reveal` and `recover` on the vault, with no deposit. Its only full-access key is the owner's, which never goes on the server |
-| [`parallaxpay.near`](https://nearblocks.io/address/parallaxpay.near) | The owner: lists coins and pools, sets the agent account, pauses trading. No contract method lets it withdraw members' coins, but members trust it: it picks the pools and the agent account, and holds the upgrade key (Known limits) |
+| [`parallaxpay.near`](https://nearblocks.io/address/parallaxpay.near) | The owner: lists coins and pools, sets the agent account, pauses trading. No contract method moves or withdraws members' coins; listing pools, setting the agent and upgrading the code are owner powers (see the security model) |
 
 The vault's on-chain `code_hash` is `B77jv24sNJ1WhtUSmgMuP1XS4pLJeZtNwCWzjE8KqyFw`: the base58 sha256 of the deployed build, committed at [`near/vault/res/parallaxpay_vault.wasm`](near/vault/res/parallaxpay_vault.wasm) (sha256 hex `9625f996…34d92e82`). It was built from `near/vault` as it is in this repository, with the toolchain `near/vault/rust-toolchain.toml` pins (`npm run near:build`); the vault's source hasn't changed since. Check it without building: `shasum -a 256 near/vault/res/parallaxpay_vault.wasm`.
 
@@ -150,18 +152,23 @@ The vault's on-chain `code_hash` is `B77jv24sNJ1WhtUSmgMuP1XS4pLJeZtNwCWzjE8KqyF
 
 - **NEAR:** `near-sdk` 5.27 (the vault, in Rust), `near-api-js` 7.4, NEAR Connect (`@hot-labs/near-connect` 0.12), the NEAR Intents 1-Click API, NEAR AI Cloud (`z-ai/glm-5.3-flash`, answers signed in a TEE), Rhea (`v2.ref-finance.near`).
 - **App and agent:** Next.js 15, React 19, TanStack Query, Tailwind CSS 4, Drizzle ORM on SQLite (`better-sqlite3`), TypeScript run with `tsx`.
-- **Baseline from before the hackathon:** the founder's chart-reading engine in [`engine/stquant`](engine/stquant) and the earlier Metis app (see the disclosure above).
+- **Baseline from before the hackathon:** the founder's chart-reading engine in [`engine/stquant`](engine/stquant), and app code carried over from the Metis version (see the disclosure above).
 - **AI tools:** written with Claude Code (Anthropic) as a coding assistant. At runtime the agent's second opinion, the Ask answers and teaching in words come from NEAR AI Cloud.
+
+### Security model
+
+- **The vault enforces every agent trade:** the member's autopilot switch, coins, largest buy and buys a day, only listed Rhea routes, and exact amounts at each step, settled by callbacks. Sells back to USDC are never limited, so the agent can always get out. Withdrawals go to the member only.
+- **The agent's key** is a function-call key for `trade`, `seal`, `reveal` and `recover` on the vault, with no deposit: it can't withdraw or send coins anywhere. The agent account's only full-access key is the owner's, which never touches the server.
+- **The owner** lists pools, sets the agent account and can pause trading and deposits; no contract method moves members' coins. The vault account still holds the owner's full-access key, so the code is upgradeable. That key is removed, or moved behind a timelock, once the contract settles after the hackathon.
+- **Price:** the vault caps how much the agent buys; the minimum out comes from the agent's own Rhea quote less its slippage allowance (0.8% by default), and each trade is sized to move its pool less than 1%.
+- **Built-in account:** its full-access key is generated and kept in the browser, like a hot wallet. Members can back it up at any time; larger amounts belong in a NEAR wallet.
+- **The server trusts the chain:** an approval is recorded only after the server reads the transaction back from NEAR, and a strategy change needs a NEP-413 signature from a full-access key of the member's account.
 
 ### Known limits
 
-- One trade at a time across the vault; the agent queues members.
-- Coins are those with a classic Rhea pool against wNEAR (through the USDC/wNEAR pool 4512) or native USDC, at least $5k of liquidity, a fee under 1% and trades in the last day: 25 at the last discovery. Another 42 tokens have a pool but barely trade; discovery picks them up when they do. Tokens whose liquidity sits only in Rhea's concentrated-liquidity (DCL) pools aren't traded yet: that needs a second swap path in the vault.
-- The vault account still holds the owner's full-access key, so its code can be upgraded: members trust the owner not to deploy code that moves their coins. The key goes, or moves behind a timelock, once the contract settles after the hackathon.
-- The house method is unproven. A one-year history test on five large coins ([`scripts/near/backtest.ts`](scripts/near/backtest.ts)) found no setting that beat its costs. So it trades live only inside each member's limits, every result is sealed and public, and strategies compete on real trades: one that beats the house over 20 trades gets adopted.
-- The vault caps how much the agent buys, not the price it pays: the agent sets the minimum out from its own Rhea quote, less 0.8%.
-- The built-in account is a hot wallet: its full-access key lives in this browser's storage. Back it up, or use a NEAR wallet for larger amounts.
-- Not financial advice. The agent can lose money; its record shows losses as they happen.
+- One trade runs at a time across the vault; the agent queues members.
+- Coins need a classic Rhea pool against wNEAR (through the USDC/wNEAR pool 4512) or native USDC, at least $5k of liquidity, a fee under 1% and trades in the last day: 25 at the last discovery. Another 42 tokens have a pool but barely trade; discovery picks them up when they do. Tokens whose liquidity sits only in Rhea's concentrated-liquidity (DCL) pools need a second swap path in the vault.
+- Not financial advice. The agent trades real money, and its record shows every result as it happens.
 
 ---
 

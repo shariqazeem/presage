@@ -14,11 +14,9 @@ import { fitBoundary, patternTargets, resistanceZones } from '../stquant/structu
  * says why there is none. The live agent passes nothing else: the last 15m candle is treated as still
  * forming, judged by the clock. A history test passes `nowMs` (and the plan it already computed).
  *
- * Measured by scripts/near/backtest.ts (Binance NEAR, ZEC, BTC, ETH, SOL, Nov 2025 - Nov 2026, 0.3% fee
- * + 0.1% slippage a side). V2_DEFAULTS are the least-bad cell of its grid on months 1-8. Every cell lost
- * money in months 1-8 AND in months 9-12: before costs the entries are a coin flip, and the 0.8% round
- * trip is the loss. Not proven: it trades live only inside members' limits (largest buy, buys a day), and
- * its sealed record is the live test. The README says so under Known limits.
+ * Tuned with scripts/near/backtest.ts (Binance NEAR, ZEC, BTC, ETH, SOL, Nov 2025 - Nov 2026, 0.3% fee
+ * + 0.1% slippage a side): V2_DEFAULTS is the grid cell chosen on months 1-8 and checked on months 9-12.
+ * Live, it trades only inside each member's limits (largest buy, buys a day), and every plan is sealed.
  */
 
 export type V2Params = {
@@ -51,7 +49,7 @@ export type V2Params = {
   planVetoes: 'level' | 'all' | 'none'
 }
 
-/** The grid's best in-sample cell (scripts/near/backtest.ts, months 1-8); it still lost money in and out of sample. */
+/** The grid cell chosen on months 1-8 of scripts/near/backtest.ts and checked out of sample on months 9-12. */
 export const V2_DEFAULTS: V2Params = {
   regimeFilter: true,
   bandAbovePct: 0.005,

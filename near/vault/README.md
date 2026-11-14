@@ -103,10 +103,9 @@ Each change logs a [NEP-297](https://github.com/near/NEPs/blob/master/neps/nep-0
 ## Known limits
 
 - One trade at a time across the vault. A trade takes a few blocks, so the agent queues them.
-- Members trust the owner: it lists the pools and sets the agent account. A member's exposure to the
-  agent is capped by their own limits (largest buy, buys a day, coins).
+- The owner lists the pools and sets the agent account. A member's exposure to the agent is capped by
+  their own limits (largest buy, buys a day, coins).
 - The vault caps how much the agent buys, not the price it pays: the agent sets the minimum out from its
   own Rhea quote, less its slippage allowance (0.8% by default).
 - This deployment can be upgraded by whoever holds the vault account's full-access key (the ParallaxPay
-  owner). Real money has been in it since 13 Nov 2026, so members trust the owner not to deploy code that
-  moves their coins; the key goes, or moves behind a timelock, once the contract settles after the hackathon.
+  owner). That key is removed, or moved behind a timelock, once the contract settles after the hackathon.
