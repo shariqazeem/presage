@@ -1,9 +1,13 @@
 # ST Quant Analysis Rubric — how to read a chart
 
-This file IS the agent's trading brain. It is fed to the vision model with every
-chart. Edit it directly to change how the agent thinks.
-
-Sections marked **[NEEDS SHARIQ]** are gaps — the agent is guessing there.
+The founder's method for reading a chart, written before the hackathon (as "ST Quant") and kept as
+the agent's reference. On NEAR, the agent's rules apply it in code (`engine/near/brain.ts`), and NEAR
+AI's analyst reads this file with every setup it reviews (`engine/near/analyst.ts`). The NEAR build
+sets its own risk rules on top: the size of each buy (the member's style and the setup's grade), and
+the exits, which its code sets: the stop goes under the level (tight, normal or wide, by strategy), the
+target is the next resistance worth the strategy's reward (2.5 times the risk for the house method, 1.5
+to 4 times for members' strategies), and a trade ends at its time limit (24, 72 or 168 hours; the house
+method, 72). Where this file says otherwise about stops, targets or holding time, those rules win.
 
 ---
 
@@ -72,10 +76,10 @@ this kind of setup is a wick, not a thesis failure. After a day, a position that
 still is not working may be **rotated** into a clearly better setup — that is a
 swap made from strength, not a panic exit.
 
-**Pace.** This is a 14-day competition. The goal is to grind into profit on a
-few good coins, not to trade constantly. One position at a time, taken well.
-Passing on a genuine setup is not free — idle capital scores nothing and the
-entry does not come back — but neither is forcing a trade that is not there.
+**Pace.** The goal is to grind into profit on a few good coins, not to trade
+constantly. One position at a time, taken well. Passing on a genuine setup is not
+free — idle capital earns nothing and the entry does not come back — but neither
+is forcing a trade that is not there.
 
 **Give a trade 5–6 days to work.** Shariq: *"will wait for atleast 5-6 days for
 that, if price stays above current level, then would just hold until tp."* As
@@ -102,7 +106,7 @@ Always in this order. A lower timeframe never overrides a higher one.
 - Where is the macro resistance line? **That is the long-term take-profit zone.**
 - Is the chart basing (flattening after decline) or still actively falling?
 - **Actively falling 1D = hostile.** Dip entries here have a measured negative
-  edge (see STRATEGY.md backtest). Require much stronger lower-TF evidence.
+  edge. Require much stronger lower-TF evidence.
 
 ### 4H — the trade's playing field
 - Draw the nearer channel: upper resistance and lower support.
@@ -254,19 +258,6 @@ the LOWER boundary of its structure, it is not his trade.
   participation. In his words such a coin needs "news or fundamentals" to move —
   a technical entry has no edge there.
 
-## 3b. Holder cost basis — the WHY behind repeated rejections
-
-Each analysis is given the top-100 holders' average buy price and collective
-PnL. Use it to explain overhead supply:
-- Price far BELOW their average buy = holders trapped underwater. Every rally
-  meets sellers trying to reach breakeven. This is the mechanism behind a level
-  that "dumps every time" — treat overhead resistance as heavier than it looks.
-  (XDOG: top 100 own 50% of supply, 51% underwater, -$46k collective PnL.)
-- Price ABOVE their average buy = holders in profit, less trapped supply, but
-  profit-taking risk into strength.
-- Cluster trend "buy" while underwater = accumulation despite losses, a mild
-  positive; "sell" while underwater = capitulation, stay away.
-
 ## 4. Conviction scale
 
 - **5** — trendline hug confirmed on 1D AND 1H with healthy 1H MFI and real
@@ -287,53 +278,3 @@ Only conviction 4+ should reach the operator as an actionable alert.
 - Tight stops: 1x ATR on 15m is inside the noise band. Use ~2x.
 - Requiring MFI to still be oversold at entry: contradictory, since a buying
   surge lifts MFI out of oversold on the same bar it prints.
-
----
-
-# [NEEDS SHARIQ] — gaps the agent is currently guessing at
-
-## G1. Coin discovery — PARTIALLY ANSWERED
-Shariq found BIRB months ago from an X post when it listed on Solana, and says
-he is "lazy at finding new coins" — his list is stale and capital rotates inside
-it. Discovery is the agent's job, sourced from: X / social chatter, market
-screeners, and DEX activity (he reads charts + buy/sell transactions on DEX).
-AGENT RULE — discovery feeds, widest first:
-  - social chatter and KOL mentions (X-driven attention)
-  - trending / mover screens across chains
-  - smart-money and whale signal activity
-Then the numeric screen, then the chart read.
-
-### CRITICAL selection constraint (learned from his own results)
-"Most of my coins take time to go up." His picks are slow burners — fine for
-swing trading, fatal for a 14-day competition. The agent must bias hard toward
-coins that MOVE: strong 24h volume, real liquidity, active transactions.
-A perfect chart pattern on a coin that will not move for 3 months is a losing
-trade in this format. Volume and liquidity are not just slippage filters —
-they are the timing filter.
-
-STILL NEEDED: minimum coin age / liquidity he will touch, and what disqualifies
-a coin before the chart is even opened.
-
-## G2. Trend exhaustion — how do you know a downtrend is ENDING?
-This is the highest-value missing piece. The agent currently uses a crude
-EMA/structure check. You do it by eye. What tells you "the sellers are done"?
-
-## G3. Long-term -> short-term translation
-Your method is swing-oriented. Which parts compress to intraday and which do
-not? Does a 1D level matter for a 15m trade, or only for the target?
-
-## G4. Position sizing — ANSWERED (and deliberately corrected)
-Shariq concentrates: "I mostly put all money into one, not split — but that's
-how I lose much money too." He named this as a known weakness.
-AGENT RULE (a correction, not a copy): never all-in. Max 30% of equity in any
-single position, 3 concurrent positions max. Conviction scales size WITHIN that
-cap (conviction 5 -> 30%, conviction 4 -> 15%). Concentration is what turns a
-normal losing streak into a blown account, and the leaderboard punishes deep
-drawdowns twice (PnL and PnL%).
-
-## G5. What a LOSER looks like BEFORE it loses
-Winners teach pattern matching; losers teach the veto. Screenshots of trades
-that failed, and what you can see in hindsight, are worth more than winners.
-
-## G6. Exits
-When do you take profit early vs let it run? What makes you exit before target?
